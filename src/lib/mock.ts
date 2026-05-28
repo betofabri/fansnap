@@ -46,43 +46,84 @@ export interface ProductDef {
   badge?: "most_popular" | "new_format";
 }
 
-// MOCKUP PHOTOS — drop real photos from your machine:
+// MOCKUP PHOTOS — drop real photos in:
 //
-//   public/mock/photos/         any filenames, any extensions (jpg/png/webp/avif)
-//   public/mock/events/<code>.* one file per event, named by lowercase code
+//   public/mock/events/<code>/NN.jpg   per-event photo set (preferred)
+//                                       1st file = cover, rest = gallery
+//   public/mock/events/<code>.jpg      legacy single cover (fallback)
+//   public/mock/photos/*.jpg           legacy shared pool (last resort)
 //
-// At build time `scripts/sync-mock-photos.mjs` scans these folders and
-// writes `photo-manifest.ts`. So Beto can drop whatever he wants — no
-// renaming needed. Gallery photos cycle through the available files.
+// `scripts/sync-mock-photos.mjs` (auto-runs before dev/build/deploy)
+// scans the folders and emits photo-manifest.ts. Drop files with any
+// names — no manual renaming required.
 //
-// When a slot has no matching file, the picsum.photos placeholder shows
-// (so the demo never has broken images). Set USE_PICSUM_FALLBACK = false
-// to show solid color tiles for missing slots instead.
-import { PHOTO_FILES, EVENT_FILES } from "./photo-manifest";
+// USE_PICSUM_FALLBACK keeps picsum.photos placeholders for any event
+// that has no local photos yet — demo never breaks.
+import { EVENT_PHOTOS, EVENT_COVERS, PHOTO_FILES } from "./photo-manifest";
 
 const USE_PICSUM_FALLBACK = true;
 
-// Picsum.photos = deterministic placeholder per `seed/{code}` pair —
-// used as fallback and for the highlight tiles inside event pages.
-const pic = (seed: string, w: number, h: number) => `https://picsum.photos/seed/fansnap-${seed}/${w}/${h}`;
+const pic = (seed: string, w: number, h: number) =>
+  `https://picsum.photos/seed/fansnap-${seed}/${w}/${h}`;
 
-/** Encode a filename for use in a URL — handles spaces, parentheses, etc. */
+/** URL-encode each path segment so spaces / parens / accents work. */
 const enc = (fn: string) => fn.split("/").map(encodeURIComponent).join("/");
 
+const eventBase = (code: string) => `/fansnap/mock/events/${code.toLowerCase()}`;
+
+/** Cover photo for an event tile / hero / pass card.
+ *  Priority: per-event folder cover → legacy single-file cover → picsum. */
 const eventImg = (code: string, w: number, h: number): string => {
-  const fn = EVENT_FILES[code.toLowerCase()];
-  if (fn) return `/fansnap/mock/events/${enc(fn)}`;
+  const lc = code.toLowerCase();
+  const set = EVENT_PHOTOS[lc];
+  if (set && set.length > 0) return `${eventBase(code)}/${enc(set[0])}`;
+  const single = EVENT_COVERS[lc];
+  if (single) return `/fansnap/mock/events/${enc(single)}`;
   return USE_PICSUM_FALLBACK ? pic(code, w, h) : "";
 };
 
+/** N-th photo in the *default* gallery (used when an event has no specific
+ *  set yet — keeps the static MOCK_PHOTOS array below working). */
 const photoImg = (n: number): string => {
   if (PHOTO_FILES.length > 0) {
-    // cycle through whatever's in public/mock/photos/ — 1-indexed
     const fn = PHOTO_FILES[(n - 1) % PHOTO_FILES.length];
     return `/fansnap/mock/photos/${enc(fn)}`;
   }
   return USE_PICSUM_FALLBACK ? pic(`photo-${n}`, 800, 1000) : "";
 };
+
+/** Per-event gallery — returned to the Gallery component as the scan result.
+ *  Uses the photos in public/mock/events/<code>/ (skipping the cover, which
+ *  is photo #1). Falls back to MOCK_PHOTOS when an event has no folder. */
+export function getPhotosForEvent(code: string): Photo[] {
+  const lc = code.toLowerCase();
+  const set = EVENT_PHOTOS[lc];
+  if (!set || set.length <= 1) return [...MOCK_PHOTOS];
+
+  // skip the first file (it's the cover) → the rest are the gallery
+  const gallery = set.slice(1);
+  return gallery.map((fn, i) => ({
+    id: i + 1,
+    color: ["#9D4EFF", "#FF3B6E", "#00B8D4"][i % 3],
+    timestamp: photoTimestamp(i),
+    photographer: photoCredits[i % photoCredits.length],
+    image: `${eventBase(code)}/${enc(fn)}`,
+  }));
+}
+
+const photoCredits = ["M. Suárez", "C. Reyes", "A. Núñez", "R. Castillo", "L. Fernández"];
+
+/** Spread N photos across an evening (21:30 – 23:55) so the timestamps
+ *  feel real on the gallery page. */
+function photoTimestamp(index: number): string {
+  const startMin = 21 * 60 + 30;
+  const endMin = 23 * 60 + 55;
+  const step = Math.max(1, Math.floor((endMin - startMin) / Math.max(11, index + 1)));
+  const total = startMin + index * step;
+  const h = Math.min(23, Math.floor(total / 60));
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 export const EVENTS: readonly Event[] = [
   // ── PRIMARY FEATURED (CCXP MX) ───────────────────────────────────────────

@@ -20,8 +20,8 @@ import {
 import { THEMES, type Theme, type ThemeName } from "@/lib/theme";
 import { I18N, LANGS, type Copy, type Lang } from "@/lib/i18n";
 import {
-  EVENTS, FEATURED_EVENTS, RECENT_EVENTS, UPCOMING_EVENTS, MOCK_PHOTOS,
-  PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
+  EVENTS, FEATURED_EVENTS, RECENT_EVENTS, UPCOMING_EVENTS,
+  getPhotosForEvent, PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
 } from "@/lib/mock";
 
 // Logo is rendered inline as SVG (not an <img>) so it can inherit the
@@ -1158,6 +1158,10 @@ function Gallery({
   selected: Set<number>; setSelected: (s: Set<number>) => void;
   onPick: (p: Photo) => void; onBack: () => void;
 }) {
+  // Photos served from this event's folder (public/mock/events/<code>/),
+  // falling back to MOCK_PHOTOS for events that have no dropped photos yet.
+  const photos = getPhotosForEvent(event.code);
+
   const toggle = (id: number) => {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
@@ -1184,7 +1188,7 @@ function Gallery({
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24, border: `2px solid ${c.border}` }}>
           <div style={{ padding: 16, borderRight: `2px solid ${c.border}`, background: c.bgPaper }}>
-            <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4, color: c.purple }}>{MOCK_PHOTOS.length}</div>
+            <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4, color: c.purple }}>{photos.length}</div>
             <div style={{ fontSize: 9, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em" }}>{t.gallery_photos}</div>
           </div>
           <div style={{ padding: 16, borderRight: `2px solid ${c.border}`, background: c.bgPaper }}>
@@ -1199,7 +1203,7 @@ function Gallery({
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <button onClick={() => setSelected(new Set(MOCK_PHOTOS.map((p) => p.id)))} style={ctaSmallStyle(c)} className="ff-cta-sec">
+            <button onClick={() => setSelected(new Set(photos.map((p) => p.id)))} style={ctaSmallStyle(c)} className="ff-cta-sec">
               {t.gallery_select_all}
             </button>
             {selected.size > 0 && (
@@ -1215,7 +1219,7 @@ function Gallery({
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
-          {MOCK_PHOTOS.map((p, i) => {
+          {photos.map((p, i) => {
             const isSelected = selected.has(p.id);
             return (
               <button
