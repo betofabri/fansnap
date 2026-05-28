@@ -1,0 +1,44 @@
+/**
+ * FanSnap — Cloudflare Workers config
+ *
+ * Docs:
+ *   https://developers.cloudflare.com/workers/wrangler/configuration/
+ *   https://opennext.js.org/cloudflare
+ *
+ * Bindings stubbed (commented) for Fatia 2 — D1 schema, R2 photo bucket, etc.
+ * Uncomment & fill IDs when the resources are provisioned.
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "fansnap",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-05-28",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	},
+	// "vars": {
+	// 	"NEXT_PUBLIC_APP_ENV": "production"
+	// }
+	// "d1_databases": [
+	// 	{
+	// 		"binding": "DB",
+	// 		"database_name": "fansnap",
+	// 		"database_id": "<FILL_AFTER_wrangler d1 create fansnap>"
+	// 	}
+	// ],
+	// "r2_buckets": [
+	// 	{
+	// 		"binding": "PHOTOS",
+	// 		"bucket_name": "fansnap-photos"
+	// 	}
+	// ],
+	// "images": { "binding": "IMAGES" }
+}
