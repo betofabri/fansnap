@@ -587,26 +587,56 @@ function Hero({
 }: { c: Theme; t: Copy; heroIdx: number; setHeroIdx: (i: number) => void; onStart: () => void }) {
   const ev = FEATURED_EVENTS[heroIdx];
   return (
-    <section style={heroStyle(c)}>
+    <section style={{
+      position: "relative", overflow: "hidden",
+      borderBottom: `2px solid ${c.border}`,
+      backgroundColor: c.bg,
+      backgroundImage: `url(${ev.imageHero})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }}>
+      {/* Dark gradient + brand-color tint over the photo so the white title
+          stays legible. Heavier on the left (where the text lives) than the
+          right (where the pass card lives, on top of its own card frame). */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "linear-gradient(100deg, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.78) 45%, rgba(10,10,15,0.55) 75%, rgba(10,10,15,0.5) 100%)",
+        pointerEvents: "none", zIndex: 1,
+      }} />
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `radial-gradient(ellipse at 80% 50%, ${ev.color}40 0%, transparent 60%)`,
+        pointerEvents: "none", zIndex: 1, mixBlendMode: "overlay",
+      }} />
       <CornerBrackets color={c.purple} />
       <div style={heroGridLinesStyle(c)} />
-      <div style={heroInnerStyle()} className="ff-hero-grid">
+      <div style={{ ...heroInnerStyle(), position: "relative", zIndex: 2 }} className="ff-hero-grid">
         <div>
-          <div style={kickerStyle(c)}>
+          {/* Kicker over the darkened photo: translucent dark pill with cyan
+              border for contrast, regardless of theme. */}
+          <div style={{
+            ...kickerStyle(c),
+            background: "rgba(10,10,15,0.55)",
+            borderColor: c.cyan,
+            backdropFilter: "blur(10px)",
+          }}>
             <span style={kickerDotStyle(c)} />
             <span style={{ color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>{t.hero_kicker}</span>
           </div>
 
-          <h1 style={heroTitleStyle(c)}>
+          <h1 style={heroTitleStyle()}>
             <span style={heroLineStyle()} className="ff-up">{t.hero_t1}</span>
             <span style={{ ...heroLineStyle(), ...gradTextStyle(c) }} className="ff-up">{t.hero_t2}</span>
-            {/* T3 is the "we have the proof" tagline — styled smaller +
-                regular-weight + nowrap so it stays on one line across all
-                viewports and languages instead of competing with the headline. */}
-            <span style={heroLineT3Style(c)} className="ff-up">{t.hero_t3}</span>
+            <span style={heroLineStyle()} className="ff-up">{t.hero_t3}</span>
           </h1>
 
-          <p style={heroSubStyle(c)} className="ff-up">{t.hero_sub}</p>
+          {/* Force white sub copy + soft shadow — over the darkened photo
+              the theme's inkSoft (#3D3D47 in light) would be invisible. */}
+          <p style={{
+            ...heroSubStyle(c),
+            color: "rgba(255,255,255,0.85)",
+            textShadow: "0 1px 12px rgba(0,0,0,0.5)",
+          }} className="ff-up">{t.hero_sub}</p>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", opacity: 0, animation: "fadeUp 0.7s 0.55s forwards" }}>
             <button onClick={onStart} style={ctaPrimaryStyle(c)} className="ff-cta-primary">
@@ -1688,10 +1718,19 @@ function ThemeStyles({ c }: { c: Theme }) {
         border-color: ${c.purple} !important;
         color: #fff !important;
       }
-      @media (max-width: 900px) {
+      /* Hamburger threshold: 1100px. The four new long nav items
+         (HOW IT WORKS / EVENTS / FOR PHOTOGRAPHERS / FOR YOUR BRAND)
+         plus the logo + powered-by + theme/lang toggles need ~1100px
+         of horizontal real estate before they fit cleanly. Below that
+         the nav truncates / wraps ugly, so we fold into the hamburger. */
+      @media (max-width: 1100px) {
         .ff-desktop-nav { display: none; }
         .ff-desktop-only { display: none !important; }
         .ff-mobile-only { display: grid !important; place-items: center; }
+      }
+      /* Layout breakpoint stays at 900px — the side-by-side hero + footer
+         still works well in the 900-1100 range, so we keep them. */
+      @media (max-width: 900px) {
         .ff-hero-grid { grid-template-columns: 1fr !important; }
         .ff-footer-grid { grid-template-columns: 1fr !important; }
       }
@@ -1782,10 +1821,6 @@ const mobileNavLinkStyle = (c: Theme): React.CSSProperties => ({
   cursor: "pointer", fontFamily: "inherit", textAlign: "left",
 });
 
-const heroStyle = (c: Theme): React.CSSProperties => ({
-  position: "relative", background: c.bg, borderBottom: `2px solid ${c.border}`, overflow: "hidden",
-});
-
 const heroGridLinesStyle = (c: Theme): React.CSSProperties => ({
   position: "absolute", inset: 0,
   backgroundImage: `linear-gradient(to right, ${c.gridLine} 1px, transparent 1px), linear-gradient(to bottom, ${c.gridLine} 1px, transparent 1px)`,
@@ -1799,33 +1834,25 @@ const heroInnerStyle = (): React.CSSProperties => ({
   gap: "clamp(32px, 5vw, 60px)", alignItems: "center",
 });
 
-const heroTitleStyle = (c: Theme): React.CSSProperties => ({
+// Hero title size: capped at 60px so the longest punchline ("A GENTE TEM A
+// PROVA." in PT, 20 chars) still fits on a single line inside the 1.4fr
+// left column at desktop widths. Letter-spacing -0.04em compresses caps so
+// the whole hero feels punchy even at this smaller cap. Force always-white
+// — we now layer text over a darkened photo background, so the theme's
+// `ink` token (which is near-black in light theme) would disappear.
+const heroTitleStyle = (): React.CSSProperties => ({
   fontFamily: "var(--font-grotesk), sans-serif",
-  fontSize: "clamp(44px, 8vw, 116px)", fontWeight: 700,
-  lineHeight: 0.95, letterSpacing: "-0.04em",
-  margin: "0 0 clamp(20px, 3vw, 32px) 0", textTransform: "uppercase", color: c.ink,
+  fontSize: "clamp(32px, 5vw, 60px)", fontWeight: 700,
+  lineHeight: 0.98, letterSpacing: "-0.04em",
+  margin: "0 0 clamp(20px, 3vw, 32px) 0", textTransform: "uppercase",
+  color: "#fff",
+  textShadow: "0 2px 32px rgba(0,0,0,0.6)",
   textWrap: "balance",
 });
 
 const heroLineStyle = (): React.CSSProperties => ({
   display: "block", opacity: 0, animation: "fadeUp 0.7s forwards",
   textWrap: "balance",
-});
-
-// T3 is the "we have the proof" follow-up after the big T1+T2 punch.
-// Across languages it varies from 16 chars (EN "WE HAVE THE PROOF.") to 20
-// chars (PT "A GENTE TEM A PROVA."). At full hero size it kept overflowing
-// and wrapping ugly. Re-styled as a smaller subhead — ~35% of T1/T2 size +
-// regular-weight + letter-spacing — so it always fits on one line and reads
-// as a tagline instead of competing with the headline.
-const heroLineT3Style = (c: Theme): React.CSSProperties => ({
-  display: "block", opacity: 0, animation: "fadeUp 0.7s forwards",
-  fontSize: "clamp(15px, 2.4vw, 32px)",
-  lineHeight: 1.2,
-  fontWeight: 500,
-  letterSpacing: "0.04em",
-  color: c.inkSoft,
-  marginTop: "clamp(10px, 1.5vw, 20px)",
   whiteSpace: "nowrap",
 });
 
