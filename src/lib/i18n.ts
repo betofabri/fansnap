@@ -6,10 +6,33 @@ export type Lang = "en" | "pt" | "es";
 export const LANGS: readonly Lang[] = ["en", "pt", "es"] as const;
 
 export interface Copy {
+  // Header / nav
+  nav_how: string;
   nav_events: string;
   nav_photographers: string;
-  nav_business: string;
+  nav_brand: string;
   nav_login: string;
+  powered_by: string;
+
+  // New pitch sections (Fatia 1.5)
+  how_kicker: string;
+  how_title: string;
+  how_sub: string;
+  how_step1_title: string;
+  how_step1_body: string;
+  how_step2_title: string;
+  how_step2_body: string;
+  how_step3_title: string;
+  how_step3_body: string;
+  photographers_kicker: string;
+  photographers_title: string;
+  photographers_body: string;
+  photographers_cta: string;
+  brand_kicker: string;
+  brand_title: string;
+  brand_body: string;
+  brand_cta: string;
+
   hero_kicker: string;
   hero_t1: string;
   hero_t2: string;
@@ -94,7 +117,30 @@ export interface Copy {
 
 export const I18N: Record<Lang, Copy> = {
   en: {
-    nav_events: "Events", nav_photographers: "Photographers", nav_business: "Business", nav_login: "Sign in",
+    nav_how: "How it works",
+    nav_events: "Events",
+    nav_photographers: "For photographers",
+    nav_brand: "For your brand",
+    nav_login: "Sign in",
+    powered_by: "powered by",
+    how_kicker: "01 · HOW IT WORKS",
+    how_title: "Three steps from selfie to your photos.",
+    how_sub: "Search is free. You pay only for the ones you love.",
+    how_step1_title: "PICK AN EVENT",
+    how_step1_body: "Choose the show, convention or race you went to.",
+    how_step2_title: "TAKE A SELFIE",
+    how_step2_body: "One frontal photo. Encrypted, never sold, deletable on request.",
+    how_step3_title: "WE FIND YOU",
+    how_step3_body: "AI sweeps every photo, returns the ones you're in. Buy a single shot or your whole reel.",
+    photographers_kicker: "03 · FOR PHOTOGRAPHERS",
+    photographers_title: "Cover an event. Get paid per fan match.",
+    photographers_body: "Upload your gallery, we watermark + face-index it, and split the revenue every time a fan finds themselves. Standard 50% commission, Pro and VIP tiers available for credentialed pros.",
+    photographers_cta: "Apply to shoot",
+    brand_kicker: "04 · FOR YOUR BRAND",
+    brand_title: "Turn fan photos into a memory channel.",
+    brand_body: "Sponsor an event and give every attendee their photos for free — branded, watermarked, downloadable. Optional merch upsell. Flat fee, predictable cost, deep engagement metrics. Perfect for activations, conventions, weddings, corporate parties.",
+    brand_cta: "Talk to sales",
+
     hero_kicker: "FACIAL RECOGNITION · LIVE ENTERTAINMENT",
     hero_t1: "YOU WERE", hero_t2: "THERE.", hero_t3: "WE HAVE THE PROOF.",
     hero_sub: "Find yourself in thousands of photos from concerts, conventions and the moments that mattered. Powered by AI.",
@@ -147,7 +193,30 @@ export const I18N: Record<Lang, Copy> = {
     starting_at: "FROM",
   },
   pt: {
-    nav_events: "Eventos", nav_photographers: "Fotógrafos", nav_business: "Empresas", nav_login: "Entrar",
+    nav_how: "Como funciona",
+    nav_events: "Eventos",
+    nav_photographers: "Para fotógrafos",
+    nav_brand: "Para sua marca",
+    nav_login: "Entrar",
+    powered_by: "powered by",
+    how_kicker: "01 · COMO FUNCIONA",
+    how_title: "Três passos da selfie até as suas fotos.",
+    how_sub: "Buscar é grátis. Você paga só pelas que quiser.",
+    how_step1_title: "ESCOLHA UM EVENTO",
+    how_step1_body: "Show, convenção ou corrida — selecione onde você esteve.",
+    how_step2_title: "TIRA UMA SELFIE",
+    how_step2_body: "Uma foto frontal. Criptografada, nunca vendida, pode ser apagada a pedido.",
+    how_step3_title: "A GENTE ACHA VOCÊ",
+    how_step3_body: "IA varre todas as fotos e devolve só as suas. Compra uma foto ou o pacote inteiro.",
+    photographers_kicker: "03 · PARA FOTÓGRAFOS",
+    photographers_title: "Cubra um evento. Receba por cada fã encontrado.",
+    photographers_body: "Suba sua galeria, a gente coloca marca d'água + indexa os rostos, e divide a receita toda vez que um fã se encontra. Comissão Standard 50%, tiers Pro e VIP pra fotógrafos credenciados.",
+    photographers_cta: "Quero cobrir eventos",
+    brand_kicker: "04 · PARA SUA MARCA",
+    brand_title: "Transforme fotos de fãs num canal de memória.",
+    brand_body: "Patrocine um evento e dê as fotos de graça pra todo mundo — com sua marca, marca d'água e download. Upsell de produto opcional. Tarifa fixa, custo previsível, métricas de engajamento profundas. Perfeito pra ativações, convenções, casamentos, festas corporativas.",
+    brand_cta: "Quero falar com vendas",
+
     hero_kicker: "RECONHECIMENTO FACIAL · ENTRETENIMENTO AO VIVO",
     hero_t1: "VOCÊ ESTEVE", hero_t2: "LÁ.", hero_t3: "A GENTE TEM A PROVA.",
     hero_sub: "Encontre você em milhares de fotos de shows, conventions e nos momentos que ficaram. Movido por IA.",
@@ -200,7 +269,30 @@ export const I18N: Record<Lang, Copy> = {
     starting_at: "A PARTIR DE",
   },
   es: {
-    nav_events: "Eventos", nav_photographers: "Fotógrafos", nav_business: "Empresas", nav_login: "Entrar",
+    nav_how: "Cómo funciona",
+    nav_events: "Eventos",
+    nav_photographers: "Para fotógrafos",
+    nav_brand: "Para tu marca",
+    nav_login: "Entrar",
+    powered_by: "powered by",
+    how_kicker: "01 · CÓMO FUNCIONA",
+    how_title: "Tres pasos desde la selfie hasta tus fotos.",
+    how_sub: "Buscar es gratis. Pagas solo por las que quieras.",
+    how_step1_title: "ELIGE UN EVENTO",
+    how_step1_body: "Concierto, convención o carrera — selecciona dónde estuviste.",
+    how_step2_title: "TÓMATE UNA SELFIE",
+    how_step2_body: "Una foto frontal. Encriptada, nunca se vende, se puede eliminar a solicitud.",
+    how_step3_title: "TE ENCONTRAMOS",
+    how_step3_body: "La IA recorre todas las fotos y te devuelve solo las tuyas. Compra una sola o el paquete completo.",
+    photographers_kicker: "03 · PARA FOTÓGRAFOS",
+    photographers_title: "Cubre un evento. Recibe por cada fan encontrado.",
+    photographers_body: "Sube tu galería, ponemos marca de agua + indexamos rostros, y dividimos los ingresos cada vez que un fan se encuentra. Comisión Standard 50%, tiers Pro y VIP para fotógrafos credenciados.",
+    photographers_cta: "Quiero cubrir eventos",
+    brand_kicker: "04 · PARA TU MARCA",
+    brand_title: "Convierte las fotos de fans en un canal de memoria.",
+    brand_body: "Patrocina un evento y entrega las fotos gratis a todos los asistentes — con tu marca, marca de agua y descarga. Upsell de merch opcional. Tarifa fija, costo previsible, métricas de engagement profundas. Perfecto para activaciones, convenciones, bodas, fiestas corporativas.",
+    brand_cta: "Hablar con ventas",
+
     hero_kicker: "RECONOCIMIENTO FACIAL · ENTRETENIMIENTO EN VIVO",
     hero_t1: "ESTUVISTE", hero_t2: "AHÍ.", hero_t3: "TENEMOS LA PRUEBA.",
     hero_sub: "Encuéntrate en miles de fotos de conciertos, conventions y los momentos que importaron. Con IA.",

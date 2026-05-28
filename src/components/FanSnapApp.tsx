@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, Fragmen
 import {
   Search, Music, Gamepad2, Trophy, PartyPopper, ChevronLeft, Calendar, MapPin, Camera,
   ArrowRight, Menu, Scan, Grid3x3, X, Upload, Check, Eye, Zap, Sun, Moon, ShoppingBag,
-  Download, Image as ImageIcon, Shirt, Coffee, Frame, Plus, Minus,
+  Download, Image as ImageIcon, Shirt, Coffee, Frame, Plus, Minus, Sparkles,
 } from "lucide-react";
 import { THEMES, type Theme, type ThemeName } from "@/lib/theme";
 import { I18N, LANGS, type Copy, type Lang } from "@/lib/i18n";
@@ -129,6 +129,22 @@ export default function FanSnapApp() {
     goTo("home");
   };
 
+  /** Jump to a section on the home page. If we're elsewhere (event, gallery, etc.),
+   *  reset to home first then scroll once the DOM lands the anchor. */
+  const goToSection = (id: string) => {
+    const scroll = () => {
+      const el = typeof document !== "undefined" ? document.getElementById(id) : null;
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    if (page !== "home") {
+      goHome();
+      // give React + DOM a beat to mount the home tree
+      setTimeout(scroll, 80);
+    } else {
+      scroll();
+    }
+  };
+
   return (
     <div style={appStyle(c)}>
       <ThemeStyles c={c} />
@@ -138,6 +154,7 @@ export default function FanSnapApp() {
         lang={lang} setLang={setLang}
         c={c} t={t}
         onLogo={goHome}
+        onNavSection={goToSection}
         cartCount={cart.length}
         mobileNav={mobileNav} setMobileNav={setMobileNav}
       />
@@ -205,27 +222,53 @@ function FanSnapLogo({ size = "md", theme = "dark" }: { size?: "xs" | "sm" | "md
 // ============================================================
 // HEADER
 // ============================================================
+
+/** Scroll smoothly to a section on the home page; works from any sub-screen
+ *  too because the home is the only route in Fatia 1.5. The caller passes
+ *  `onNavigate` so we can also reset to the home screen first when we're
+ *  inside the event → selfie → gallery flow. */
+const NAV_ITEMS: ReadonlyArray<{ id: string; key: "nav_how" | "nav_events" | "nav_photographers" | "nav_brand" }> = [
+  { id: "how", key: "nav_how" },
+  { id: "events", key: "nav_events" },
+  { id: "photographers", key: "nav_photographers" },
+  { id: "brand", key: "nav_brand" },
+];
+
 function Header({
-  theme, setTheme, lang, setLang, c, t, onLogo, cartCount, mobileNav, setMobileNav,
+  theme, setTheme, lang, setLang, c, t, onLogo, onNavSection, cartCount, mobileNav, setMobileNav,
 }: {
   theme: ThemeName; setTheme: (n: ThemeName) => void;
   lang: Lang; setLang: (l: Lang) => void;
   c: Theme; t: Copy;
   onLogo: () => void;
+  onNavSection: (id: string) => void;
   cartCount: number;
   mobileNav: boolean; setMobileNav: (v: boolean) => void;
 }) {
   return (
     <header style={headerStyle(c)}>
       <div style={headerInnerStyle()}>
-        <button onClick={onLogo} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <FanSnapLogo size="md" theme={theme} />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={onLogo} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <FanSnapLogo size="md" theme={theme} />
+          </button>
+          <div className="ff-desktop-only" style={poweredByStyle(c)}>
+            <span style={{ opacity: 0.65 }}>{t.powered_by}</span>{" "}
+            <span style={{ color: c.purple, fontWeight: 700 }}>O&amp;CO</span>
+          </div>
+        </div>
 
-        <nav style={{ display: "flex", gap: 4 }} className="ff-desktop-nav">
-          <a href="#" style={navLinkStyle(c)}>{t.nav_events}</a>
-          <a href="#" style={navLinkStyle(c)}>{t.nav_photographers}</a>
-          <a href="#" style={navLinkStyle(c)}>{t.nav_business}</a>
+        <nav style={{ display: "flex", gap: 2 }} className="ff-desktop-nav">
+          {NAV_ITEMS.map((it) => (
+            <button
+              key={it.id}
+              onClick={() => onNavSection(it.id)}
+              style={navLinkStyle(c)}
+              className="ff-nav-link"
+            >
+              {t[it.key]}
+            </button>
+          ))}
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -258,9 +301,15 @@ function Header({
 
       {mobileNav && (
         <div style={mobileMenuStyle(c)}>
-          <a href="#" style={mobileNavLinkStyle(c)}>{t.nav_events}</a>
-          <a href="#" style={mobileNavLinkStyle(c)}>{t.nav_photographers}</a>
-          <a href="#" style={mobileNavLinkStyle(c)}>{t.nav_business}</a>
+          {NAV_ITEMS.map((it) => (
+            <button
+              key={it.id}
+              onClick={() => { onNavSection(it.id); setMobileNav(false); }}
+              style={mobileNavLinkStyle(c)}
+            >
+              {t[it.key]}
+            </button>
+          ))}
           <div style={{ height: 2, background: c.border, margin: "8px 0" }} />
           <div style={{ display: "flex", justifyContent: "center", paddingBottom: 8 }}>
             <LangToggle lang={lang} setLang={setLang} c={c} />
@@ -332,14 +381,119 @@ function Home({
   return (
     <>
       <Hero c={c} t={t} heroIdx={heroIdx} setHeroIdx={setHeroIdx} onStart={() => onPick(FEATURED_EVENTS[heroIdx])} />
-      <SearchBar c={c} t={t} category={category} setCategory={setCategory} search={search} setSearch={setSearch} />
-      <FeedSection c={c} t={t} label={t.section_recent} sub={t.section_recent_sub} marker="01"
-        events={RECENT_EVENTS.filter(filterFn)} onPick={onPick} />
-      {upcomingFiltered.length > 0 && (
-        <FeedSection c={c} t={t} label={t.section_upcoming} sub={t.section_upcoming_sub} marker="02"
-          events={upcomingFiltered} onPick={onPick} />
-      )}
+      <HowItWorks c={c} t={t} />
+      <section id="events">
+        <SearchBar c={c} t={t} category={category} setCategory={setCategory} search={search} setSearch={setSearch} />
+        <FeedSection c={c} t={t} label={t.section_recent} sub={t.section_recent_sub} marker="01"
+          events={RECENT_EVENTS.filter(filterFn)} onPick={onPick} />
+        {upcomingFiltered.length > 0 && (
+          <FeedSection c={c} t={t} label={t.section_upcoming} sub={t.section_upcoming_sub} marker="02"
+            events={upcomingFiltered} onPick={onPick} />
+        )}
+      </section>
+      <ForPhotographers c={c} t={t} />
+      <ForBrand c={c} t={t} />
     </>
+  );
+}
+
+// ============================================================
+// HOW IT WORKS
+// ============================================================
+function HowItWorks({ c, t }: { c: Theme; t: Copy }) {
+  const steps = [
+    { n: "01", title: t.how_step1_title, body: t.how_step1_body, color: c.purple },
+    { n: "02", title: t.how_step2_title, body: t.how_step2_body, color: c.cyan },
+    { n: "03", title: t.how_step3_title, body: t.how_step3_body, color: c.pink },
+  ];
+  return (
+    <section id="how" style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "clamp(48px, 6vw, 80px) clamp(20px, 3vw, 32px)" }}>
+        <div style={kickerStyle(c)}>
+          <span style={kickerDotStyle(c)} />
+          <span style={{ color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>{t.how_kicker}</span>
+        </div>
+        <h2 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(28px, 5vw, 56px)", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.0, margin: "0 0 12px 0", textTransform: "uppercase", color: c.ink, maxWidth: 760 }}>{t.how_title}</h2>
+        <p style={{ fontSize: "clamp(14px, 1.4vw, 16px)", color: c.inkSoft, marginBottom: 40, maxWidth: 560, lineHeight: 1.5 }}>{t.how_sub}</p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
+          {steps.map((s, i) => (
+            <div key={s.n} style={{
+              position: "relative", background: c.bgPaper, border: `2px solid ${c.border}`,
+              padding: "clamp(24px, 3vw, 32px)", overflow: "hidden",
+              opacity: 0, animation: `fadeUp 0.5s ${i * 0.08}s forwards`, transition: "all 0.2s",
+            }} className="ff-highlight">
+              <CornerBrackets color={s.color} />
+              <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 13, color: s.color, fontWeight: 700, border: `2px solid ${s.color}`, padding: "5px 9px", letterSpacing: "0.05em", display: "inline-block", marginBottom: 16, background: c.bg }}>{s.n}</div>
+              <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(18px, 2vw, 22px)", fontWeight: 700, letterSpacing: "-0.02em", color: c.ink, textTransform: "uppercase", marginBottom: 8 }}>{s.title}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.55, color: c.inkSoft }}>{s.body}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
+// FOR PHOTOGRAPHERS
+// ============================================================
+function ForPhotographers({ c, t }: { c: Theme; t: Copy }) {
+  return (
+    <section id="photographers" style={{ background: c.bgAlt, borderBottom: `2px solid ${c.border}` }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "clamp(48px, 6vw, 80px) clamp(20px, 3vw, 32px)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(32px, 4vw, 60px)", alignItems: "center" }} className="ff-hero-grid">
+        <div>
+          <div style={kickerStyle(c)}>
+            <span style={kickerDotStyle(c)} />
+            <span style={{ color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>{t.photographers_kicker}</span>
+          </div>
+          <h2 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(28px, 4.5vw, 52px)", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.0, margin: "0 0 16px 0", textTransform: "uppercase", color: c.ink }}>{t.photographers_title}</h2>
+          <p style={{ fontSize: "clamp(14px, 1.4vw, 16px)", color: c.inkSoft, marginBottom: 28, lineHeight: 1.55, maxWidth: 540 }}>{t.photographers_body}</p>
+          <button style={ctaPrimaryStyle(c)} className="ff-cta-primary">
+            <Camera size={16} strokeWidth={2.5} />
+            <span>{t.photographers_cta}</span>
+            <ArrowRight size={16} strokeWidth={3} />
+          </button>
+        </div>
+        <div style={{ position: "relative", aspectRatio: "4/3", border: `3px solid ${c.purple}`, overflow: "hidden", boxShadow: `8px 8px 0 0 ${c.purple}` }}>
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "url(https://picsum.photos/seed/fansnap-photographer/900/700)", backgroundSize: "cover", backgroundPosition: "center" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(157,78,255,0.25) 0%, rgba(10,10,15,0.55) 100%)" }} />
+          <CornerBrackets color={c.cyan} />
+          <div style={{ position: "absolute", bottom: 14, left: 14, fontFamily: "var(--font-mono), monospace", fontSize: 10, color: "#fff", fontWeight: 700, letterSpacing: "0.1em", background: "rgba(0,0,0,0.55)", padding: "5px 9px", border: "2px solid rgba(255,255,255,0.2)" }}>STANDARD · 50% · PRO · VIP</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
+// FOR YOUR BRAND
+// ============================================================
+function ForBrand({ c, t }: { c: Theme; t: Copy }) {
+  return (
+    <section id="brand" style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "clamp(48px, 6vw, 80px) clamp(20px, 3vw, 32px)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(32px, 4vw, 60px)", alignItems: "center" }} className="ff-hero-grid">
+        <div style={{ position: "relative", aspectRatio: "4/3", border: `3px solid ${c.cyan}`, overflow: "hidden", boxShadow: `8px 8px 0 0 ${c.cyan}`, order: 1 }} className="ff-brand-tile">
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "url(https://picsum.photos/seed/fansnap-brand/900/700)", backgroundSize: "cover", backgroundPosition: "center" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(0,184,212,0.25) 0%, rgba(10,10,15,0.55) 100%)" }} />
+          <CornerBrackets color={c.purple} />
+          <div style={{ position: "absolute", bottom: 14, left: 14, fontFamily: "var(--font-mono), monospace", fontSize: 10, color: "#fff", fontWeight: 700, letterSpacing: "0.1em", background: "rgba(0,0,0,0.55)", padding: "5px 9px", border: "2px solid rgba(255,255,255,0.2)" }}>SPONSORED · FREE FOR FANS · BRANDED</div>
+        </div>
+        <div style={{ order: 2 }}>
+          <div style={kickerStyle(c)}>
+            <span style={kickerDotStyle(c)} />
+            <span style={{ color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>{t.brand_kicker}</span>
+          </div>
+          <h2 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(28px, 4.5vw, 52px)", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.0, margin: "0 0 16px 0", textTransform: "uppercase", color: c.ink }}>{t.brand_title}</h2>
+          <p style={{ fontSize: "clamp(14px, 1.4vw, 16px)", color: c.inkSoft, marginBottom: 28, lineHeight: 1.55, maxWidth: 540 }}>{t.brand_body}</p>
+          <button style={ctaPrimaryStyle(c)} className="ff-cta-primary">
+            <Sparkles size={16} strokeWidth={2.5} />
+            <span>{t.brand_cta}</span>
+            <ArrowRight size={16} strokeWidth={3} />
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -405,10 +559,17 @@ function PassCard({
         </div>
       </div>
 
-      <div style={{ position: "relative", aspectRatio: "4/3", background: event.color, overflow: "hidden" }}>
+      <div style={{
+        position: "relative", aspectRatio: "4/3", overflow: "hidden",
+        backgroundColor: event.color,
+        backgroundImage: `url(${event.imageHero})`,
+        backgroundSize: "cover", backgroundPosition: "center",
+      }}>
+        {/* darken the photo so the initials/code overlay stays readable */}
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${event.color}55 0%, rgba(10,10,15,0.45) 100%)` }} />
         <CornerBrackets color="rgba(255,255,255,0.85)" />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
-        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(56px, 9vw, 88px)", fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.04em" }}>{event.initials}</div>
+        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(56px, 9vw, 88px)", fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.04em", textShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>{event.initials}</div>
       </div>
 
       <div style={{ padding: "18px 16px 14px 16px", borderTop: `3px solid ${c.border}`, background: c.bgPaper }}>
@@ -526,10 +687,17 @@ function EventCard({
 }: { c: Theme; t: Copy; event: FsEvent; onClick: () => void; delay?: number }) {
   return (
     <button onClick={onClick} style={{ ...eventCardStyle(c), animationDelay: `${delay}s` }} className="ff-event-card">
-      <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden", borderBottom: `2px solid ${c.border}`, background: event.color }}>
+      <div style={{
+        position: "relative", aspectRatio: "4/3", overflow: "hidden",
+        borderBottom: `2px solid ${c.border}`,
+        backgroundColor: event.color,
+        backgroundImage: `url(${event.image})`,
+        backgroundSize: "cover", backgroundPosition: "center",
+      }}>
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${event.color}55 0%, rgba(10,10,15,0.45) 100%)` }} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
         <CornerBrackets color="rgba(255,255,255,0.85)" />
-        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(48px, 7vw, 76px)", fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.04em" }}>{event.initials}</div>
+        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(48px, 7vw, 76px)", fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.04em", textShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>{event.initials}</div>
 
         {event.status === "live" && (
           <div style={{
@@ -614,8 +782,14 @@ function EventPage({
 }: { c: Theme; t: Copy; event: FsEvent; onBack: () => void; onStart: () => void }) {
   return (
     <div className="ff-fade-in">
-      <section style={{ position: "relative", minHeight: "clamp(340px, 45vw, 420px)", overflow: "hidden", borderBottom: `3px solid ${c.border}`, background: event.color }}>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom right, rgba(10,10,15,0.4) 0%, rgba(10,10,15,0.85) 100%)" }} />
+      <section style={{
+        position: "relative", minHeight: "clamp(340px, 45vw, 420px)", overflow: "hidden",
+        borderBottom: `3px solid ${c.border}`,
+        backgroundColor: event.color,
+        backgroundImage: `url(${event.imageHero})`,
+        backgroundSize: "cover", backgroundPosition: "center",
+      }}>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom right, rgba(10,10,15,0.55) 0%, rgba(10,10,15,0.9) 100%)" }} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "50px 50px" }} />
         <CornerBrackets color={c.cyan} />
 
@@ -686,8 +860,11 @@ function EventPage({
                   transition: "all 0.2s",
                   gridColumn: i === 1 ? "span 2" : "span 1",
                   aspectRatio: i === 1 ? "16/10" : "1/1",
-                  background: event.color,
+                  backgroundColor: event.color,
+                  backgroundImage: `url(https://picsum.photos/seed/fansnap-hl-${event.code}-${i}/800/600)`,
+                  backgroundSize: "cover", backgroundPosition: "center",
                 }} className="ff-highlight">
+                  <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${event.color}33 0%, rgba(10,10,15,0.35) 100%)` }} />
                   <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
                   <CornerBrackets color="rgba(255,255,255,0.85)" />
                   <div style={{ position: "absolute", bottom: 12, right: 12, fontFamily: "var(--font-mono), monospace", fontSize: 9, color: "#fff", fontWeight: 700, letterSpacing: "0.08em", background: "rgba(0,0,0,0.5)", padding: "3px 7px", zIndex: 6 }}>FANSNAP · {event.code}</div>
@@ -1001,7 +1178,9 @@ function Gallery({
                   transition: "all 0.2s",
                   boxShadow: isSelected ? `4px 4px 0 0 ${c.purple}` : "none",
                   transform: isSelected ? "translate(-2px, -2px)" : "none",
-                  background: p.color,
+                  backgroundColor: p.color,
+                  backgroundImage: `url(${p.image})`,
+                  backgroundSize: "cover", backgroundPosition: "center",
                 }}
                 className="ff-gallery-item"
               >
@@ -1060,7 +1239,13 @@ function PhotoDetail({
           <span>{t.photo_back}</span>
         </button>
 
-        <div style={{ position: "relative", width: "100%", aspectRatio: "4/5", maxHeight: 540, background: photo.color, border: `3px solid ${c.border}`, marginBottom: 12, overflow: "hidden" }}>
+        <div style={{
+          position: "relative", width: "100%", aspectRatio: "4/5", maxHeight: 540,
+          backgroundColor: photo.color,
+          backgroundImage: `url(${photo.image})`,
+          backgroundSize: "cover", backgroundPosition: "center",
+          border: `3px solid ${c.border}`, marginBottom: 12, overflow: "hidden",
+        }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
           <CornerBrackets color="rgba(255,255,255,0.85)" />
 
@@ -1323,10 +1508,16 @@ function ThemeStyles({ c }: { c: Theme }) {
       a:hover { color: ${c.ink} !important; }
 
       .ff-mobile-only { display: none; }
+      .ff-nav-link:hover { color: ${c.ink} !important; }
+      .ff-section-cta:hover {
+        background: ${c.purple} !important;
+        border-color: ${c.purple} !important;
+        color: #fff !important;
+      }
       @media (max-width: 900px) {
         .ff-desktop-nav { display: none; }
         .ff-desktop-only { display: none !important; }
-        .ff-mobile-only { display: grid !important; }
+        .ff-mobile-only { display: grid !important; place-items: center; }
         .ff-hero-grid { grid-template-columns: 1fr !important; }
         .ff-footer-grid { grid-template-columns: 1fr !important; }
       }
@@ -1361,6 +1552,13 @@ const headerInnerStyle = (): React.CSSProperties => ({
 const navLinkStyle = (c: Theme): React.CSSProperties => ({
   fontSize: 12, fontWeight: 600, color: c.inkSoft, textDecoration: "none",
   letterSpacing: "0.05em", textTransform: "uppercase", padding: "8px 12px", transition: "color 0.15s",
+  // for <button> reset
+  background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit",
+});
+
+const poweredByStyle = (c: Theme): React.CSSProperties => ({
+  fontFamily: "var(--font-mono), monospace", fontSize: 10, color: c.inkSoft,
+  letterSpacing: "0.05em", whiteSpace: "nowrap",
 });
 
 const themeToggleStyle = (c: Theme): React.CSSProperties => ({
@@ -1390,9 +1588,12 @@ const cartBtnStyle = (c: Theme): React.CSSProperties => ({
   fontSize: 11, fontWeight: 700, cursor: "pointer", letterSpacing: "0.08em",
 });
 
+// NB: NO `display` here — the `.ff-mobile-only` CSS class controls it.
+// Inline `display: grid` would beat the class and leak the button onto desktop
+// (the symptom that originally looked like "broken hamburger on desktop").
 const menuBtnStyle = (c: Theme): React.CSSProperties => ({
   width: 36, height: 36, background: c.bgPaper, border: `2px solid ${c.border}`,
-  color: c.ink, cursor: "pointer", display: "grid", placeItems: "center",
+  color: c.ink, cursor: "pointer", placeItems: "center",
 });
 
 const mobileMenuStyle = (c: Theme): React.CSSProperties => ({
@@ -1404,6 +1605,7 @@ const mobileNavLinkStyle = (c: Theme): React.CSSProperties => ({
   fontSize: 14, fontWeight: 600, color: c.ink, textDecoration: "none",
   letterSpacing: "0.05em", textTransform: "uppercase", padding: "14px 12px",
   border: `2px solid ${c.border}`, background: c.bg,
+  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
 });
 
 const heroStyle = (c: Theme): React.CSSProperties => ({
