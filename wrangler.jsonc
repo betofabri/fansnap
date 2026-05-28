@@ -24,6 +24,14 @@
 	"observability": {
 		"enabled": true
 	},
+	// Keep the workers.dev URL alive as a debugging fallback alongside the custom domain.
+	"workers_dev": true,
+	// Custom URL: betofabri.com/fansnap (subpath on the personal domain).
+	// Pair this with basePath: "/fansnap" in next.config.ts so all Next routes
+	// (including /_next/static/*) line up.
+	"routes": [
+		{ "pattern": "betofabri.com/fansnap*", "zone_name": "betofabri.com" }
+	],
 	// "vars": {
 	// 	"NEXT_PUBLIC_APP_ENV": "production"
 	// }
