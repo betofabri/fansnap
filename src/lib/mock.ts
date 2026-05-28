@@ -46,8 +46,36 @@ export interface ProductDef {
   badge?: "most_popular" | "new_format";
 }
 
-// Picsum.photos returns a deterministic image per `seed/{code}` pair.
-// We use the event code so each event keeps the same placeholder across reloads.
+// MOCKUP PHOTOS — two ways to use real photos from your machine:
+//
+//   1) PER-EVENT cover:  public/mock/events/<event-code-lowercase>.jpg
+//      e.g. public/mock/events/ccxp-26.jpg becomes the CCXP México tile.
+//
+//   2) GALLERY photos:   public/mock/photos/<n>.jpg   for n = 1..12
+//      e.g. public/mock/photos/3.jpg becomes the 3rd photo in the scan
+//      result.
+//
+// Drop ANY format (jpg, png, webp). Keep width <= 1600px so the page
+// stays fast. When a file is missing, the colored fallback tile
+// (event.color) shows through underneath — no broken-image icon.
+//
+// USE_LOCAL_MOCKS toggle: set to true once you've dropped real files.
+// When false (default for the live demo), picsum.photos is used so we
+// always have *something* showing.
+const USE_LOCAL_MOCKS = true;
+
+const eventImg = (code: string, w: number, h: number): string =>
+  USE_LOCAL_MOCKS
+    ? `/fansnap/mock/events/${code.toLowerCase()}.jpg`
+    : pic(code, w, h);
+
+const photoImg = (n: number): string =>
+  USE_LOCAL_MOCKS
+    ? `/fansnap/mock/photos/${n}.jpg`
+    : pic(`photo-${n}`, 800, 1000);
+
+// Picsum.photos = deterministic placeholder per `seed/{code}` pair —
+// used as fallback and for the highlight tiles inside event pages.
 const pic = (seed: string, w: number, h: number) => `https://picsum.photos/seed/fansnap-${seed}/${w}/${h}`;
 
 export const EVENTS: readonly Event[] = [
@@ -62,8 +90,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 24850, photogCount: 12,
     color: "#00B8D4", initials: "CCXP",
     status: "live", featured: true,
-    image: pic("ccxp-26", 1200, 800),
-    imageHero: pic("ccxp-26", 1920, 1080),
+    image: eventImg("CCXP-26", 1200, 800),
+    imageHero: eventImg("CCXP-26", 1920, 1080),
   },
   // ── SECONDARY FEATURED ───────────────────────────────────────────────────
   {
@@ -73,8 +101,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 47283, photogCount: 6,
     color: "#9D4EFF", initials: "BB",
     status: "live", featured: true,
-    image: pic("bb-001", 1200, 800),
-    imageHero: pic("bb-001", 1920, 1080),
+    image: eventImg("BB-001", 1200, 800),
+    imageHero: eventImg("BB-001", 1920, 1080),
   },
   // ── RECENT ───────────────────────────────────────────────────────────────
   {
@@ -84,8 +112,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 38192, photogCount: 5,
     color: "#FF3B6E", initials: "RO",
     status: "recent",
-    image: pic("ro-014", 1200, 800),
-    imageHero: pic("ro-014", 1920, 1080),
+    image: eventImg("RO-014", 1200, 800),
+    imageHero: eventImg("RO-014", 1920, 1080),
   },
   {
     id: 4, code: "MX-MTN", name: "Maratón CDMX 2026",
@@ -94,8 +122,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 124891, photogCount: 18,
     color: "#00B8D4", initials: "MX",
     status: "recent",
-    image: pic("mx-mtn", 1200, 800),
-    imageHero: pic("mx-mtn", 1920, 1080),
+    image: eventImg("MX-MTN", 1200, 800),
+    imageHero: eventImg("MX-MTN", 1920, 1080),
   },
   {
     id: 5, code: "CC-26", name: "Corona Capital",
@@ -104,8 +132,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 89421, photogCount: 14,
     color: "#9D4EFF", initials: "CC",
     status: "recent",
-    image: pic("cc-26", 1200, 800),
-    imageHero: pic("cc-26", 1920, 1080),
+    image: eventImg("CC-26", 1200, 800),
+    imageHero: eventImg("CC-26", 1920, 1080),
   },
   {
     id: 6, code: "FCJ-22", name: "FC Juárez vs Pumas",
@@ -114,8 +142,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 18402, photogCount: 4,
     color: "#FF3B6E", initials: "FCJ",
     status: "recent",
-    image: pic("fcj-22", 1200, 800),
-    imageHero: pic("fcj-22", 1920, 1080),
+    image: eventImg("FCJ-22", 1200, 800),
+    imageHero: eventImg("FCJ-22", 1920, 1080),
   },
   {
     id: 7, code: "AE-08", name: "Anime Expo Guadalajara",
@@ -124,8 +152,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 28394, photogCount: 8,
     color: "#9D4EFF", initials: "AE",
     status: "recent",
-    image: pic("ae-08", 1200, 800),
-    imageHero: pic("ae-08", 1920, 1080),
+    image: eventImg("AE-08", 1200, 800),
+    imageHero: eventImg("AE-08", 1920, 1080),
   },
   // ── UPCOMING ─────────────────────────────────────────────────────────────
   {
@@ -135,8 +163,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 0, photogCount: 16,
     color: "#00B8D4", initials: "EDC",
     status: "upcoming",
-    image: pic("edc-26", 1200, 800),
-    imageHero: pic("edc-26", 1920, 1080),
+    image: eventImg("EDC-26", 1200, 800),
+    imageHero: eventImg("EDC-26", 1920, 1080),
   },
   {
     id: 9, code: "LL-26", name: "Lollapalooza México 2026",
@@ -145,8 +173,8 @@ export const EVENTS: readonly Event[] = [
     photoCount: 0, photogCount: 0,
     color: "#FF3B6E", initials: "LL",
     status: "upcoming",
-    image: pic("ll-26", 1200, 800),
-    imageHero: pic("ll-26", 1920, 1080),
+    image: eventImg("LL-26", 1200, 800),
+    imageHero: eventImg("LL-26", 1920, 1080),
   },
 ];
 
@@ -155,18 +183,18 @@ export const RECENT_EVENTS = EVENTS.filter((e) => e.status === "recent" || e.sta
 export const UPCOMING_EVENTS = EVENTS.filter((e) => e.status === "upcoming");
 
 export const MOCK_PHOTOS: readonly Photo[] = [
-  { id: 1, color: "#9D4EFF", timestamp: "21:34", photographer: "M. Suárez", image: pic("photo-1", 800, 1000) },
-  { id: 2, color: "#FF3B6E", timestamp: "21:42", photographer: "M. Suárez", image: pic("photo-2", 800, 1000) },
-  { id: 3, color: "#00B8D4", timestamp: "21:51", photographer: "C. Reyes",  image: pic("photo-3", 800, 1000) },
-  { id: 4, color: "#9D4EFF", timestamp: "22:03", photographer: "A. Núñez",  image: pic("photo-4", 800, 1000) },
-  { id: 5, color: "#FF3B6E", timestamp: "22:18", photographer: "M. Suárez", image: pic("photo-5", 800, 1000) },
-  { id: 6, color: "#00B8D4", timestamp: "22:27", photographer: "A. Núñez",  image: pic("photo-6", 800, 1000) },
-  { id: 7, color: "#9D4EFF", timestamp: "22:41", photographer: "C. Reyes",  image: pic("photo-7", 800, 1000) },
-  { id: 8, color: "#FF3B6E", timestamp: "22:55", photographer: "M. Suárez", image: pic("photo-8", 800, 1000) },
-  { id: 9, color: "#00B8D4", timestamp: "23:08", photographer: "A. Núñez",  image: pic("photo-9", 800, 1000) },
-  { id: 10, color: "#9D4EFF", timestamp: "23:21", photographer: "M. Suárez", image: pic("photo-10", 800, 1000) },
-  { id: 11, color: "#FF3B6E", timestamp: "23:34", photographer: "C. Reyes",  image: pic("photo-11", 800, 1000) },
-  { id: 12, color: "#00B8D4", timestamp: "23:48", photographer: "A. Núñez",  image: pic("photo-12", 800, 1000) },
+  { id: 1,  color: "#9D4EFF", timestamp: "21:34", photographer: "M. Suárez", image: photoImg(1) },
+  { id: 2,  color: "#FF3B6E", timestamp: "21:42", photographer: "M. Suárez", image: photoImg(2) },
+  { id: 3,  color: "#00B8D4", timestamp: "21:51", photographer: "C. Reyes",  image: photoImg(3) },
+  { id: 4,  color: "#9D4EFF", timestamp: "22:03", photographer: "A. Núñez",  image: photoImg(4) },
+  { id: 5,  color: "#FF3B6E", timestamp: "22:18", photographer: "M. Suárez", image: photoImg(5) },
+  { id: 6,  color: "#00B8D4", timestamp: "22:27", photographer: "A. Núñez",  image: photoImg(6) },
+  { id: 7,  color: "#9D4EFF", timestamp: "22:41", photographer: "C. Reyes",  image: photoImg(7) },
+  { id: 8,  color: "#FF3B6E", timestamp: "22:55", photographer: "M. Suárez", image: photoImg(8) },
+  { id: 9,  color: "#00B8D4", timestamp: "23:08", photographer: "A. Núñez",  image: photoImg(9) },
+  { id: 10, color: "#9D4EFF", timestamp: "23:21", photographer: "M. Suárez", image: photoImg(10) },
+  { id: 11, color: "#FF3B6E", timestamp: "23:34", photographer: "C. Reyes",  image: photoImg(11) },
+  { id: 12, color: "#00B8D4", timestamp: "23:48", photographer: "A. Núñez",  image: photoImg(12) },
 ];
 
 // Prices below are USD; converted to MXN on display via MXN_RATE.
