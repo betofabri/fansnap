@@ -563,10 +563,10 @@ function Hero({
           <h1 style={heroTitleStyle(c)}>
             <span style={heroLineStyle()} className="ff-up">{t.hero_t1}</span>
             <span style={{ ...heroLineStyle(), ...gradTextStyle(c) }} className="ff-up">{t.hero_t2}</span>
-            {/* T3 is the long "we have the proof" line — runs longer in PT/ES
-                than EN, so it gets a slightly smaller font and text-wrap:
-                balance to keep its wrapping clean across languages. */}
-            <span style={heroLineT3Style()} className="ff-up">{t.hero_t3}</span>
+            {/* T3 is the "we have the proof" tagline — styled smaller +
+                regular-weight + nowrap so it stays on one line across all
+                viewports and languages instead of competing with the headline. */}
+            <span style={heroLineT3Style(c)} className="ff-up">{t.hero_t3}</span>
           </h1>
 
           <p style={heroSubStyle(c)} className="ff-up">{t.hero_sub}</p>
@@ -1689,15 +1689,21 @@ const heroLineStyle = (): React.CSSProperties => ({
   textWrap: "balance",
 });
 
-// T3 is shorter on EN ("WE HAVE THE PROOF.") but longer on PT ("A GENTE TEM A
-// PROVA.") and ES ("TENEMOS LA PRUEBA.") — at full hero size it overflowed
-// the 1.4fr column and wrapped ugly. ~65% of T1/T2 size keeps it on one line
-// at desktop widths while still feeling like part of the title block.
-const heroLineT3Style = (): React.CSSProperties => ({
+// T3 is the "we have the proof" follow-up after the big T1+T2 punch.
+// Across languages it varies from 16 chars (EN "WE HAVE THE PROOF.") to 20
+// chars (PT "A GENTE TEM A PROVA."). At full hero size it kept overflowing
+// and wrapping ugly. Re-styled as a smaller subhead — ~35% of T1/T2 size +
+// regular-weight + letter-spacing — so it always fits on one line and reads
+// as a tagline instead of competing with the headline.
+const heroLineT3Style = (c: Theme): React.CSSProperties => ({
   display: "block", opacity: 0, animation: "fadeUp 0.7s forwards",
-  fontSize: "clamp(28px, 5.2vw, 76px)",
-  lineHeight: 1.0,
-  textWrap: "balance",
+  fontSize: "clamp(15px, 2.4vw, 32px)",
+  lineHeight: 1.2,
+  fontWeight: 500,
+  letterSpacing: "0.04em",
+  color: c.inkSoft,
+  marginTop: "clamp(10px, 1.5vw, 20px)",
+  whiteSpace: "nowrap",
 });
 
 const heroSubStyle = (c: Theme): React.CSSProperties => ({
