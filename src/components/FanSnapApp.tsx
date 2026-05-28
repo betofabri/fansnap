@@ -1042,6 +1042,7 @@ function SelfieStep({
 }) {
   void event;
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [showWebcam, setShowWebcam] = useState(false);
 
   // Warm up face-api models in the background while the user is fiddling
   // with the selfie + consent checkbox, so the scanning step doesn't have
@@ -1094,29 +1095,50 @@ function SelfieStep({
             <Upload size={14} strokeWidth={2.5} />
             <span>{t.upload_selfie}</span>
           </button>
-          <button onClick={() => fileRef.current?.click()} style={ctaSecondaryStyle(c)} className="ff-cta-sec">
+          <button onClick={() => setShowWebcam(true)} style={ctaSecondaryStyle(c)} className="ff-cta-sec">
             <Camera size={14} strokeWidth={2.5} />
             <span>{t.take_selfie}</span>
           </button>
         </div>
 
+        {/* Consent panel: the whole label toggles consent on click (any part).
+            The privacy link gets stopPropagation + preventDefault so clicking
+            it doesn't toggle consent or navigate away. */}
         <div style={{ background: c.bgPaper, border: `2px solid ${c.border}`, marginBottom: 16 }}>
           <div style={{ padding: "10px 14px", borderBottom: `2px solid ${c.border}`, background: c.bgAlt, display: "flex", alignItems: "center", gap: 8 }}>
             <Eye size={14} strokeWidth={2.5} style={{ color: c.cyan }} />
             <span style={{ fontSize: 10, fontWeight: 700, color: c.cyan, letterSpacing: "0.18em" }}>{t.consent_title}</span>
           </div>
-          <label style={{ display: "flex", gap: 12, padding: 14, cursor: "pointer" }}>
-            <div onClick={() => setConsent(!consent)} style={{
+          <label
+            htmlFor="fs-consent"
+            style={{ display: "flex", gap: 12, padding: 14, cursor: "pointer" }}
+          >
+            {/* Real checkbox, kept off-screen for a11y. The label's htmlFor +
+                input's id mean clicking ANY part of the label toggles it. */}
+            <input
+              id="fs-consent"
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+            />
+            <div style={{
               flexShrink: 0, width: 22, height: 22,
               border: `2px solid ${consent ? c.purple : c.border}`,
               background: consent ? c.purple : "transparent",
-              display: "grid", placeItems: "center", cursor: "pointer", transition: "all 0.15s", marginTop: 2,
+              display: "grid", placeItems: "center", transition: "all 0.15s", marginTop: 2,
             }}>
               {consent && <Check size={12} strokeWidth={3} style={{ color: "#fff" }} />}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 12, lineHeight: 1.5, color: c.inkSoft, marginBottom: 8 }}>{t.consent_text}</div>
-              <a href="#" style={{ fontSize: 11, color: c.purple, textDecoration: "underline", fontWeight: 600 }}>{t.privacy_link} →</a>
+              <a
+                href="#"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                style={{ fontSize: 11, color: c.purple, textDecoration: "underline", fontWeight: 600 }}
+              >
+                {t.privacy_link} →
+              </a>
             </div>
           </label>
         </div>
@@ -1136,7 +1158,200 @@ function SelfieStep({
           <ArrowRight size={16} strokeWidth={3} />
         </button>
       </div>
+
+      {showWebcam && (
+        <WebcamCapture
+          c={c} t={t}
+          onCapture={(dataUrl) => { setSelfie(dataUrl); setShowWebcam(false); }}
+          onCancel={() => setShowWebcam(false)}
+          onFallbackUpload={() => { setShowWebcam(false); fileRef.current?.click(); }}
+        />
+      )}
     </section>
+  );
+}
+
+// ============================================================
+// WEBCAM CAPTURE MODAL
+// ============================================================
+function WebcamCapture({
+  c, t, onCapture, onCancel, onFallbackUpload,
+}: {
+  c: Theme; t: Copy;
+  onCapture: (dataUrl: string) => void;
+  onCancel: () => void;
+  onFallbackUpload: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [captured, setCaptured] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("getUserMedia not available");
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((tr) => tr.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+          setReady(true);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Camera blocked");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((tr) => tr.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
+  const capture = () => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    // Mirror so the captured photo matches the (mirrored) live preview
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setCaptured(canvas.toDataURL("image/jpeg", 0.92));
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(10,10,15,0.92)",
+      display: "grid", placeItems: "center",
+      padding: 16,
+    }}>
+      <div style={{
+        position: "relative",
+        background: c.bg,
+        border: `3px solid ${c.purple}`,
+        boxShadow: `8px 8px 0 0 ${c.purple}`,
+        maxWidth: 720, width: "100%",
+        padding: 20,
+      }}>
+        <CornerBrackets color={c.cyan} />
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 11, color: c.cyan, letterSpacing: "0.15em", fontWeight: 700 }}>
+            {captured ? t.camera_use : (error ? "ERROR" : (ready ? t.camera_position : t.camera_loading))}
+          </div>
+          <button onClick={onCancel} style={{
+            background: "transparent", border: "none", color: c.ink, cursor: "pointer", padding: 4,
+          }}>
+            <X size={20} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        <div style={{
+          position: "relative", width: "100%", aspectRatio: "1/1",
+          background: "#000", border: `2px solid ${c.border}`, overflow: "hidden",
+          marginBottom: 14,
+        }}>
+          {error ? (
+            <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
+              <div>
+                <Camera size={48} strokeWidth={1.5} style={{ color: c.pink, marginBottom: 12 }} />
+                <div style={{ fontSize: 13, color: c.inkSoft, lineHeight: 1.5, marginBottom: 16 }}>
+                  {t.camera_blocked}
+                </div>
+                <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 10, color: c.inkMute, marginBottom: 16 }}>
+                  {error}
+                </div>
+              </div>
+            </div>
+          ) : captured ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={captured} alt="captured selfie" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <>
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video
+                ref={videoRef}
+                autoPlay playsInline muted
+                style={{
+                  width: "100%", height: "100%", objectFit: "cover",
+                  transform: "scaleX(-1)", // mirror like a mirror
+                }}
+              />
+              {/* Face-position guide overlay */}
+              <div style={{
+                position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)",
+                width: "55%", aspectRatio: "3/4",
+                border: `2px dashed ${c.cyan}`, borderRadius: "45% 45% 40% 40%",
+                pointerEvents: "none",
+              }} />
+            </>
+          )}
+        </div>
+
+        {/* Action row */}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {error ? (
+            <>
+              <button onClick={onFallbackUpload} style={{ ...ctaPrimaryStyle(c), flex: 1, justifyContent: "center" }} className="ff-cta-primary">
+                <Upload size={16} strokeWidth={2.5} />
+                <span>{t.upload_selfie}</span>
+              </button>
+            </>
+          ) : captured ? (
+            <>
+              <button onClick={() => setCaptured(null)} style={{ ...ctaSecondaryStyle(c), flex: 1, justifyContent: "center" }} className="ff-cta-sec">
+                <Camera size={14} strokeWidth={2.5} />
+                <span>{t.camera_retake}</span>
+              </button>
+              <button onClick={() => onCapture(captured)} style={{ ...ctaPrimaryStyle(c), flex: 1, justifyContent: "center" }} className="ff-cta-primary">
+                <Check size={16} strokeWidth={3} />
+                <span>{t.camera_use}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={onCancel} style={{ ...ctaSecondaryStyle(c), flex: 1, justifyContent: "center" }} className="ff-cta-sec">
+                <span>{t.camera_cancel}</span>
+              </button>
+              <button
+                onClick={capture}
+                disabled={!ready}
+                style={{
+                  ...ctaPrimaryStyle(c), flex: 1, justifyContent: "center",
+                  opacity: ready ? 1 : 0.4,
+                  cursor: ready ? "pointer" : "not-allowed",
+                }}
+                className={ready ? "ff-cta-primary" : ""}
+              >
+                <Camera size={16} strokeWidth={2.5} />
+                <span>{t.camera_capture}</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

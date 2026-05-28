@@ -71,6 +71,13 @@ export interface Copy {
   selfie_sub: string;
   upload_selfie: string;
   take_selfie: string;
+  camera_position: string;
+  camera_capture: string;
+  camera_retake: string;
+  camera_use: string;
+  camera_cancel: string;
+  camera_blocked: string;
+  camera_loading: string;
   consent_title: string;
   consent_text: string;
   privacy_link: string;
@@ -163,6 +170,13 @@ export const I18N: Record<Lang, Copy> = {
     selfie_title: "TAKE A SELFIE",
     selfie_sub: "Frontal photo, good light. That's all we need.",
     upload_selfie: "UPLOAD SELFIE", take_selfie: "USE CAMERA",
+    camera_position: "Center your face in the frame",
+    camera_capture: "CAPTURE",
+    camera_retake: "RETAKE",
+    camera_use: "USE THIS SELFIE",
+    camera_cancel: "CANCEL",
+    camera_blocked: "Camera access blocked. Please use upload instead, or check browser settings.",
+    camera_loading: "Starting camera…",
     consent_title: "BIOMETRIC CONSENT",
     consent_text: "I authorize FanSnap to process my selfie as biometric data for the sole purpose of finding my photos in this event. Data is encrypted, never sold, and may be deleted on request.",
     privacy_link: "Read full privacy notice",
@@ -239,6 +253,13 @@ export const I18N: Record<Lang, Copy> = {
     selfie_title: "TIRA UMA SELFIE",
     selfie_sub: "Foto frontal, luz boa. Só isso.",
     upload_selfie: "SUBIR SELFIE", take_selfie: "USAR CÂMERA",
+    camera_position: "Centralize seu rosto no quadro",
+    camera_capture: "CAPTURAR",
+    camera_retake: "REFAZER",
+    camera_use: "USAR ESSA SELFIE",
+    camera_cancel: "CANCELAR",
+    camera_blocked: "Acesso à câmera bloqueado. Use o upload, ou libere nas permissões do browser.",
+    camera_loading: "Ligando câmera…",
     consent_title: "CONSENTIMENTO BIOMÉTRICO",
     consent_text: "Autorizo a FanSnap a processar minha selfie como dado biométrico com a finalidade exclusiva de encontrar minhas fotos neste evento. Os dados são criptografados, nunca vendidos, e podem ser excluídos a pedido.",
     privacy_link: "Ler aviso completo de privacidade",
@@ -315,6 +336,13 @@ export const I18N: Record<Lang, Copy> = {
     selfie_title: "TÓMATE UNA SELFIE",
     selfie_sub: "Foto frontal, buena luz. Eso es todo.",
     upload_selfie: "SUBIR SELFIE", take_selfie: "USAR CÁMARA",
+    camera_position: "Centra tu rostro en el marco",
+    camera_capture: "CAPTURAR",
+    camera_retake: "REPETIR",
+    camera_use: "USAR ESTA SELFIE",
+    camera_cancel: "CANCELAR",
+    camera_blocked: "Acceso a la cámara bloqueado. Usa la opción de subir, o revisa los permisos del navegador.",
+    camera_loading: "Iniciando cámara…",
     consent_title: "CONSENTIMIENTO BIOMÉTRICO",
     consent_text: "Autorizo a FanSnap a procesar mi selfie como dato biométrico con la única finalidad de encontrar mis fotos en este evento. Los datos están encriptados, nunca se venden y pueden eliminarse a solicitud.",
     privacy_link: "Leer aviso completo de privacidad",
