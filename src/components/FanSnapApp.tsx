@@ -11,7 +11,7 @@
  * self-hosted SVG variants when production assets are ready.
  */
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, Fragment } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, Fragment } from "react";
 import {
   Search, Music, Gamepad2, Trophy, PartyPopper, ChevronLeft, Calendar, MapPin, Camera,
   ArrowRight, Menu, Scan, Grid3x3, X, Upload, Check, Eye, Zap, Sun, Moon, ShoppingBag,
@@ -24,13 +24,11 @@ import {
   PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
 } from "@/lib/mock";
 
-// Logo lives at /public/logo.svg (self-hosted SVG approximation of the
-// hand-drawn wordmark). Replace with the hi-res PNG/SVG variants per brief §7
-// when the production assets are ready (drop into public/, swap LOGO_SRC).
-//
-// Plain <img> doesn't auto-prefix Next's basePath the way next/image would,
-// so we prefix manually. basePath = "/fansnap" in both dev and prod.
-const LOGO_SRC = "/fansnap/logo.svg";
+// Logo is rendered inline as SVG (not an <img>) so it can inherit the
+// Space Grotesk font we already load via next/font + the brand gradient.
+// Horizontal wordmark — much more readable at header sizes than the
+// skull-shape vertical lockup (which left the inner text illegible at 44px).
+// public/logo.svg still ships as a static-asset variant for og-image / favicon.
 
 type Page = "home" | "event" | "selfie" | "scanning" | "gallery" | "photo";
 type CartItem = {
@@ -207,25 +205,65 @@ export default function FanSnapApp() {
 // LOGO
 // ============================================================
 function FanSnapLogo({ size = "md", theme: _theme = "dark" }: { size?: "xs" | "sm" | "md" | "lg"; theme?: ThemeName }) {
+  void _theme; // gradient handles both themes; no invert trick needed
   const heights = { xs: 28, sm: 36, md: 44, lg: 72 };
-  // SVG uses the brand gradient internally — it reads cleanly on both light
-  // and dark backgrounds, so no theme-based filter needed (unlike the old
-  // Imgur PNG that required invert + hue-rotate).
-  void _theme;
-  // Next.js basePath is auto-prefixed on /public assets by next/image, but
-  // we're using a plain <img> here so the runtime serves it as-is. Cloudflare
-  // routes /fansnap/logo.svg → the Worker's asset bundle.
+  const h = heights[size];
+
+  // useId gives each instance a unique gradient id so multiple logos on the
+  // same page (header + footer) don't collide on `url(#...)` references.
+  const reactId = useId().replace(/:/g, "");
+  const gid = `fsg-${reactId}`;
+
+  // viewBox 380×80 → ~4.75:1 aspect ratio. At header md=44px, this is ~209px
+  // wide — comfortable for the wordmark + the two "eye" circles between
+  // "fan" and "Snap" that preserve the skull personality.
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={LOGO_SRC}
-      alt="FanSnap"
-      style={{
-        height: `${heights[size]}px`,
-        width: "auto",
-        display: "block",
-      }}
-    />
+    <svg
+      viewBox="0 0 380 80"
+      style={{ height: h, width: "auto", display: "block", flexShrink: 0 }}
+      role="img"
+      aria-label="FanSnap"
+    >
+      <defs>
+        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="80%">
+          <stop offset="0%" stopColor="#C13EFF" />
+          <stop offset="55%" stopColor="#7B4EFF" />
+          <stop offset="100%" stopColor="#00B8FF" />
+        </linearGradient>
+      </defs>
+
+      {/* "fan" */}
+      <text
+        x="0"
+        y="62"
+        fontFamily="var(--font-grotesk), system-ui, sans-serif"
+        fontWeight="700"
+        fontSize="64"
+        fill={`url(#${gid})`}
+        letterSpacing="-3"
+      >
+        fan
+      </text>
+
+      {/* Two eye circles — pulled from the skull motif */}
+      <circle cx="138" cy="36" r="11" stroke={`url(#${gid})`} strokeWidth="3" fill="none" />
+      <circle cx="138" cy="34" r="4.5" fill={`url(#${gid})`} />
+      <circle cx="170" cy="36" r="11" stroke={`url(#${gid})`} strokeWidth="3" fill="none" />
+      <circle cx="170" cy="34" r="4.5" fill={`url(#${gid})`} />
+
+      {/* "Snap" */}
+      <text
+        x="195"
+        y="62"
+        fontFamily="var(--font-grotesk), system-ui, sans-serif"
+        fontWeight="700"
+        fontSize="64"
+        fill={`url(#${gid})`}
+        letterSpacing="-3"
+      >
+        Snap
+      </text>
+    </svg>
   );
 }
 
@@ -525,7 +563,10 @@ function Hero({
           <h1 style={heroTitleStyle(c)}>
             <span style={heroLineStyle()} className="ff-up">{t.hero_t1}</span>
             <span style={{ ...heroLineStyle(), ...gradTextStyle(c) }} className="ff-up">{t.hero_t2}</span>
-            <span style={heroLineStyle()} className="ff-up">{t.hero_t3}</span>
+            {/* T3 is the long "we have the proof" line — runs longer in PT/ES
+                than EN, so it gets a slightly smaller font and text-wrap:
+                balance to keep its wrapping clean across languages. */}
+            <span style={heroLineT3Style()} className="ff-up">{t.hero_t3}</span>
           </h1>
 
           <p style={heroSubStyle(c)} className="ff-up">{t.hero_sub}</p>
@@ -1638,11 +1679,26 @@ const heroInnerStyle = (): React.CSSProperties => ({
 const heroTitleStyle = (c: Theme): React.CSSProperties => ({
   fontFamily: "var(--font-grotesk), sans-serif",
   fontSize: "clamp(44px, 8vw, 116px)", fontWeight: 700,
-  lineHeight: 0.92, letterSpacing: "-0.04em",
+  lineHeight: 0.95, letterSpacing: "-0.04em",
   margin: "0 0 clamp(20px, 3vw, 32px) 0", textTransform: "uppercase", color: c.ink,
+  textWrap: "balance",
 });
 
-const heroLineStyle = (): React.CSSProperties => ({ display: "block", opacity: 0, animation: "fadeUp 0.7s forwards" });
+const heroLineStyle = (): React.CSSProperties => ({
+  display: "block", opacity: 0, animation: "fadeUp 0.7s forwards",
+  textWrap: "balance",
+});
+
+// T3 is shorter on EN ("WE HAVE THE PROOF.") but longer on PT ("A GENTE TEM A
+// PROVA.") and ES ("TENEMOS LA PRUEBA.") — at full hero size it overflowed
+// the 1.4fr column and wrapped ugly. ~65% of T1/T2 size keeps it on one line
+// at desktop widths while still feeling like part of the title block.
+const heroLineT3Style = (): React.CSSProperties => ({
+  display: "block", opacity: 0, animation: "fadeUp 0.7s forwards",
+  fontSize: "clamp(28px, 5.2vw, 76px)",
+  lineHeight: 1.0,
+  textWrap: "balance",
+});
 
 const heroSubStyle = (c: Theme): React.CSSProperties => ({
   fontSize: "clamp(14px, 1.6vw, 17px)", lineHeight: 1.5, color: c.inkSoft,
