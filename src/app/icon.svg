@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!--
+    FanSnap favicon — two-eye logomark.
+    Distinctive at 16×16 (browser tab) and scales cleanly to apple-touch.
+    Next.js 16 auto-routes /app/icon.svg → <link rel="icon">.
+  -->
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C13EFF"/>
+      <stop offset="55%" stop-color="#7B4EFF"/>
+      <stop offset="100%" stop-color="#00B8FF"/>
+    </linearGradient>
+  </defs>
+  <!-- Dark rounded square — pops on light browser tabs -->
+  <rect width="64" height="64" rx="14" fill="#0A0A0F"/>
+  <!-- Left eye -->
+  <circle cx="22" cy="33" r="11" fill="none" stroke="url(#g)" stroke-width="3.5"/>
+  <circle cx="22" cy="31" r="4" fill="url(#g)"/>
+  <!-- Right eye -->
+  <circle cx="42" cy="33" r="11" fill="none" stroke="url(#g)" stroke-width="3.5"/>
+  <circle cx="42" cy="31" r="4" fill="url(#g)"/>
+</svg>

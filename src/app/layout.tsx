@@ -17,6 +17,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://betofabri.com"),
   title: "FanSnap — You were there. We have the proof.",
   description:
     "Facial-recognition photo platform for live events. Find yourself in thousands of photos from concerts, conventions and the moments that mattered.",
@@ -25,9 +26,16 @@ export const metadata: Metadata = {
   keywords: ["FanSnap", "live events", "facial recognition", "concert photos", "CCXP", "Ocesa"],
   openGraph: {
     title: "FanSnap — You were there. We have the proof.",
-    description: "The memory layer of live entertainment.",
+    description: "Facial-recognition photo platform for live events. Powered by O&CO.",
     type: "website",
     locale: "en_US",
+    url: "https://betofabri.com/fansnap",
+    siteName: "FanSnap",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FanSnap — You were there. We have the proof.",
+    description: "Facial-recognition photo platform for live events. Powered by O&CO.",
   },
 };
 
