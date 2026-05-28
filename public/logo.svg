@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FanSnap logo — SVG approximation of the hand-drawn wordmark.
+  Skull silhouette traced from the original PNG, with "fan" / "snap"
+  rendered in Space Grotesk + gradient stroke matching the brand
+  (purple #9D4EFF → cyan #00B8FF).
+
+  Looks clean, scales perfect, ~2KB. When the hi-res PNG/SVG variants
+  arrive per brief §7 TODO, swap this file for them.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 320" fill="none">
+  <defs>
+    <linearGradient id="fsg" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#C13EFF"/>
+      <stop offset="50%" stop-color="#7B4EFF"/>
+      <stop offset="100%" stop-color="#00B8FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Skull silhouette — rounded crown, smooth jawline, slight cheekbone curve. -->
+  <path d="
+    M 120 18
+    Q 70 18, 56 60
+    Q 50 90, 56 130
+    Q 58 175, 70 220
+    Q 80 258, 102 282
+    Q 112 292, 120 296
+    Q 128 292, 138 282
+    Q 160 258, 170 220
+    Q 182 175, 184 130
+    Q 190 90, 184 60
+    Q 170 18, 120 18
+    Z
+  " stroke="url(#fsg)" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- "fan" lettering at the top -->
+  <text x="120" y="98" text-anchor="middle"
+        font-family="'Space Grotesk', system-ui, sans-serif"
+        font-weight="700" font-size="44"
+        fill="url(#fsg)" letter-spacing="-2.5">fan</text>
+
+  <!-- Left eye -->
+  <circle cx="92" cy="160" r="17" stroke="url(#fsg)" stroke-width="3.5"/>
+  <circle cx="92" cy="158" r="6.5" fill="url(#fsg)"/>
+
+  <!-- Right eye -->
+  <circle cx="148" cy="160" r="17" stroke="url(#fsg)" stroke-width="3.5"/>
+  <circle cx="148" cy="158" r="6.5" fill="url(#fsg)"/>
+
+  <!-- "snap" lettering at the bottom -->
+  <text x="120" y="232" text-anchor="middle"
+        font-family="'Space Grotesk', system-ui, sans-serif"
+        font-weight="700" font-size="44"
+        fill="url(#fsg)" letter-spacing="-2.5">snap</text>
+</svg>

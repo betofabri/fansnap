@@ -24,8 +24,13 @@ import {
   PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
 } from "@/lib/mock";
 
-// --- temporary logo (replace per brief §7 with self-hosted SVG set)
-const LOGO_URL = "https://i.imgur.com/mFHK3If_d.webp?maxwidth=760&fidelity=grand";
+// Logo lives at /public/logo.svg (self-hosted SVG approximation of the
+// hand-drawn wordmark). Replace with the hi-res PNG/SVG variants per brief §7
+// when the production assets are ready (drop into public/, swap LOGO_SRC).
+//
+// Plain <img> doesn't auto-prefix Next's basePath the way next/image would,
+// so we prefix manually. basePath = "/fansnap" in both dev and prod.
+const LOGO_SRC = "/fansnap/logo.svg";
 
 type Page = "home" | "event" | "selfie" | "scanning" | "gallery" | "photo";
 type CartItem = {
@@ -201,19 +206,24 @@ export default function FanSnapApp() {
 // ============================================================
 // LOGO
 // ============================================================
-function FanSnapLogo({ size = "md", theme = "dark" }: { size?: "xs" | "sm" | "md" | "lg"; theme?: ThemeName }) {
+function FanSnapLogo({ size = "md", theme: _theme = "dark" }: { size?: "xs" | "sm" | "md" | "lg"; theme?: ThemeName }) {
   const heights = { xs: 28, sm: 36, md: 44, lg: 72 };
+  // SVG uses the brand gradient internally — it reads cleanly on both light
+  // and dark backgrounds, so no theme-based filter needed (unlike the old
+  // Imgur PNG that required invert + hue-rotate).
+  void _theme;
+  // Next.js basePath is auto-prefixed on /public assets by next/image, but
+  // we're using a plain <img> here so the runtime serves it as-is. Cloudflare
+  // routes /fansnap/logo.svg → the Worker's asset bundle.
   return (
-    // Temporary logo (FanSnap brief §7 — TODO: self-host hi-res SVG set).
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={LOGO_URL}
+      src={LOGO_SRC}
       alt="FanSnap"
       style={{
         height: `${heights[size]}px`,
         width: "auto",
         display: "block",
-        filter: theme === "dark" ? "invert(1) hue-rotate(180deg)" : "none",
       }}
     />
   );
