@@ -23,6 +23,7 @@ import {
   EVENTS, FEATURED_EVENTS, RECENT_EVENTS, UPCOMING_EVENTS,
   getPhotosForEvent, PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
 } from "@/lib/mock";
+import { scanSelfie, prefetchFaceModels, type ScanResult } from "@/lib/face-recognition";
 
 // Logo is rendered inline as SVG (not an <img>) so it can inherit the
 // Space Grotesk font we already load via next/font + the brand gradient.
@@ -40,6 +41,18 @@ type Category = "all" | "music" | "conventions" | "sports" | "parties";
 const productIcon = {
   download: Download, image: ImageIcon, shirt: Shirt, coffee: Coffee, frame: Frame,
 } as const;
+
+/** Spread N gallery timestamps across an evening so the photo grid feels
+ *  like a real coverage timeline (21:30 - 23:55). */
+function photoTimestampForGallery(index: number): string {
+  const startMin = 21 * 60 + 30;
+  const endMin = 23 * 60 + 55;
+  const step = Math.max(2, Math.floor((endMin - startMin) / 12));
+  const total = startMin + index * step;
+  const h = Math.min(23, Math.floor(total / 60));
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 /** Pick 6 highlight images for an event page — sample evenly across the
  *  event's photo set so the curated grid feels visually diverse instead of
@@ -126,6 +139,7 @@ export default function FanSnapApp() {
   const [search, setSearch] = useState("");
   const [selfie, setSelfie] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [cart, setCart] = useState<CartItem[]>([]);
   const [mobileNav, setMobileNav] = useState(false);
@@ -148,6 +162,7 @@ export default function FanSnapApp() {
     setSelected(new Set());
     setSelfie(null);
     setConsent(false);
+    setScanResult(null);
     goTo("home");
   };
 
@@ -196,12 +211,15 @@ export default function FanSnapApp() {
           onBack={() => goTo("event")}
         />
       )}
-      {page === "scanning" && activeEvent && (
-        <Scanning c={c} t={t} event={activeEvent} onDone={() => goTo("gallery")} />
+      {page === "scanning" && activeEvent && selfie && (
+        <Scanning
+          c={c} t={t} event={activeEvent} selfieDataUrl={selfie}
+          onDone={(r) => { setScanResult(r); goTo("gallery"); }}
+        />
       )}
       {page === "gallery" && activeEvent && (
         <Gallery
-          c={c} t={t} event={activeEvent}
+          c={c} t={t} event={activeEvent} scanResult={scanResult}
           selected={selected} setSelected={setSelected}
           onPick={(p) => { setActivePhoto(p); goTo("photo"); }}
           onBack={() => goTo("event")}
@@ -995,6 +1013,11 @@ function SelfieStep({
   void event;
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  // Warm up face-api models in the background while the user is fiddling
+  // with the selfie + consent checkbox, so the scanning step doesn't have
+  // to wait for a cold ~6.7 MB download.
+  useEffect(() => { void prefetchFaceModels(); }, []);
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -1090,34 +1113,65 @@ function SelfieStep({
 // ============================================================
 // SCANNING
 // ============================================================
-function Scanning({ c, t, event, onDone }: { c: Theme; t: Copy; event: FsEvent; onDone: () => void }) {
+function Scanning({
+  c, t, event, selfieDataUrl, onDone,
+}: {
+  c: Theme; t: Copy; event: FsEvent;
+  selfieDataUrl: string;
+  onDone: (result: ScanResult) => void;
+}) {
   const [progress, setProgress] = useState(0);
   const [count, setCount] = useState(0);
   const [phase, setPhase] = useState(0);
+  const minDurationMs = 3000; // keep the radar onscreen long enough to read
 
-  const totalPhotos = event.photoCount > 0 ? event.photoCount : 47283;
-
-  // Fatia 1: cosmetic timer. Fatia 3 swaps this for POST /api/scan +
-  // server-side Rekognition (or InsightFace at scale).
+  // 1) Real face-match pipeline — runs concurrently with the radar animation.
+  // 2) Cosmetic counter / progress bar / phase label — purely visual.
   useEffect(() => {
-    const dur = 4500;
-    const start = Date.now();
+    let cancelled = false;
+    const animStart = Date.now();
+    const totalPhotos = event.photoCount > 0 ? event.photoCount : 47283;
+
     const tick = setInterval(() => {
-      const e = Date.now() - start;
-      const p = Math.min(e / dur, 1);
+      if (cancelled) return;
+      const e = Date.now() - animStart;
+      const p = Math.min(e / minDurationMs, 1);
       setProgress(p);
       setCount(Math.floor(totalPhotos * p));
       if (p < 0.4) setPhase(0);
       else if (p < 0.85) setPhase(1);
       else setPhase(2);
-      if (p >= 1) {
-        clearInterval(tick);
-        // give the bar a beat to settle, then continue
-        setTimeout(onDone, 500);
-      }
     }, 30);
-    return () => clearInterval(tick);
-  }, [onDone, totalPhotos]);
+
+    (async () => {
+      try {
+        // Load the selfie into an off-DOM <img> so face-api can read it.
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("selfie failed to decode"));
+          img.src = selfieDataUrl;
+        });
+
+        const result = await scanSelfie(img, { eventCode: event.code });
+        if (cancelled) return;
+
+        // Keep the radar onscreen for at least minDurationMs so the
+        // "FACIAL SCAN" moment lands visually even on fast machines.
+        const elapsed = Date.now() - animStart;
+        const wait = Math.max(0, minDurationMs - elapsed + 300);
+        setTimeout(() => { if (!cancelled) onDone(result); }, wait);
+      } catch (err) {
+        console.error("[scan] failed:", err);
+        if (!cancelled) {
+          onDone({ matches: [], photosScanned: 0, facesScanned: 0, selfieHasFace: false });
+        }
+      }
+    })();
+
+    return () => { cancelled = true; clearInterval(tick); };
+  }, [event.code, event.photoCount, onDone, selfieDataUrl]);
 
   const phases = [t.scan_indexing, t.scan_matching, t.scan_finalizing];
 
@@ -1174,15 +1228,33 @@ function Scanning({ c, t, event, onDone }: { c: Theme; t: Copy; event: FsEvent; 
 // GALLERY
 // ============================================================
 function Gallery({
-  c, t, event, selected, setSelected, onPick, onBack,
+  c, t, event, scanResult, selected, setSelected, onPick, onBack,
 }: {
   c: Theme; t: Copy; event: FsEvent;
+  scanResult: ScanResult | null;
   selected: Set<number>; setSelected: (s: Set<number>) => void;
   onPick: (p: Photo) => void; onBack: () => void;
 }) {
-  // Photos served from this event's folder (public/mock/events/<code>/),
-  // falling back to MOCK_PHOTOS for events that have no dropped photos yet.
-  const photos = getPhotosForEvent(event.code);
+  // Convert scan matches → Photo[] so the existing tile UI keeps working.
+  // - selfieHasFace === false → couldn't detect a face in the selfie, fall
+  //   back to the curated event photos and show a friendly note.
+  // - matches.length === 0 → real scan ran but found nothing, also fall
+  //   back so the demo never ends on an empty page.
+  // - otherwise → show the matched photos sorted by similarity (best first).
+  const fallback = getPhotosForEvent(event.code);
+  const matchPhotos: Photo[] = scanResult?.matches.map((m, i) => {
+    const credit = ["M. Suárez", "C. Reyes", "A. Núñez", "R. Castillo", "L. Fernández"][i % 5];
+    return {
+      id: i + 1,
+      color: ["#9D4EFF", "#FF3B6E", "#00B8D4"][i % 3],
+      timestamp: photoTimestampForGallery(i),
+      photographer: credit,
+      image: m.url,
+    };
+  }) ?? [];
+
+  const hasRealMatches = scanResult?.selfieHasFace && matchPhotos.length > 0;
+  const photos = hasRealMatches ? matchPhotos : fallback;
 
   const toggle = (id: number) => {
     const next = new Set(selected);
@@ -1201,12 +1273,37 @@ function Gallery({
 
         <div style={kickerStyle(c)}>
           <span style={kickerDotStyle(c)} />
-          <span style={{ color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>{t.gallery_kicker}</span>
+          <span style={{ color: hasRealMatches ? c.cyan : c.pink, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>
+            {hasRealMatches
+              ? t.gallery_kicker
+              : scanResult?.selfieHasFace === false
+                ? "DEMO · NO FACE DETECTED"
+                : "DEMO · 0 MATCHES"}
+          </span>
         </div>
 
         <h1 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(40px, 8vw, 96px)", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 0.95, margin: "0 0 24px 0", textTransform: "uppercase", color: c.ink }}>
-          {t.gallery_title}
+          {hasRealMatches ? t.gallery_title : "SHOWING ALL"}
         </h1>
+
+        {/* Demo-mode disclosure: when the real scan didn't return matches we
+            show the curated event photos so the demo never dead-ends, but
+            we're honest about it. */}
+        {!hasRealMatches && scanResult && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "12px 14px", marginBottom: 16,
+            background: c.bgPaper, border: `2px dashed ${c.pink}`,
+            fontSize: 12, color: c.inkSoft, lineHeight: 1.4,
+          }}>
+            <Sparkles size={16} strokeWidth={2} style={{ color: c.pink, flexShrink: 0 }} />
+            <span>
+              {scanResult.selfieHasFace
+                ? `Scanned ${scanResult.photosScanned} photos · ${scanResult.facesScanned} faces · 0 matches in this event. Showing the full coverage as a preview.`
+                : `Couldn't detect a face in the selfie — try one with better lighting / clearer angle. Showing the full coverage so you can still browse the event.`}
+            </span>
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24, border: `2px solid ${c.border}` }}>
           <div style={{ padding: 16, borderRight: `2px solid ${c.border}`, background: c.bgPaper }}>
