@@ -1086,6 +1086,34 @@ function EventPage({
         </div>
       </section>
 
+      {/* PRIMARY ACTION FIRST — the whole reason the fan landed here is to
+          start the facial scan. Pull this above the highlights so it's the
+          first thing they see after the hero + stats. */}
+      <section style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }}>
+        <div style={{
+          position: "relative",
+          maxWidth: 900, margin: "clamp(40px, 5vw, 60px) auto",
+          padding: "clamp(36px, 5vw, 56px) clamp(20px, 3vw, 32px)",
+          background: c.bgPaper, border: `3px solid ${c.purple}`,
+          textAlign: "center", boxShadow: `0 0 40px ${c.purple}25`,
+        }}>
+          <CornerBrackets color={c.purple} />
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", border: `2px solid ${c.cyan}`, color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", marginBottom: 20, background: c.bg }}>
+            <Scan size={12} strokeWidth={2.5} />
+            <span>{t.scan_pill}</span>
+          </div>
+          <h3 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(24px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 12px 0", textTransform: "uppercase", color: c.ink }}>{t.cta_start}</h3>
+          <p style={{ fontSize: 14, color: c.inkSoft, marginBottom: 24, maxWidth: 440, marginLeft: "auto", marginRight: "auto", lineHeight: 1.5 }}>{t.cta_sub}</p>
+          <button onClick={onStart} style={ctaPrimaryStyle(c)} className="ff-cta-primary">
+            <Scan size={16} strokeWidth={2.5} />
+            <span>{t.cta_start}</span>
+            <ArrowRight size={16} strokeWidth={3} />
+          </button>
+        </div>
+      </section>
+
+      {/* Highlights come after the CTA — a preview of what's waiting once
+          the scan runs, not a barrier in front of the action. */}
       {event.photoCount > 0 && (
         <section style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", padding: "clamp(40px, 5vw, 60px) clamp(20px, 3vw, 32px)" }}>
@@ -1124,23 +1152,6 @@ function EventPage({
           </div>
         </section>
       )}
-
-      <section style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }}>
-        <div style={{ position: "relative", maxWidth: 900, margin: "0 auto", padding: "clamp(40px, 5vw, 60px) clamp(20px, 3vw, 32px)", background: c.bgPaper, border: `3px solid ${c.purple}`, textAlign: "center", boxShadow: `0 0 40px ${c.purple}25` }}>
-          <CornerBrackets color={c.purple} />
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", border: `2px solid ${c.cyan}`, color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", marginBottom: 20, background: c.bg }}>
-            <Scan size={12} strokeWidth={2.5} />
-            <span>{t.scan_pill}</span>
-          </div>
-          <h3 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(24px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.03em", margin: "0 0 12px 0", textTransform: "uppercase", color: c.ink }}>{t.cta_start}</h3>
-          <p style={{ fontSize: 14, color: c.inkSoft, marginBottom: 24, maxWidth: 440, marginLeft: "auto", marginRight: "auto", lineHeight: 1.5 }}>{t.cta_sub}</p>
-          <button onClick={onStart} style={ctaPrimaryStyle(c)} className="ff-cta-primary">
-            <Scan size={16} strokeWidth={2.5} />
-            <span>{t.cta_start}</span>
-            <ArrowRight size={16} strokeWidth={3} />
-          </button>
-        </div>
-      </section>
     </div>
   );
 }
