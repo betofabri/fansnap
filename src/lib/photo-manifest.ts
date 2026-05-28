@@ -41,7 +41,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "34.jpg",
     "35.jpg",
     "36.jpg",
-    "37.jpg"
+    "37.jpg",
+    "99.jpg"
   ],
   "bb-001": [
     "01.jpg",
@@ -80,7 +81,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "34.jpg",
     "35.jpg",
     "36.jpg",
-    "37.jpg"
+    "37.jpg",
+    "99.jpg"
   ],
   "cc-26": [
     "01.jpg",
@@ -119,7 +121,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "34.jpg",
     "35.jpg",
     "36.jpg",
-    "37.jpg"
+    "37.jpg",
+    "99.jpg"
   ],
   "ccxp-26": [
     "01.jpg",
@@ -159,7 +162,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "35.jpg",
     "36.jpg",
     "37.jpg",
-    "38.jpg"
+    "38.jpg",
+    "99.jpg"
   ],
   "edc-26": [
     "01.jpg",
@@ -198,7 +202,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "34.jpg",
     "35.jpg",
     "36.jpg",
-    "37.jpg"
+    "37.jpg",
+    "99.jpg"
   ],
   "fcj-22": [
     "01.jpg",
@@ -237,7 +242,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "34.jpg",
     "35.jpg",
     "36.jpg",
-    "37.jpg"
+    "37.jpg",
+    "99.jpg"
   ],
   "ll-26": [
     "01.jpg",
@@ -276,7 +282,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "34.jpg",
     "35.jpg",
     "36.jpg",
-    "37.jpg"
+    "37.jpg",
+    "99.jpg"
   ],
   "mx-mtn": [
     "01.jpg",
@@ -315,7 +322,8 @@ export const EVENT_PHOTOS: Record<string, readonly string[]> = {
     "34.jpg",
     "35.jpg",
     "36.jpg",
-    "37.jpg"
+    "37.jpg",
+    "99.jpg"
   ],
   "ro-014": [
     "01.jpg",
