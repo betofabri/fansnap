@@ -41,6 +41,25 @@ const productIcon = {
   download: Download, image: ImageIcon, shirt: Shirt, coffee: Coffee, frame: Frame,
 } as const;
 
+/** Pick 6 highlight images for an event page — sample evenly across the
+ *  event's photo set so the curated grid feels visually diverse instead of
+ *  just showing the first 6 (which are also the start of the gallery).
+ *  Falls back to picsum when the event has no local photos. */
+function pickHighlights(event: FsEvent): string[] {
+  const gallery = getPhotosForEvent(event.code);
+  if (gallery.length >= 6) {
+    // 6 evenly spread indices across the available gallery
+    const step = gallery.length / 6;
+    return Array.from({ length: 6 }, (_, k) =>
+      gallery[Math.min(gallery.length - 1, Math.floor(k * step))].image,
+    );
+  }
+  // Fallback: picsum placeholders keyed by event code
+  return Array.from({ length: 6 }, (_, k) =>
+    `https://picsum.photos/seed/fansnap-hl-${event.code}-${k + 1}/800/600`,
+  );
+}
+
 const categoryLabel = (cat: string, t: Copy): string => {
   const map: Record<string, string> = {
     music: t.cat_music, conventions: t.cat_conventions, sports: t.cat_sports, parties: t.cat_parties,
@@ -903,24 +922,27 @@ function EventPage({
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} style={{
-                  position: "relative", overflow: "hidden", cursor: "pointer",
-                  border: `2px solid ${c.border}`, opacity: 0,
-                  animation: `fadeUp 0.5s ${i * 0.06}s forwards`,
-                  transition: "all 0.2s",
-                  gridColumn: i === 1 ? "span 2" : "span 1",
-                  aspectRatio: i === 1 ? "16/10" : "1/1",
-                  backgroundColor: event.color,
-                  backgroundImage: `url(https://picsum.photos/seed/fansnap-hl-${event.code}-${i}/800/600)`,
-                  backgroundSize: "cover", backgroundPosition: "center",
-                }} className="ff-highlight">
-                  <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${event.color}33 0%, rgba(10,10,15,0.35) 100%)` }} />
-                  <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
-                  <CornerBrackets color="rgba(255,255,255,0.85)" />
-                  <div style={{ position: "absolute", bottom: 12, right: 12, fontFamily: "var(--font-mono), monospace", fontSize: 9, color: "#fff", fontWeight: 700, letterSpacing: "0.08em", background: "rgba(0,0,0,0.5)", padding: "3px 7px", zIndex: 6 }}>FANSNAP · {event.code}</div>
-                </div>
-              ))}
+              {pickHighlights(event).map((src, idx) => {
+                const i = idx + 1;
+                return (
+                  <div key={i} style={{
+                    position: "relative", overflow: "hidden", cursor: "pointer",
+                    border: `2px solid ${c.border}`, opacity: 0,
+                    animation: `fadeUp 0.5s ${i * 0.06}s forwards`,
+                    transition: "all 0.2s",
+                    gridColumn: i === 1 ? "span 2" : "span 1",
+                    aspectRatio: i === 1 ? "16/10" : "1/1",
+                    backgroundColor: event.color,
+                    backgroundImage: `url(${src})`,
+                    backgroundSize: "cover", backgroundPosition: "center",
+                  }} className="ff-highlight">
+                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${event.color}33 0%, rgba(10,10,15,0.35) 100%)` }} />
+                    <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+                    <CornerBrackets color="rgba(255,255,255,0.85)" />
+                    <div style={{ position: "absolute", bottom: 12, right: 12, fontFamily: "var(--font-mono), monospace", fontSize: 9, color: "#fff", fontWeight: 700, letterSpacing: "0.08em", background: "rgba(0,0,0,0.5)", padding: "3px 7px", zIndex: 6 }}>FANSNAP · {event.code}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
