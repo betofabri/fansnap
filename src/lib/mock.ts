@@ -46,37 +46,43 @@ export interface ProductDef {
   badge?: "most_popular" | "new_format";
 }
 
-// MOCKUP PHOTOS — two ways to use real photos from your machine:
+// MOCKUP PHOTOS — drop real photos from your machine:
 //
-//   1) PER-EVENT cover:  public/mock/events/<event-code-lowercase>.jpg
-//      e.g. public/mock/events/ccxp-26.jpg becomes the CCXP México tile.
+//   public/mock/photos/         any filenames, any extensions (jpg/png/webp/avif)
+//   public/mock/events/<code>.* one file per event, named by lowercase code
 //
-//   2) GALLERY photos:   public/mock/photos/<n>.jpg   for n = 1..12
-//      e.g. public/mock/photos/3.jpg becomes the 3rd photo in the scan
-//      result.
+// At build time `scripts/sync-mock-photos.mjs` scans these folders and
+// writes `photo-manifest.ts`. So Beto can drop whatever he wants — no
+// renaming needed. Gallery photos cycle through the available files.
 //
-// Drop ANY format (jpg, png, webp). Keep width <= 1600px so the page
-// stays fast. When a file is missing, the colored fallback tile
-// (event.color) shows through underneath — no broken-image icon.
-//
-// USE_LOCAL_MOCKS toggle: set to true once you've dropped real files.
-// When false (default for the live demo), picsum.photos is used so we
-// always have *something* showing.
-const USE_LOCAL_MOCKS = true;
+// When a slot has no matching file, the picsum.photos placeholder shows
+// (so the demo never has broken images). Set USE_PICSUM_FALLBACK = false
+// to show solid color tiles for missing slots instead.
+import { PHOTO_FILES, EVENT_FILES } from "./photo-manifest";
 
-const eventImg = (code: string, w: number, h: number): string =>
-  USE_LOCAL_MOCKS
-    ? `/fansnap/mock/events/${code.toLowerCase()}.jpg`
-    : pic(code, w, h);
-
-const photoImg = (n: number): string =>
-  USE_LOCAL_MOCKS
-    ? `/fansnap/mock/photos/${n}.jpg`
-    : pic(`photo-${n}`, 800, 1000);
+const USE_PICSUM_FALLBACK = true;
 
 // Picsum.photos = deterministic placeholder per `seed/{code}` pair —
 // used as fallback and for the highlight tiles inside event pages.
 const pic = (seed: string, w: number, h: number) => `https://picsum.photos/seed/fansnap-${seed}/${w}/${h}`;
+
+/** Encode a filename for use in a URL — handles spaces, parentheses, etc. */
+const enc = (fn: string) => fn.split("/").map(encodeURIComponent).join("/");
+
+const eventImg = (code: string, w: number, h: number): string => {
+  const fn = EVENT_FILES[code.toLowerCase()];
+  if (fn) return `/fansnap/mock/events/${enc(fn)}`;
+  return USE_PICSUM_FALLBACK ? pic(code, w, h) : "";
+};
+
+const photoImg = (n: number): string => {
+  if (PHOTO_FILES.length > 0) {
+    // cycle through whatever's in public/mock/photos/ — 1-indexed
+    const fn = PHOTO_FILES[(n - 1) % PHOTO_FILES.length];
+    return `/fansnap/mock/photos/${enc(fn)}`;
+  }
+  return USE_PICSUM_FALLBACK ? pic(`photo-${n}`, 800, 1000) : "";
+};
 
 export const EVENTS: readonly Event[] = [
   // ── PRIMARY FEATURED (CCXP MX) ───────────────────────────────────────────
