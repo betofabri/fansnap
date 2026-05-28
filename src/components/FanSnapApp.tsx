@@ -448,11 +448,9 @@ function Home({
   onPick: (e: FsEvent) => void;
 }) {
   const [heroIdx, setHeroIdx] = useState(0);
-
-  useEffect(() => {
-    const tick = setInterval(() => setHeroIdx((i) => (i + 1) % FEATURED_EVENTS.length), 7000);
-    return () => clearInterval(tick);
-  }, []);
+  // Hero owns its own auto-advance timer + pause-on-hover state internally
+  // now (HeroMarquee). Home only keeps heroIdx around so the CTA still knows
+  // which featured event to open if clicked.
 
   const filterFn = (e: FsEvent) => {
     const matchesCat = category === "all" || e.category === category;
@@ -582,38 +580,107 @@ function ForBrand({ c, t }: { c: Theme; t: Copy }) {
   );
 }
 
+/** Hero with an auto-advancing photo marquee.
+ *
+ *   - Featured event photos stack as absolutely-positioned divs; only one is
+ *     visible at a time via opacity, with a long cross-fade between them.
+ *   - 7-second auto-timer drives the rotation. A progress bar at the bottom
+ *     of the section fills up so the timing is visible, not invisible.
+ *   - Hovering the hero (or focusing any control inside it) pauses both the
+ *     timer and the progress bar.
+ *   - Prev/Next arrows on the left + right edges for manual navigation; dots
+ *     inside the pass card stay in sync.
+ *   - Heavier overall darkening + slightly brighter grid lines, so the
+ *     brutalist grid pattern reads cleanly on top of the photo.
+ */
 function Hero({
   c, t, heroIdx, setHeroIdx, onStart,
 }: { c: Theme; t: Copy; heroIdx: number; setHeroIdx: (i: number) => void; onStart: () => void }) {
   const ev = FEATURED_EVENTS[heroIdx];
+  const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  // 7-second auto-advance, animated progress bar at 30 fps.
+  const SLIDE_MS = 7000;
+  useEffect(() => {
+    if (paused) return;
+    let raf = 0;
+    const start = Date.now();
+    const loop = () => {
+      const elapsed = Date.now() - start;
+      const p = Math.min(elapsed / SLIDE_MS, 1);
+      setProgress(p);
+      if (p >= 1) {
+        setHeroIdx((heroIdx + 1) % FEATURED_EVENTS.length);
+      } else {
+        raf = requestAnimationFrame(loop);
+      }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [heroIdx, paused, setHeroIdx]);
+
+  const go = (delta: number) => {
+    const n = FEATURED_EVENTS.length;
+    setHeroIdx(((heroIdx + delta) % n + n) % n);
+    setProgress(0);
+  };
+
   return (
-    <section style={{
-      position: "relative", overflow: "hidden",
-      borderBottom: `2px solid ${c.border}`,
-      backgroundColor: c.bg,
-      backgroundImage: `url(${ev.imageHero})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    }}>
-      {/* Dark gradient + brand-color tint over the photo so the white title
-          stays legible. Heavier on the left (where the text lives) than the
-          right (where the pass card lives, on top of its own card frame). */}
+    <section
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      style={{
+        position: "relative", overflow: "hidden",
+        borderBottom: `2px solid ${c.border}`,
+        backgroundColor: c.bg,
+      }}
+    >
+      {/* ── Stacked photos: only the active one is visible (opacity 1).
+            CSS opacity transition gives the cross-fade between slides. ── */}
+      {FEATURED_EVENTS.map((featuredEv, i) => (
+        <div
+          key={featuredEv.code}
+          style={{
+            position: "absolute", inset: 0,
+            backgroundImage: `url(${featuredEv.imageHero})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: i === heroIdx ? 1 : 0,
+            transition: "opacity 1.1s ease",
+          }}
+        />
+      ))}
+
+      {/* ── Heavier dark overlay (more opaque across the board) so the grid
+            and corner brackets read sharply. Subtle gradient still gives a
+            bit of "the text side is darker" feel. ── */}
       <div style={{
         position: "absolute", inset: 0,
-        background: "linear-gradient(100deg, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.78) 45%, rgba(10,10,15,0.55) 75%, rgba(10,10,15,0.5) 100%)",
+        background: "linear-gradient(100deg, rgba(10,10,15,0.96) 0%, rgba(10,10,15,0.9) 45%, rgba(10,10,15,0.78) 75%, rgba(10,10,15,0.74) 100%)",
         pointerEvents: "none", zIndex: 1,
       }} />
+      {/* Brand-color glow on the right side, blends with the photo. */}
       <div style={{
         position: "absolute", inset: 0,
-        background: `radial-gradient(ellipse at 80% 50%, ${ev.color}40 0%, transparent 60%)`,
+        background: `radial-gradient(ellipse at 80% 50%, ${ev.color}50 0%, transparent 60%)`,
         pointerEvents: "none", zIndex: 1, mixBlendMode: "overlay",
+        transition: "background 1.1s ease",
       }} />
+
       <CornerBrackets color={c.purple} />
-      <div style={heroGridLinesStyle(c)} />
+      {/* Slightly brighter grid lines for better visibility over the darkened
+          photo (was rgba ~0.04, now ~0.08 on dark theme). */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
+        backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.075) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.075) 1px, transparent 1px)",
+        backgroundSize: "60px 60px",
+      }} />
+
       <div style={{ ...heroInnerStyle(), position: "relative", zIndex: 2 }} className="ff-hero-grid">
         <div>
-          {/* Kicker over the darkened photo: translucent dark pill with cyan
-              border for contrast, regardless of theme. */}
           <div style={{
             ...kickerStyle(c),
             background: "rgba(10,10,15,0.55)",
@@ -630,8 +697,6 @@ function Hero({
             <span style={heroLineStyle()} className="ff-up">{t.hero_t3}</span>
           </h1>
 
-          {/* Force white sub copy + soft shadow — over the darkened photo
-              the theme's inkSoft (#3D3D47 in light) would be invisible. */}
           <p style={{
             ...heroSubStyle(c),
             color: "rgba(255,255,255,0.85)",
@@ -648,9 +713,73 @@ function Hero({
         </div>
 
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <PassCard c={c} t={t} event={ev} idx={heroIdx} setIdx={setHeroIdx} />
+          <PassCard c={c} t={t} event={ev} idx={heroIdx} setIdx={(i) => { setHeroIdx(i); setProgress(0); }} />
         </div>
       </div>
+
+      {/* ── Prev/Next arrows on the side edges (hidden on narrow viewports
+            via the responsive .ff-hero-grid columns collapse). ── */}
+      <button
+        onClick={() => go(-1)}
+        aria-label="Previous event"
+        className="ff-desktop-only"
+        style={{
+          position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)",
+          zIndex: 3, width: 44, height: 44, padding: 0,
+          background: "rgba(10,10,15,0.55)",
+          border: `2px solid ${c.cyan}`,
+          color: c.cyan, cursor: "pointer",
+          display: "grid", placeItems: "center",
+          backdropFilter: "blur(8px)",
+          transition: "all 0.15s",
+        }}
+      >
+        <ChevronLeft size={20} strokeWidth={2.5} />
+      </button>
+      <button
+        onClick={() => go(1)}
+        aria-label="Next event"
+        className="ff-desktop-only"
+        style={{
+          position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)",
+          zIndex: 3, width: 44, height: 44, padding: 0,
+          background: "rgba(10,10,15,0.55)",
+          border: `2px solid ${c.cyan}`,
+          color: c.cyan, cursor: "pointer",
+          display: "grid", placeItems: "center",
+          backdropFilter: "blur(8px)",
+          transition: "all 0.15s",
+        }}
+      >
+        <ArrowRight size={20} strokeWidth={2.5} />
+      </button>
+
+      {/* ── Auto-timer progress bar at the very bottom edge ── */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, bottom: 0,
+        height: 3, background: "rgba(255,255,255,0.08)", zIndex: 3,
+      }}>
+        <div style={{
+          height: "100%",
+          width: `${progress * 100}%`,
+          background: `linear-gradient(90deg, ${c.purple}, ${c.cyan})`,
+          transition: paused ? "none" : "width 30ms linear",
+          boxShadow: `0 0 8px ${c.purple}`,
+        }} />
+      </div>
+
+      {/* Small "paused" tag when the hover halts the timer (subtle, mono). */}
+      {paused && (
+        <div style={{
+          position: "absolute", left: 14, bottom: 14, zIndex: 3,
+          fontFamily: "var(--font-mono), monospace",
+          fontSize: 9, color: c.inkMute, letterSpacing: "0.15em",
+          background: "rgba(10,10,15,0.55)", padding: "3px 7px",
+          border: `1px solid ${c.border}`,
+        }}>
+          PAUSED
+        </div>
+      )}
     </section>
   );
 }
