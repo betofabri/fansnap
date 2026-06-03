@@ -15,7 +15,7 @@ import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, 
 import {
   Search, Music, Gamepad2, Trophy, PartyPopper, ChevronLeft, Calendar, MapPin, Camera,
   ArrowRight, Menu, Scan, Grid3x3, X, Upload, Check, Eye, Zap, Sun, Moon, ShoppingBag,
-  Download, Image as ImageIcon, Shirt, Coffee, Frame, Plus, Minus, Sparkles,
+  Download, Image as ImageIcon, Shirt, Coffee, Frame, Plus, Minus, Sparkles, Loader2,
 } from "lucide-react";
 import { THEMES, type Theme, type ThemeName } from "@/lib/theme";
 import { I18N, LANGS, type Copy, type Lang } from "@/lib/i18n";
@@ -24,6 +24,11 @@ import {
   getPhotosForEvent, PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
 } from "@/lib/mock";
 import { scanSelfie, prefetchFaceModels, type ScanResult } from "@/lib/face-recognition";
+import {
+  loadCart, saveCart, clearCart, addToCart, updateQty, removeLine,
+  makeLineId, computeTotals, formatMXN, newOrderNumber, newOxxoReference,
+  type CartItem,
+} from "@/lib/cart";
 
 // Logo is rendered inline as SVG (not an <img>) so it can inherit the
 // Space Grotesk font we already load via next/font + the brand gradient.
@@ -31,11 +36,7 @@ import { scanSelfie, prefetchFaceModels, type ScanResult } from "@/lib/face-reco
 // skull-shape vertical lockup (which left the inner text illegible at 44px).
 // public/logo.svg still ships as a static-asset variant for og-image / favicon.
 
-type Page = "home" | "event" | "selfie" | "scanning" | "gallery" | "photo";
-type CartItem = {
-  photoId: number; format: string; size: string | null; color: string | null;
-  qty: number; priceUSD: number; tile: string;
-};
+type Page = "home" | "event" | "selfie" | "scanning" | "gallery" | "photo" | "cart" | "checkout" | "confirmation";
 type Category = "all" | "music" | "conventions" | "sports" | "parties";
 
 const productIcon = {
@@ -192,7 +193,8 @@ export default function FanSnapApp() {
         c={c} t={t}
         onLogo={goHome}
         onNavSection={goToSection}
-        cartCount={cart.length}
+        onCart={() => goTo("cart")}
+        cartCount={cart.reduce((n, it) => n + it.qty, 0)}
         mobileNav={mobileNav} setMobileNav={setMobileNav}
       />
 
@@ -320,13 +322,14 @@ const NAV_ITEMS: ReadonlyArray<{ id: string; key: "nav_how" | "nav_events" | "na
 ];
 
 function Header({
-  theme, setTheme, lang, setLang, c, t, onLogo, onNavSection, cartCount, mobileNav, setMobileNav,
+  theme, setTheme, lang, setLang, c, t, onLogo, onNavSection, onCart, cartCount, mobileNav, setMobileNav,
 }: {
   theme: ThemeName; setTheme: (n: ThemeName) => void;
   lang: Lang; setLang: (l: Lang) => void;
   c: Theme; t: Copy;
   onLogo: () => void;
   onNavSection: (id: string) => void;
+  onCart: () => void;
   cartCount: number;
   mobileNav: boolean; setMobileNav: (v: boolean) => void;
 }) {
@@ -368,7 +371,7 @@ function Header({
             <LangToggle lang={lang} setLang={setLang} c={c} />
           </div>
           {cartCount > 0 && (
-            <button style={cartBtnStyle(c)} className="ff-cta-cart">
+            <button onClick={onCart} style={cartBtnStyle(c)} className="ff-cta-cart" aria-label="Open cart">
               <ShoppingBag size={14} strokeWidth={2.5} />
               <span style={{ marginLeft: 6 }}>{cartCount}</span>
             </button>
@@ -1833,7 +1836,7 @@ function PhotoDetail({
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
             {Object.entries(PRODUCTS).map(([key, p]) => (
-              <ProductCard key={key} c={c} t={t} productKey={key as keyof Copy} product={p} photo={photo} fmt={fmt} onAdd={onAdd} />
+              <ProductCard key={key} c={c} t={t} productKey={key as keyof Copy} product={p} photo={photo} event={event} fmt={fmt} onAdd={onAdd} />
             ))}
           </div>
         </div>
@@ -1843,11 +1846,11 @@ function PhotoDetail({
 }
 
 function ProductCard({
-  c, t, productKey, product, photo, fmt, onAdd,
+  c, t, productKey, product, photo, event, fmt, onAdd,
 }: {
   c: Theme; t: Copy; productKey: keyof Copy;
   product: (typeof PRODUCTS)[keyof typeof PRODUCTS];
-  photo: Photo; fmt: (usd: number) => string;
+  photo: Photo; event: FsEvent; fmt: (usd: number) => string;
   onAdd: (item: CartItem) => void;
 }) {
   const [selectedSize, setSelectedSize] = useState(0);
@@ -1948,15 +1951,28 @@ function ProductCard({
       </div>
 
       <button
-        onClick={() => onAdd({
-          photoId: photo.id,
-          format: String(productKey),
-          size: hasSize && product.sizes ? product.sizes[selectedSize] : null,
-          color: hasColor && product.colors ? product.colors[selectedColor].name : null,
-          qty,
-          priceUSD: currentPrice * qty,
-          tile: photo.color,
-        })}
+        onClick={() => {
+          const sku = String(productKey) as CartItem["productSku"];
+          const size = hasSize && product.sizes ? product.sizes[selectedSize] : null;
+          const color = hasColor && product.colors ? product.colors[selectedColor].name : null;
+          onAdd({
+            lineId: makeLineId({ photoId: photo.id, productSku: sku, size, color }),
+            photoId: photo.id,
+            photoTimestamp: photo.timestamp,
+            photoImage: photo.image,
+            photoTile: photo.color,
+            photographer: photo.photographer,
+            eventCode: event.code,
+            eventName: event.name,
+            productSku: sku,
+            size,
+            color,
+            qty,
+            unitPriceUSD: currentPrice,
+            fulfillment: product.fulfillment,
+            addedAt: Date.now(),
+          });
+        }}
         style={{
           display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
           width: "100%", padding: 12, background: c.ink, color: c.bg, border: `2px solid ${c.ink}`,
@@ -1968,6 +1984,599 @@ function ProductCard({
         <ShoppingBag size={14} strokeWidth={2.5} />
         <span>{t.add_to_cart}</span>
       </button>
+    </div>
+  );
+}
+
+// ============================================================
+// CART PAGE
+// ============================================================
+function CartPage({
+  c, t, cart, onUpdateQty, onRemove, onContinue, onKeepShopping,
+}: {
+  c: Theme; t: Copy;
+  cart: CartItem[];
+  onUpdateQty: (lineId: string, qty: number) => void;
+  onRemove: (lineId: string) => void;
+  onContinue: () => void;
+  onKeepShopping: () => void;
+}) {
+  const totals = computeTotals(cart);
+
+  // Empty state
+  if (cart.length === 0) {
+    return (
+      <section style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }} className="ff-fade-in">
+        <div style={{ position: "relative", maxWidth: 720, margin: "0 auto", padding: "clamp(60px, 8vw, 100px) clamp(20px, 3vw, 32px) 100px", textAlign: "center" }}>
+          <CornerBrackets color={c.cyan} />
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", border: `2px solid ${c.cyan}`, color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", marginBottom: 24, background: c.bgPaper }}>
+            <ShoppingBag size={12} strokeWidth={2.5} />
+            <span>{t.cart_title}</span>
+          </div>
+          <h1 style={{ ...largeTitleStyle(c), marginBottom: 14 }}>{t.cart_empty_title}</h1>
+          <p style={{ ...largeSubStyle(c), maxWidth: 480, margin: "0 auto 32px" }}>{t.cart_empty_sub}</p>
+          <button onClick={onKeepShopping} style={ctaPrimaryStyle(c)} className="ff-cta-primary">
+            <Search size={16} strokeWidth={2.5} />
+            <span>{t.cart_empty_cta}</span>
+            <ArrowRight size={16} strokeWidth={3} />
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }} className="ff-fade-in">
+      <div style={{ position: "relative", maxWidth: 1100, margin: "0 auto", padding: "clamp(40px, 5vw, 60px) clamp(20px, 3vw, 32px) 100px" }}>
+        <button onClick={onKeepShopping} style={backBtnStyle(c)} className="ff-back-btn">
+          <ChevronLeft size={14} strokeWidth={3} />
+          <span>{t.cart_keep_shopping}</span>
+        </button>
+
+        <div style={kickerStyle(c)}>
+          <span style={kickerDotStyle(c)} />
+          <span style={{ color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>{t.cart_kicker}</span>
+        </div>
+        <h1 style={{ ...largeTitleStyle(c), marginBottom: 28 }}>
+          {t.cart_title}{" "}
+          <span style={{ color: c.purple }}>· {totals.totalItems}</span>
+        </h1>
+
+        {/* Two columns on desktop: lines list left, totals right (sticky) */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: "clamp(20px, 3vw, 32px)" }} className="ff-cart-grid">
+          {/* Items */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {cart.map((item) => (
+              <CartLine key={item.lineId} c={c} t={t} item={item}
+                onUpdateQty={(qty) => onUpdateQty(item.lineId, qty)}
+                onRemove={() => onRemove(item.lineId)}
+              />
+            ))}
+          </div>
+
+          {/* Totals */}
+          <div>
+            <div style={{ position: "sticky", top: 100, background: c.bgPaper, border: `3px solid ${c.purple}`, padding: "clamp(20px, 3vw, 28px)", boxShadow: `8px 8px 0 0 ${c.purple}` }}>
+              <CornerBrackets color={c.cyan} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+                <TotalRow label={t.cart_subtotal} value={formatMXN(totals.subtotalMXN)} c={c} />
+                <TotalRow label={t.cart_iva} value={formatMXN(totals.ivaMXN)} c={c} />
+                <div style={{ height: 2, background: c.border, margin: "4px 0" }} />
+                <TotalRow label={t.cart_total} value={formatMXN(totals.totalMXN)} c={c} big />
+              </div>
+              <button onClick={onContinue} style={{ ...ctaPrimaryStyle(c), width: "100%", justifyContent: "center" }} className="ff-cta-primary">
+                <span>{t.cart_continue}</span>
+                <ArrowRight size={16} strokeWidth={3} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CartLine({
+  c, t, item, onUpdateQty, onRemove,
+}: {
+  c: Theme; t: Copy; item: CartItem;
+  onUpdateQty: (qty: number) => void;
+  onRemove: () => void;
+}) {
+  const productLabel = (() => {
+    const k = item.productSku as keyof Copy;
+    return (t[k] as string) ?? item.productSku.toUpperCase();
+  })();
+  const fulfillmentLabel = item.fulfillment === "instant"
+    ? t.instant
+    : `${t.ships_in} ${item.fulfillment} ${t.days}`;
+  const lineTotal = formatMXN(Math.round(item.unitPriceUSD * 18.5 * item.qty));
+
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14,
+      background: c.bgPaper, border: `2px solid ${c.border}`, padding: 12,
+    }}>
+      {/* Thumb */}
+      <div style={{
+        position: "relative", width: 96, height: 120,
+        backgroundColor: item.photoTile,
+        backgroundImage: `url(${item.photoImage})`,
+        backgroundSize: "cover", backgroundPosition: "center",
+        border: `2px solid ${c.border}`, flexShrink: 0,
+      }}>
+        <div style={{ position: "absolute", top: 4, left: 4, fontFamily: "var(--font-mono), monospace", fontSize: 8, color: "#fff", background: "rgba(0,0,0,0.6)", padding: "2px 4px", letterSpacing: "0.05em", fontWeight: 700 }}>
+          {item.photoTimestamp}
+        </div>
+      </div>
+
+      {/* Info */}
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
+        <div>
+          <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 9, color: c.inkSoft, letterSpacing: "0.1em", marginBottom: 4, textTransform: "uppercase" }}>
+            {item.eventCode} · {t.photo_by} {item.photographer}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: c.ink, letterSpacing: "-0.01em", textTransform: "uppercase", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {item.eventName}
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 7px", border: `2px solid ${c.purple}`, color: c.purple, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 8 }}>
+            {productLabel}
+            {item.size && <span style={{ color: c.inkSoft }}>· {item.size}</span>}
+            {item.color && <span style={{ color: c.inkSoft }}>· {item.color}</span>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: c.inkSoft, letterSpacing: "0.05em" }}>
+            {item.fulfillment === "instant"
+              ? <Zap size={11} strokeWidth={2.5} style={{ color: c.cyan }} />
+              : <Calendar size={11} strokeWidth={2.5} style={{ color: c.inkMute }} />}
+            <span>{fulfillmentLabel}</span>
+          </div>
+        </div>
+
+        {/* Qty + remove */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", border: `2px solid ${c.border}` }}>
+            <button onClick={() => onUpdateQty(item.qty - 1)} style={{ width: 28, height: 28, background: c.bgPaper, color: c.ink, border: "none", cursor: "pointer", display: "grid", placeItems: "center" }} aria-label="decrease">
+              <Minus size={12} strokeWidth={3} />
+            </button>
+            <div style={{ width: 32, textAlign: "center", fontSize: 13, fontWeight: 700, borderLeft: `2px solid ${c.border}`, borderRight: `2px solid ${c.border}`, padding: "4px 0" }}>{item.qty}</div>
+            <button onClick={() => onUpdateQty(item.qty + 1)} style={{ width: 28, height: 28, background: c.bgPaper, color: c.ink, border: "none", cursor: "pointer", display: "grid", placeItems: "center" }} aria-label="increase">
+              <Plus size={12} strokeWidth={3} />
+            </button>
+          </div>
+          <button onClick={onRemove} style={{ background: "none", border: "none", color: c.pink, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer", textTransform: "uppercase", padding: 4 }}>
+            {t.cart_item_remove}
+          </button>
+        </div>
+      </div>
+
+      {/* Price */}
+      <div style={{ textAlign: "right", display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: 16, fontWeight: 700, color: c.cyan, letterSpacing: "-0.01em" }}>{lineTotal}</div>
+      </div>
+    </div>
+  );
+}
+
+function TotalRow({ label, value, c, big = false }: { label: string; value: string; c: Theme; big?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <span style={{ fontSize: big ? 12 : 10, color: big ? c.ink : c.inkSoft, fontWeight: 700, letterSpacing: "0.12em" }}>{label}</span>
+      <span style={{
+        fontFamily: "var(--font-grotesk), sans-serif",
+        fontSize: big ? "clamp(22px, 3vw, 32px)" : 14,
+        fontWeight: 700, letterSpacing: "-0.01em",
+        color: big ? c.cyan : c.ink,
+      }}>{value}</span>
+    </div>
+  );
+}
+
+// ============================================================
+// CHECKOUT PAGE
+// ============================================================
+type PayMethod = "stripe" | "oxxo";
+
+function CheckoutPage({
+  c, t, cart, onBack, onPlace,
+}: {
+  c: Theme; t: Copy;
+  cart: CartItem[];
+  onBack: () => void;
+  onPlace: (payload: { number: string; email: string; oxxoReference: string | null; items: CartItem[] }) => void;
+}) {
+  const totals = computeTotals(cart);
+  const [pay, setPay] = useState<PayMethod>("stripe");
+  const [terms, setTerms] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  // Form state — all client-side, no validation beyond required for now
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [address2, setAddress2] = useState("");
+  const [city, setCity] = useState("");
+  const [stateField, setStateField] = useState("");
+  const [zip, setZip] = useState("");
+
+  const canPlace = name.trim() && email.includes("@") && terms && !processing &&
+    (!totals.hasPhysical || (address.trim() && city.trim() && zip.trim()));
+
+  const placeOrder = () => {
+    if (!canPlace) return;
+    setProcessing(true);
+    // Simulate processing delay (gives the spinner a moment of theatre)
+    setTimeout(() => {
+      onPlace({
+        number: newOrderNumber(),
+        email,
+        oxxoReference: pay === "oxxo" ? newOxxoReference() : null,
+        items: cart,
+      });
+    }, 900);
+  };
+
+  return (
+    <section style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }} className="ff-fade-in">
+      <div style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "clamp(40px, 5vw, 60px) clamp(20px, 3vw, 32px) 100px" }}>
+        <button onClick={onBack} style={backBtnStyle(c)} className="ff-back-btn">
+          <ChevronLeft size={14} strokeWidth={3} />
+          <span>{t.checkout_back_to_cart}</span>
+        </button>
+
+        <div style={kickerStyle(c)}>
+          <span style={kickerDotStyle(c)} />
+          <span style={{ color: c.cyan, fontSize: 10, fontWeight: 700, letterSpacing: "0.18em" }}>{t.checkout_kicker}</span>
+        </div>
+        <h1 style={{ ...largeTitleStyle(c), marginBottom: 32 }}>{t.checkout_title}</h1>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "clamp(20px, 3vw, 40px)" }} className="ff-cart-grid">
+          {/* Form */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* CONTACT */}
+            <FormSection c={c} title={t.checkout_section_contact}>
+              <FormGrid>
+                <Field c={c} label={t.checkout_name} value={name} onChange={setName} fullWidth />
+                <Field c={c} label={t.checkout_email} value={email} onChange={setEmail} type="email" />
+                <Field c={c} label={t.checkout_phone} value={phone} onChange={setPhone} type="tel" />
+              </FormGrid>
+            </FormSection>
+
+            {/* SHIPPING (only when physical items present) */}
+            {totals.hasPhysical ? (
+              <FormSection c={c} title={t.checkout_section_shipping}>
+                <FormGrid>
+                  <Field c={c} label={t.checkout_address} value={address} onChange={setAddress} fullWidth />
+                  <Field c={c} label={t.checkout_address2} value={address2} onChange={setAddress2} fullWidth />
+                  <Field c={c} label={t.checkout_city} value={city} onChange={setCity} />
+                  <Field c={c} label={t.checkout_state} value={stateField} onChange={setStateField} />
+                  <Field c={c} label={t.checkout_zip} value={zip} onChange={setZip} />
+                  <Field c={c} label={t.checkout_country} value="México" onChange={() => {}} disabled />
+                </FormGrid>
+              </FormSection>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 14, background: c.bgPaper, border: `2px dashed ${c.cyan}`, fontSize: 12, color: c.inkSoft }}>
+                <Zap size={14} strokeWidth={2.5} style={{ color: c.cyan, flexShrink: 0 }} />
+                <span>{t.checkout_digital_only}</span>
+              </div>
+            )}
+
+            {/* PAYMENT */}
+            <FormSection c={c} title={t.checkout_section_payment}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <PayOption
+                  c={c} selected={pay === "stripe"} onClick={() => setPay("stripe")}
+                  icon={<ShoppingBag size={20} strokeWidth={2} />}
+                  title={t.checkout_pay_card} sub={t.checkout_pay_card_desc}
+                />
+                <PayOption
+                  c={c} selected={pay === "oxxo"} onClick={() => setPay("oxxo")}
+                  icon={<div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontWeight: 900, fontSize: 18, letterSpacing: "-1px" }}>OXXO</div>}
+                  title={t.checkout_pay_oxxo} sub={t.checkout_pay_oxxo_desc}
+                />
+              </div>
+            </FormSection>
+
+            {/* Terms checkbox */}
+            <label htmlFor="fs-terms" style={{ display: "flex", gap: 12, padding: 14, background: c.bgPaper, border: `2px solid ${c.border}`, cursor: "pointer", alignItems: "flex-start" }}>
+              <input
+                id="fs-terms" type="checkbox" checked={terms}
+                onChange={(e) => setTerms(e.target.checked)}
+                style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+              />
+              <div style={{
+                flexShrink: 0, width: 22, height: 22,
+                border: `2px solid ${terms ? c.purple : c.border}`,
+                background: terms ? c.purple : "transparent",
+                display: "grid", placeItems: "center", transition: "all 0.15s", marginTop: 1,
+              }}>
+                {terms && <Check size={12} strokeWidth={3} style={{ color: "#fff" }} />}
+              </div>
+              <span style={{ fontSize: 12, lineHeight: 1.5, color: c.inkSoft }}>{t.checkout_terms}</span>
+            </label>
+
+            <button
+              onClick={placeOrder}
+              disabled={!canPlace}
+              style={{
+                ...ctaPrimaryStyle(c), width: "100%", justifyContent: "center",
+                padding: "18px 24px", fontSize: 14,
+                opacity: canPlace ? 1 : 0.4,
+                cursor: canPlace ? "pointer" : "not-allowed",
+              }}
+              className={canPlace ? "ff-cta-primary" : ""}
+            >
+              {processing ? (
+                <>
+                  <Loader2 size={18} strokeWidth={2.5} className="ff-spin" />
+                  <span>{t.checkout_processing}</span>
+                </>
+              ) : (
+                <>
+                  <span>{t.checkout_place_order} · {formatMXN(totals.totalMXN)}</span>
+                  <ArrowRight size={18} strokeWidth={3} />
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Summary */}
+          <div>
+            <div style={{ position: "sticky", top: 100, background: c.bgPaper, border: `2px solid ${c.border}`, padding: "clamp(16px, 2vw, 24px)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: c.purple, letterSpacing: "0.18em", marginBottom: 16, paddingBottom: 10, borderBottom: `2px solid ${c.border}` }}>{t.checkout_section_summary}</div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, maxHeight: 280, overflowY: "auto" }}>
+                {cart.map((it) => (
+                  <div key={it.lineId} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 11 }}>
+                    <div style={{
+                      width: 40, height: 50, flexShrink: 0,
+                      backgroundColor: it.photoTile,
+                      backgroundImage: `url(${it.photoImage})`,
+                      backgroundSize: "cover", backgroundPosition: "center",
+                      border: `2px solid ${c.border}`,
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: c.ink, fontWeight: 700, fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {(t[it.productSku as keyof Copy] as string) ?? it.productSku}
+                      </div>
+                      <div style={{ color: c.inkMute, fontFamily: "var(--font-mono), monospace", fontSize: 9, letterSpacing: "0.05em" }}>
+                        {it.eventCode} · ×{it.qty}
+                      </div>
+                    </div>
+                    <div style={{ color: c.cyan, fontWeight: 700, fontFamily: "var(--font-grotesk), sans-serif" }}>
+                      {formatMXN(Math.round(it.unitPriceUSD * 18.5 * it.qty))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 14, borderTop: `2px solid ${c.border}` }}>
+                <TotalRow label={t.cart_subtotal} value={formatMXN(totals.subtotalMXN)} c={c} />
+                <TotalRow label={t.cart_iva} value={formatMXN(totals.ivaMXN)} c={c} />
+                {totals.hasPhysical && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
+                    <span style={{ color: c.inkSoft, fontWeight: 700, letterSpacing: "0.12em" }}>SHIPPING</span>
+                    <span style={{ color: c.cyan, fontWeight: 700 }}>{t.checkout_shipping_free}</span>
+                  </div>
+                )}
+                <div style={{ height: 2, background: c.border, margin: "4px 0" }} />
+                <TotalRow label={t.cart_total} value={formatMXN(totals.totalMXN)} c={c} big />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FormSection({ c, title, children }: { c: Theme; title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: c.purple, letterSpacing: "0.18em", marginBottom: 12 }}>{title}</div>
+      <div style={{ background: c.bgPaper, border: `2px solid ${c.border}`, padding: 16 }}>{children}</div>
+    </div>
+  );
+}
+
+function FormGrid({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }} className="ff-form-grid">{children}</div>;
+}
+
+function Field({
+  c, label, value, onChange, type = "text", fullWidth = false, disabled = false,
+}: {
+  c: Theme; label: string;
+  value: string; onChange: (v: string) => void;
+  type?: string; fullWidth?: boolean; disabled?: boolean;
+}) {
+  return (
+    <div style={{ gridColumn: fullWidth ? "1 / -1" : "auto" }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: c.inkSoft, letterSpacing: "0.15em", marginBottom: 6, textTransform: "uppercase" }}>{label}</div>
+      <input
+        type={type} value={value} disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: "100%", padding: "10px 12px",
+          background: c.bg, border: `2px solid ${c.border}`,
+          color: c.ink, fontSize: 14, fontFamily: "var(--font-grotesk), sans-serif", fontWeight: 500,
+          outline: "none", transition: "border-color 0.15s",
+        }}
+        onFocus={(e) => (e.currentTarget.style.borderColor = c.purple)}
+        onBlur={(e) => (e.currentTarget.style.borderColor = c.border)}
+      />
+    </div>
+  );
+}
+
+function PayOption({ c, selected, onClick, icon, title, sub }: {
+  c: Theme; selected: boolean; onClick: () => void;
+  icon: React.ReactNode; title: string; sub: string;
+}) {
+  return (
+    <button onClick={onClick} style={{
+      display: "flex", alignItems: "center", gap: 14, padding: 14, textAlign: "left",
+      background: c.bg,
+      border: `2px solid ${selected ? c.purple : c.border}`,
+      boxShadow: selected ? `4px 4px 0 0 ${c.purple}` : "none",
+      transform: selected ? "translate(-2px, -2px)" : "none",
+      cursor: "pointer", transition: "all 0.15s",
+      fontFamily: "inherit",
+    }}>
+      <div style={{
+        width: 44, height: 44, border: `2px solid ${selected ? c.purple : c.border}`,
+        display: "grid", placeItems: "center", color: selected ? c.purple : c.ink, flexShrink: 0,
+      }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: c.ink, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 3 }}>{title}</div>
+        <div style={{ fontSize: 11, color: c.inkSoft, lineHeight: 1.4 }}>{sub}</div>
+      </div>
+      <div style={{
+        flexShrink: 0, width: 18, height: 18, borderRadius: "50%",
+        border: `2px solid ${selected ? c.purple : c.border}`,
+        background: selected ? c.purple : "transparent",
+        display: "grid", placeItems: "center",
+      }}>
+        {selected && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />}
+      </div>
+    </button>
+  );
+}
+
+// ============================================================
+// ORDER CONFIRMATION
+// ============================================================
+function OrderConfirmation({
+  c, t, order, onContinue,
+}: {
+  c: Theme; t: Copy;
+  order: { number: string; email: string; oxxoReference: string | null; items: CartItem[] };
+  onContinue: () => void;
+}) {
+  const digitals = order.items.filter((it) => it.fulfillment === "instant");
+  const physicals = order.items.filter((it) => it.fulfillment !== "instant");
+
+  return (
+    <section style={{ background: c.bg, borderBottom: `2px solid ${c.border}` }} className="ff-fade-in">
+      <div style={{ position: "relative", maxWidth: 1000, margin: "0 auto", padding: "clamp(40px, 5vw, 60px) clamp(20px, 3vw, 32px) 100px" }}>
+        {/* Confirmation hero */}
+        <div style={{
+          position: "relative", padding: "clamp(28px, 4vw, 44px)",
+          border: `3px solid ${c.cyan}`, background: c.bgPaper,
+          boxShadow: `8px 8px 0 0 ${c.cyan}`, marginBottom: 24, textAlign: "center",
+        }}>
+          <CornerBrackets color={c.purple} />
+
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 12px", background: c.cyan, color: "#0A0A0F", fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", marginBottom: 24 }}>
+            <Check size={14} strokeWidth={3} />
+            <span>{t.confirmation_kicker}</span>
+          </div>
+
+          <h1 style={{ ...largeTitleStyle(c), marginBottom: 14, fontSize: "clamp(36px, 6vw, 64px)" }}>{t.confirmation_title}</h1>
+          <p style={{ ...largeSubStyle(c), margin: "0 auto 28px", maxWidth: 520 }}>{t.confirmation_sub}</p>
+
+          <div style={{ display: "inline-block", padding: "12px 20px", border: `2px solid ${c.purple}`, background: c.bg, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: c.inkSoft, letterSpacing: "0.15em", fontWeight: 700, marginBottom: 4 }}>{t.confirmation_order_number}</div>
+            <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "clamp(18px, 2.5vw, 28px)", color: c.purple, fontWeight: 700, letterSpacing: "0.05em" }}>{order.number}</div>
+          </div>
+
+          <div style={{ fontSize: 12, color: c.inkSoft }}>
+            {t.confirmation_email_to} <span style={{ color: c.cyan, fontWeight: 700 }}>{order.email}</span>
+          </div>
+        </div>
+
+        {/* OXXO reference (if applicable) */}
+        {order.oxxoReference && (
+          <div style={{
+            padding: 20, background: c.bgPaper, border: `2px dashed ${c.pink}`, marginBottom: 24, textAlign: "center",
+          }}>
+            <div style={{ fontSize: 10, color: c.pink, fontWeight: 700, letterSpacing: "0.18em", marginBottom: 8 }}>{t.oxxo_reference_label}</div>
+            <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "clamp(20px, 3vw, 32px)", color: c.ink, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 6 }}>{order.oxxoReference}</div>
+            <div style={{ fontSize: 11, color: c.inkSoft }}>{t.oxxo_pay_at}</div>
+          </div>
+        )}
+
+        {/* Digital downloads */}
+        {digitals.length > 0 && (
+          <OrderSection
+            c={c}
+            title={t.confirmation_digital_title} sub={t.confirmation_digital_sub}
+            accent={c.cyan}
+            items={digitals}
+            renderAction={() => (
+              <button style={{ ...ctaSmallStyle(c), borderColor: c.cyan, color: c.cyan }} className="ff-cta-sec">
+                <Download size={12} strokeWidth={2.5} />
+                <span>{t.confirmation_digital_download}</span>
+              </button>
+            )}
+          />
+        )}
+
+        {/* Physical items */}
+        {physicals.length > 0 && (
+          <OrderSection
+            c={c}
+            title={t.confirmation_physical_title} sub={t.confirmation_physical_sub}
+            accent={c.purple}
+            items={physicals}
+            renderAction={(item) => (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 8px", border: `2px solid ${c.purple}`, color: c.purple, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em" }}>
+                <Calendar size={11} strokeWidth={2.5} />
+                <span>{t.confirmation_tracking_soon} {item.fulfillment} {t.days}</span>
+              </div>
+            )}
+          />
+        )}
+
+        {/* Continue */}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 32 }}>
+          <button onClick={onContinue} style={ctaPrimaryStyle(c)} className="ff-cta-primary">
+            <span>{t.confirmation_continue}</span>
+            <ArrowRight size={16} strokeWidth={3} />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OrderSection({
+  c, title, sub, accent, items, renderAction,
+}: {
+  c: Theme; title: string; sub: string; accent: string;
+  items: CartItem[];
+  renderAction: (item: CartItem) => React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: 24, background: c.bgPaper, border: `2px solid ${c.border}`, padding: 20 }}>
+      <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: `2px solid ${c.border}` }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: "0.18em", marginBottom: 4 }}>{title}</div>
+        <div style={{ fontSize: 12, color: c.inkSoft }}>{sub}</div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {items.map((it) => (
+          <div key={it.lineId} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 56, height: 70, flexShrink: 0,
+              backgroundColor: it.photoTile,
+              backgroundImage: `url(${it.photoImage})`,
+              backgroundSize: "cover", backgroundPosition: "center",
+              border: `2px solid ${c.border}`,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: c.ink, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 3 }}>
+                {it.eventName}
+              </div>
+              <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 10, color: c.inkSoft, letterSpacing: "0.05em" }}>
+                {it.eventCode} · {it.photoTimestamp} · ×{it.qty}
+              </div>
+            </div>
+            {renderAction(it)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -2088,6 +2697,8 @@ function ThemeStyles({ c }: { c: Theme }) {
       @media (max-width: 900px) {
         .ff-hero-grid { grid-template-columns: 1fr !important; }
         .ff-footer-grid { grid-template-columns: 1fr !important; }
+        .ff-cart-grid { grid-template-columns: 1fr !important; }
+        .ff-form-grid { grid-template-columns: 1fr !important; }
       }
       @media (max-width: 640px) {
         .ff-pass-card {
@@ -2095,6 +2706,9 @@ function ThemeStyles({ c }: { c: Theme }) {
           max-width: 100% !important;
         }
       }
+      /* Spinner used by the checkout 'placing order' state. */
+      @keyframes ff-spin { to { transform: rotate(360deg); } }
+      .ff-spin { animation: ff-spin 0.8s linear infinite; }
     `}</style>
   );
 }

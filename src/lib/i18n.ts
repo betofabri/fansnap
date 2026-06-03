@@ -120,6 +120,62 @@ export interface Copy {
   ships_in: string;
   days: string;
   starting_at: string;
+
+  cart_title: string;
+  cart_kicker: string;
+  cart_empty_title: string;
+  cart_empty_sub: string;
+  cart_empty_cta: string;
+  cart_item_qty: string;
+  cart_item_format: string;
+  cart_item_remove: string;
+  cart_subtotal: string;
+  cart_iva: string;
+  cart_total: string;
+  cart_continue: string;
+  cart_keep_shopping: string;
+
+  checkout_title: string;
+  checkout_kicker: string;
+  checkout_section_contact: string;
+  checkout_section_shipping: string;
+  checkout_section_payment: string;
+  checkout_section_summary: string;
+  checkout_name: string;
+  checkout_email: string;
+  checkout_phone: string;
+  checkout_address: string;
+  checkout_address2: string;
+  checkout_city: string;
+  checkout_state: string;
+  checkout_zip: string;
+  checkout_country: string;
+  checkout_pay_card: string;
+  checkout_pay_card_desc: string;
+  checkout_pay_oxxo: string;
+  checkout_pay_oxxo_desc: string;
+  checkout_shipping_free: string;
+  checkout_terms: string;
+  checkout_place_order: string;
+  checkout_processing: string;
+  checkout_back_to_cart: string;
+  checkout_digital_only: string;
+
+  confirmation_kicker: string;
+  confirmation_title: string;
+  confirmation_sub: string;
+  confirmation_order_number: string;
+  confirmation_email_to: string;
+  confirmation_digital_title: string;
+  confirmation_digital_sub: string;
+  confirmation_digital_download: string;
+  confirmation_physical_title: string;
+  confirmation_physical_sub: string;
+  confirmation_tracking_soon: string;
+  confirmation_continue: string;
+
+  oxxo_reference_label: string;
+  oxxo_pay_at: string;
 }
 
 export const I18N: Record<Lang, Copy> = {
@@ -205,6 +261,62 @@ export const I18N: Record<Lang, Copy> = {
     most_popular: "MOST POPULAR", new_format: "NEW",
     instant: "INSTANT", ships_in: "SHIPS IN", days: "DAYS",
     starting_at: "FROM",
+
+    cart_title: "YOUR CART",
+    cart_kicker: "REVIEW · ADJUST · CHECK OUT",
+    cart_empty_title: "NOTHING IN THE CART YET",
+    cart_empty_sub: "Pick an event, find yourself, add the keepers.",
+    cart_empty_cta: "BROWSE EVENTS",
+    cart_item_qty: "QTY",
+    cart_item_format: "FORMAT",
+    cart_item_remove: "REMOVE",
+    cart_subtotal: "SUBTOTAL",
+    cart_iva: "IVA · 16%",
+    cart_total: "TOTAL",
+    cart_continue: "CONTINUE TO CHECKOUT",
+    cart_keep_shopping: "KEEP SHOPPING",
+
+    checkout_title: "CHECKOUT",
+    checkout_kicker: "ALMOST THERE",
+    checkout_section_contact: "01 · CONTACT",
+    checkout_section_shipping: "02 · SHIPPING ADDRESS",
+    checkout_section_payment: "03 · PAYMENT",
+    checkout_section_summary: "ORDER SUMMARY",
+    checkout_name: "Full name",
+    checkout_email: "Email",
+    checkout_phone: "Phone",
+    checkout_address: "Street + number",
+    checkout_address2: "Apt / suite / interior (optional)",
+    checkout_city: "City",
+    checkout_state: "State",
+    checkout_zip: "ZIP / postal code",
+    checkout_country: "Country",
+    checkout_pay_card: "PAY WITH CARD",
+    checkout_pay_card_desc: "Visa, Mastercard, Amex. Secured by Stripe.",
+    checkout_pay_oxxo: "PAY WITH OXXO",
+    checkout_pay_oxxo_desc: "Pay in cash at any OXXO. Settles in 24-48h.",
+    checkout_shipping_free: "FREE",
+    checkout_terms: "I agree to FanSnap's terms + privacy notice.",
+    checkout_place_order: "PLACE ORDER",
+    checkout_processing: "PROCESSING…",
+    checkout_back_to_cart: "Back to cart",
+    checkout_digital_only: "Digital order — no shipping required.",
+
+    confirmation_kicker: "PAYMENT CONFIRMED",
+    confirmation_title: "ORDER PLACED",
+    confirmation_sub: "Thanks for trusting FanSnap with your memories.",
+    confirmation_order_number: "ORDER",
+    confirmation_email_to: "Receipt sent to",
+    confirmation_digital_title: "DIGITAL DOWNLOADS · READY NOW",
+    confirmation_digital_sub: "High-resolution, no watermark. Yours forever.",
+    confirmation_digital_download: "DOWNLOAD",
+    confirmation_physical_title: "PHYSICAL ITEMS · IN PRODUCTION",
+    confirmation_physical_sub: "Tracking link arrives by email once shipped.",
+    confirmation_tracking_soon: "ETA",
+    confirmation_continue: "BACK TO EVENTS",
+
+    oxxo_reference_label: "OXXO REFERENCE",
+    oxxo_pay_at: "Pay this code at any OXXO within 72h.",
   },
   pt: {
     nav_how: "Como funciona",
@@ -288,6 +400,62 @@ export const I18N: Record<Lang, Copy> = {
     most_popular: "MAIS POPULAR", new_format: "NOVO",
     instant: "INSTANTÂNEO", ships_in: "ENTREGA EM", days: "DIAS",
     starting_at: "A PARTIR DE",
+
+    cart_title: "SEU CARRINHO",
+    cart_kicker: "REVISA · AJUSTA · FINALIZA",
+    cart_empty_title: "NADA NO CARRINHO AINDA",
+    cart_empty_sub: "Escolhe um evento, se acha nas fotos, adiciona as que vão pra parede.",
+    cart_empty_cta: "VER EVENTOS",
+    cart_item_qty: "QTD",
+    cart_item_format: "FORMATO",
+    cart_item_remove: "REMOVER",
+    cart_subtotal: "SUBTOTAL",
+    cart_iva: "IVA · 16%",
+    cart_total: "TOTAL",
+    cart_continue: "IR PRO CHECKOUT",
+    cart_keep_shopping: "CONTINUAR COMPRANDO",
+
+    checkout_title: "CHECKOUT",
+    checkout_kicker: "QUASE LÁ",
+    checkout_section_contact: "01 · CONTATO",
+    checkout_section_shipping: "02 · ENDEREÇO DE ENTREGA",
+    checkout_section_payment: "03 · PAGAMENTO",
+    checkout_section_summary: "RESUMO DO PEDIDO",
+    checkout_name: "Nome completo",
+    checkout_email: "Email",
+    checkout_phone: "Telefone",
+    checkout_address: "Rua + número",
+    checkout_address2: "Apto / complemento (opcional)",
+    checkout_city: "Cidade",
+    checkout_state: "Estado",
+    checkout_zip: "CEP / código postal",
+    checkout_country: "País",
+    checkout_pay_card: "PAGAR COM CARTÃO",
+    checkout_pay_card_desc: "Visa, Mastercard, Amex. Processado pela Stripe.",
+    checkout_pay_oxxo: "PAGAR COM OXXO",
+    checkout_pay_oxxo_desc: "Em dinheiro em qualquer OXXO. Liquida em 24-48h.",
+    checkout_shipping_free: "GRÁTIS",
+    checkout_terms: "Concordo com os termos + política de privacidade da FanSnap.",
+    checkout_place_order: "FINALIZAR PEDIDO",
+    checkout_processing: "PROCESSANDO…",
+    checkout_back_to_cart: "Voltar ao carrinho",
+    checkout_digital_only: "Pedido digital — não precisa de endereço de entrega.",
+
+    confirmation_kicker: "PAGAMENTO CONFIRMADO",
+    confirmation_title: "PEDIDO FEITO",
+    confirmation_sub: "Obrigado por confiar suas memórias à FanSnap.",
+    confirmation_order_number: "PEDIDO",
+    confirmation_email_to: "Recibo enviado pra",
+    confirmation_digital_title: "DOWNLOADS DIGITAIS · PRONTOS AGORA",
+    confirmation_digital_sub: "Alta resolução, sem marca d'água. Suas pra sempre.",
+    confirmation_digital_download: "BAIXAR",
+    confirmation_physical_title: "PRODUTOS FÍSICOS · EM PRODUÇÃO",
+    confirmation_physical_sub: "Link de rastreio chega no email quando despachar.",
+    confirmation_tracking_soon: "ENTREGA EM",
+    confirmation_continue: "VOLTAR AOS EVENTOS",
+
+    oxxo_reference_label: "REFERÊNCIA OXXO",
+    oxxo_pay_at: "Pague esse código em qualquer OXXO em até 72h.",
   },
   es: {
     nav_how: "Cómo funciona",
@@ -371,5 +539,61 @@ export const I18N: Record<Lang, Copy> = {
     most_popular: "MÁS POPULAR", new_format: "NUEVO",
     instant: "INSTANTÁNEO", ships_in: "ENVÍO EN", days: "DÍAS",
     starting_at: "DESDE",
+
+    cart_title: "TU CARRITO",
+    cart_kicker: "REVISA · AJUSTA · FINALIZA",
+    cart_empty_title: "NADA EN EL CARRITO TODAVÍA",
+    cart_empty_sub: "Elige un evento, encuéntrate, suma las que más te gustaron.",
+    cart_empty_cta: "VER EVENTOS",
+    cart_item_qty: "CANT",
+    cart_item_format: "FORMATO",
+    cart_item_remove: "QUITAR",
+    cart_subtotal: "SUBTOTAL",
+    cart_iva: "IVA · 16%",
+    cart_total: "TOTAL",
+    cart_continue: "IR AL CHECKOUT",
+    cart_keep_shopping: "SEGUIR COMPRANDO",
+
+    checkout_title: "CHECKOUT",
+    checkout_kicker: "CASI LISTO",
+    checkout_section_contact: "01 · CONTACTO",
+    checkout_section_shipping: "02 · DIRECCIÓN DE ENVÍO",
+    checkout_section_payment: "03 · PAGO",
+    checkout_section_summary: "RESUMEN DEL PEDIDO",
+    checkout_name: "Nombre completo",
+    checkout_email: "Email",
+    checkout_phone: "Teléfono",
+    checkout_address: "Calle + número",
+    checkout_address2: "Depto / interior (opcional)",
+    checkout_city: "Ciudad",
+    checkout_state: "Estado",
+    checkout_zip: "CP / código postal",
+    checkout_country: "País",
+    checkout_pay_card: "PAGAR CON TARJETA",
+    checkout_pay_card_desc: "Visa, Mastercard, Amex. Procesado por Stripe.",
+    checkout_pay_oxxo: "PAGAR EN OXXO",
+    checkout_pay_oxxo_desc: "En efectivo en cualquier OXXO. Liquida en 24-48h.",
+    checkout_shipping_free: "GRATIS",
+    checkout_terms: "Acepto los términos + aviso de privacidad de FanSnap.",
+    checkout_place_order: "FINALIZAR PEDIDO",
+    checkout_processing: "PROCESANDO…",
+    checkout_back_to_cart: "Volver al carrito",
+    checkout_digital_only: "Pedido digital — no necesita dirección de envío.",
+
+    confirmation_kicker: "PAGO CONFIRMADO",
+    confirmation_title: "PEDIDO REALIZADO",
+    confirmation_sub: "Gracias por confiar tus recuerdos a FanSnap.",
+    confirmation_order_number: "PEDIDO",
+    confirmation_email_to: "Recibo enviado a",
+    confirmation_digital_title: "DESCARGAS DIGITALES · LISTAS YA",
+    confirmation_digital_sub: "Alta resolución, sin marca de agua. Tuyas para siempre.",
+    confirmation_digital_download: "DESCARGAR",
+    confirmation_physical_title: "PRODUCTOS FÍSICOS · EN PRODUCCIÓN",
+    confirmation_physical_sub: "El link de seguimiento llega por email cuando se envíe.",
+    confirmation_tracking_soon: "ENTREGA EN",
+    confirmation_continue: "VOLVER A LOS EVENTOS",
+
+    oxxo_reference_label: "REFERENCIA OXXO",
+    oxxo_pay_at: "Paga este código en cualquier OXXO dentro de 72h.",
   },
 };
