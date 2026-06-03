@@ -10,8 +10,9 @@
     "preview": "npm run prebuild-mocks && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "npm run prebuild-mocks && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "npm run prebuild-mocks && opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "prebuild-mocks": "npm run write-build-info && npm run sync-mocks && npm run build-face-index",
+    "prebuild-mocks": "npm run write-build-info && npm run process-photos && npm run sync-mocks && npm run build-face-index",
     "write-build-info": "node scripts/write-build-info.mjs",
+    "process-photos": "node scripts/process-photos.mjs",
     "sync-mocks": "node scripts/sync-mock-photos.mjs",
     "build-face-index": "node scripts/build-face-index.mjs",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"

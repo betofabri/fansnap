@@ -75,6 +75,97 @@ function pickHighlights(event: FsEvent): string[] {
   );
 }
 
+/** Split an event name into 1-3 visually balanced stacked lines for the
+ *  EventLogoMark below. Honors the em-dash that separates artist from
+ *  subtitle ("Bad Bunny — Most Wanted Tour" → 2 lines). */
+function logoLines(name: string): string[] {
+  if (name.includes("—")) return name.split("—").map((s) => s.trim()).filter(Boolean);
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length <= 3) return words;
+  const half = Math.ceil(words.length / 2);
+  return [words.slice(0, half).join(" "), words.slice(half).join(" ")];
+}
+
+/** Placeholder event logo — replaces the old giant-initials overlay.
+ *  Renders a festival-pass-style mark with the event name stacked, framed
+ *  by the event's brand color, with a 'FANSNAP CERTIFIED · CODE' tag below.
+ *  Promoter brand PNGs can swap in later by checking event.logoUrl. */
+function EventLogoMark({
+  event, size = "md",
+}: { event: FsEvent; size?: "sm" | "md" | "lg" }) {
+  const lines = logoLines(event.name);
+
+  // Per-size scale knobs. lg = hero/pass card, md = event tile, sm = highlight.
+  const padX = size === "lg" ? "clamp(18px, 2.5vw, 32px)" : "clamp(12px, 1.8vw, 22px)";
+  const padY = size === "lg" ? "clamp(16px, 2.2vw, 28px)" : "clamp(10px, 1.5vw, 18px)";
+  const lineSize = size === "lg"
+    ? "clamp(28px, 4.8vw, 56px)"
+    : "clamp(20px, 3.4vw, 40px)";
+  const tagSize = size === "lg" ? 10 : 8;
+  const tagGap = size === "lg" ? 18 : 12;
+  const maxWidth = size === "lg" ? "78%" : "82%";
+
+  return (
+    <div
+      style={{
+        position: "absolute", left: "50%", top: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 4, pointerEvents: "none",
+        padding: `${padY} ${padX}`,
+        background: "rgba(10,10,15,0.42)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        border: `${size === "lg" ? 3 : 2.5}px solid ${event.color}`,
+        boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.1)`,
+        textAlign: "center",
+        maxWidth,
+        // Subtle rotate so it reads like a hand-applied stamp — straightens
+        // on hover via the pass-card .ff-pass-card:hover rule (no-op on
+        // tiles).
+      }}
+      aria-label={event.name}
+    >
+      {lines.map((line, i) => (
+        <div
+          key={i}
+          style={{
+            fontFamily: "var(--font-grotesk), sans-serif",
+            fontSize: lineSize,
+            fontWeight: 900,
+            letterSpacing: "-0.04em",
+            lineHeight: 0.92,
+            color: "#fff",
+            textTransform: "uppercase",
+            textShadow: "0 3px 18px rgba(0,0,0,0.55)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {line}
+        </div>
+      ))}
+      <div style={{
+        marginTop: tagGap,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        gap: 6,
+        fontFamily: "var(--font-mono), monospace",
+        fontSize: tagSize,
+        fontWeight: 700,
+        color: event.color,
+        letterSpacing: "0.22em",
+        whiteSpace: "nowrap",
+      }}>
+        <span>·</span>
+        <span>FANSNAP</span>
+        <span style={{ opacity: 0.5 }}>·</span>
+        <span>{event.code}</span>
+        <span>·</span>
+      </div>
+    </div>
+  );
+}
+
 const categoryLabel = (cat: string, t: Copy): string => {
   const map: Record<string, string> = {
     music: t.cat_music, conventions: t.cat_conventions, sports: t.cat_sports, parties: t.cat_parties,
@@ -861,11 +952,11 @@ function PassCard({
         backgroundImage: `url(${event.imageHero})`,
         backgroundSize: "cover", backgroundPosition: "center",
       }}>
-        {/* darken the photo so the initials/code overlay stays readable */}
+        {/* darken the photo so the logo mark stays readable */}
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${event.color}55 0%, rgba(10,10,15,0.45) 100%)` }} />
         <CornerBrackets color="rgba(255,255,255,0.85)" />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
-        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(56px, 9vw, 88px)", fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.04em", textShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>{event.initials}</div>
+        <EventLogoMark event={event} size="lg" />
       </div>
 
       <div style={{ padding: "18px 16px 14px 16px", borderTop: `3px solid ${c.border}`, background: c.bgPaper }}>
@@ -992,7 +1083,7 @@ function EventCard({
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${event.color}55 0%, rgba(10,10,15,0.45) 100%)` }} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
         <CornerBrackets color="rgba(255,255,255,0.85)" />
-        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(48px, 7vw, 76px)", fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.04em", textShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>{event.initials}</div>
+        <EventLogoMark event={event} size="md" />
 
         {event.status === "live" && (
           <div style={{

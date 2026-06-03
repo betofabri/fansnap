@@ -7,7 +7,7 @@
 
 import React, { useState } from "react";
 import { THEMES } from "@/lib/theme";
-import TourSystem, { TOUR_STEPS } from "./TourSystem";
+import NavInspector, { NAV_INFO } from "./TourSystem";
 
 const T = {
   ...THEMES.dark,
@@ -114,7 +114,7 @@ function MockupStyles() {
 // ============================================================
 
 type NavAccent = "purple" | "cyan" | "pink";
-type NavItem = { n: string; label: string; active?: boolean; badge?: string; accent?: NavAccent };
+type NavItem = { n: string; label: string; active?: boolean; badge?: string; accent?: NavAccent; dim?: boolean };
 
 const NAV: NavItem[] = [
   { n: "01", label: "OVERVIEW",       active: true },
@@ -122,14 +122,18 @@ const NAV: NavItem[] = [
   { n: "03", label: "PHOTOGRAPHERS",  badge: "23",  accent: "cyan" },
   { n: "04", label: "SALES" },
   { n: "05", label: "FANS" },
-  { n: "06", label: "B2B" },
-  { n: "07", label: "FINANCE" },
-  { n: "08", label: "OPERATIONS",     badge: "!", accent: "pink" },
+  { n: "06", label: "B2B",            dim: true },
+  { n: "07", label: "FINANCE",        dim: true },
+  { n: "08", label: "OPERATIONS",     dim: true },
   { n: "09", label: "SETTINGS" },
 ];
 
 function Sidebar() {
+  // Hover state — only the number badge of each nav item triggers it.
+  const [hovered, setHovered] = useState<{ id: string; rect: DOMRect } | null>(null);
+
   return (
+    <>
     <aside data-tour="sidebar" style={{
       width: 248, flexShrink: 0,
       borderRight: `2px solid ${T.border}`,
@@ -155,37 +159,50 @@ function Sidebar() {
 
       <nav style={{ padding: "18px 12px", flex: 1, overflowY: "auto" }}>
         {NAV.map((item) => {
-          const accent =
-            item.accent === "pink" ? T.pink :
-            item.accent === "cyan" ? T.cyan : T.purple;
-          // Slug for data-tour: "B2B" → "b2b", "PHOTOGRAPHERS" → "photographers"
+          const dim = !!item.dim;
+          const accent = dim
+            ? T.inkMute
+            : item.accent === "pink" ? T.pink
+            : item.accent === "cyan" ? T.cyan
+            : T.purple;
+          // Slug: "B2B" → "b2b", "PHOTOGRAPHERS" → "photographers"
           const tourId = `nav-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
           return (
             <a
               key={item.n}
               href="#"
               data-tour={tourId}
-              className="fs-nav-item"
+              className={dim ? "fs-nav-item fs-nav-dim" : "fs-nav-item"}
               style={{
                 position: "relative", display: "flex", alignItems: "center", gap: 14,
                 padding: "14px 14px", marginBottom: 4,
                 textDecoration: "none",
-                color: item.active ? T.ink : T.inkSoft,
+                color: dim ? T.inkMute : (item.active ? T.ink : T.inkSoft),
                 background: item.active ? T.bgPaper : "transparent",
                 border: item.active ? `2px solid ${T.borderStrong}` : "2px solid transparent",
-                transition: "background 120ms, color 120ms",
+                opacity: dim ? 0.45 : 1,
+                transition: "background 120ms, color 120ms, opacity 120ms",
               }}
             >
               {item.active && <CornerBrackets color={T.cyan} size={11} thickness={2} inset={-2} />}
-              <span style={{
-                fontFamily: mono, fontSize: 12, fontWeight: 700,
-                color: accent, width: 20,
-              }}>{item.n}</span>
+              {/* Number badge — the ONLY hover trigger for the inspector. */}
+              <span
+                onMouseEnter={(e) => {
+                  const row = e.currentTarget.closest<HTMLAnchorElement>("a");
+                  if (row) setHovered({ id: tourId, rect: row.getBoundingClientRect() });
+                }}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  fontFamily: mono, fontSize: 12, fontWeight: 700,
+                  color: accent, width: 20, cursor: "help",
+                  textAlign: "center", letterSpacing: "0.04em",
+                }}
+              >{item.n}</span>
               <span style={{
                 fontFamily: display, fontSize: 14, fontWeight: item.active ? 700 : 500,
                 letterSpacing: "0.02em", textTransform: "uppercase", flex: 1,
               }}>{item.label}</span>
-              {item.badge && (
+              {item.badge && !dim && (
                 <span style={{
                   fontFamily: mono, fontSize: 10, fontWeight: 700,
                   color: item.accent === "pink" ? T.pink : T.inkMute,
@@ -220,14 +237,19 @@ function Sidebar() {
         </div>
       </div>
     </aside>
+    <NavInspector
+      info={hovered ? NAV_INFO[hovered.id] ?? null : null}
+      anchor={hovered?.rect ?? null}
+    />
+    </>
   );
 }
 
 // ============================================================
-// TOP BAR — simpler
+// TOP BAR — simpler (no tour button)
 // ============================================================
 
-function TopBar({ onStartTour }: { onStartTour: () => void }) {
+function TopBar() {
   return (
     <header style={{
       display: "flex", alignItems: "stretch",
@@ -247,15 +269,6 @@ function TopBar({ onStartTour }: { onStartTour: () => void }) {
       <div style={{ flex: 1 }} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 22px" }}>
-        <button
-          onClick={onStartTour}
-          className="fs-tour-launch"
-          style={{
-            fontFamily: mono, fontSize: 11, fontWeight: 700, color: T.cyan,
-            background: "transparent", border: `2px solid ${T.cyan}`,
-            padding: "8px 14px", letterSpacing: "0.18em", cursor: "pointer",
-            transition: "transform 120ms, box-shadow 120ms",
-          }}>▸ TOUR</button>
         <span data-tour="topbar-status" style={{ display: "inline-flex" }}>
           <Pill color={T.green} dot dotPulse>ALL SYSTEMS</Pill>
         </span>
@@ -841,26 +854,16 @@ function FooterStrip() {
 // ============================================================
 
 export default function OverviewMockup() {
-  const [tourOpen, setTourOpen] = useState(false);
-
   return (
     <>
       <MockupStyles />
-      <style>{`
-        .fs-tour-launch:hover {
-          background: ${T.cyan} !important;
-          color: ${T.bg} !important;
-          transform: translate(-1px, -1px);
-          box-shadow: 3px 3px 0 0 ${T.purple};
-        }
-      `}</style>
       <div style={{ display: "flex", minHeight: "100vh", background: T.bg, minWidth: 1280 }}>
         <Sidebar />
         <main style={{
           flex: 1, display: "flex", flexDirection: "column",
           background: T.bg, position: "relative", minWidth: 0,
         }}>
-          <TopBar onStartTour={() => setTourOpen(true)} />
+          <TopBar />
           <PageHeader />
           <KPIRow />
           <div style={{
@@ -877,12 +880,6 @@ export default function OverviewMockup() {
           <FooterStrip />
         </main>
       </div>
-      {tourOpen && (
-        <TourSystem
-          steps={TOUR_STEPS.menu}
-          onClose={() => setTourOpen(false)}
-        />
-      )}
     </>
   );
 }
