@@ -341,17 +341,16 @@ function Header({
           <button onClick={onLogo} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <FanSnapLogo size="md" theme={theme} />
           </button>
-          {/* Build pill — short git SHA + local timestamp so Beto can eyeball
-              whether a deploy actually replaced the previous version. */}
+          {/* Build pill — local timestamp so Beto can eyeball whether a
+              deploy actually replaced the previous version. SHA is kept in
+              the title attr for inspection but not in the visible label. */}
           <div
             style={buildPillStyle(c)}
-            title={`Build ${BUILD_SHA} — generated ${BUILD_TIME}`}
-            aria-label={`Build ${BUILD_SHA} at ${BUILD_TIME}`}
+            title={`Build ${BUILD_SHA} — ${BUILD_TIME}`}
+            aria-label={`Built ${BUILD_TIME}`}
           >
-            <span style={{ color: c.cyan, fontWeight: 700 }}>v</span>
-            <span>{BUILD_SHA}</span>
-            <span style={{ opacity: 0.45 }} className="ff-desktop-only">·</span>
-            <span style={{ opacity: 0.6 }} className="ff-desktop-only">{BUILD_TIME}</span>
+            <span style={{ color: c.cyan, opacity: 0.7 }}>·</span>
+            <span>{BUILD_TIME}</span>
           </div>
           <div className="ff-desktop-only" style={poweredByStyle(c)}>
             <span style={{ opacity: 0.65 }}>{t.powered_by}</span>{" "}
@@ -616,8 +615,8 @@ function Hero({
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // 7-second auto-advance, animated progress bar at 30 fps.
-  const SLIDE_MS = 7000;
+  // 4.5-second auto-advance, animated progress bar at 30 fps.
+  const SLIDE_MS = 4500;
   useEffect(() => {
     if (paused) return;
     let raf = 0;
@@ -687,12 +686,12 @@ function Hero({
       }} />
 
       <CornerBrackets color={c.purple} />
-      {/* Slightly brighter grid lines for better visibility over the darkened
-          photo (was rgba ~0.04, now ~0.08 on dark theme). */}
+      {/* Subtle grid — wider gaps + softer lines so it whispers behind the
+          photo instead of competing with the title typography. */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-        backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.075) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.075) 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
+        backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px)",
+        backgroundSize: "80px 80px",
       }} />
 
       <div style={{ ...heroInnerStyle(), position: "relative", zIndex: 2 }} className="ff-hero-grid">
@@ -729,8 +728,35 @@ function Hero({
         </div>
 
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <PassCard c={c} t={t} event={ev} idx={heroIdx} setIdx={(i) => { setHeroIdx(i); setProgress(0); }} />
+          <PassCard c={c} t={t} event={ev} onClick={onStart} />
         </div>
+      </div>
+
+      {/* ── Dot navigation: centered under the hero content, above the
+            progress bar. Bigger / more visible than the old footer dots
+            so it reads as primary navigation. ── */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, bottom: 22,
+        display: "flex", justifyContent: "center", gap: 8,
+        zIndex: 3, pointerEvents: "auto",
+      }}>
+        {FEATURED_EVENTS.map((_, i) => {
+          const isActive = i === heroIdx;
+          return (
+            <button
+              key={i}
+              onClick={() => { setHeroIdx(i); setProgress(0); }}
+              aria-label={`Slide ${i + 1}`}
+              style={{
+                width: isActive ? 32 : 10, height: 10,
+                background: isActive ? c.cyan : "rgba(255,255,255,0.35)",
+                border: "none", padding: 0, cursor: "pointer",
+                transition: "all 0.3s ease",
+                boxShadow: isActive ? `0 0 12px ${c.cyan}` : "none",
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* ── Prev/Next arrows on the side edges (hidden on narrow viewports
@@ -801,10 +827,17 @@ function Hero({
 }
 
 function PassCard({
-  c, t, event, idx, setIdx,
-}: { c: Theme; t: Copy; event: FsEvent; idx: number; setIdx: (i: number) => void }) {
+  c, t, event, onClick,
+}: { c: Theme; t: Copy; event: FsEvent; onClick: () => void }) {
   return (
-    <div style={passCardStyle(c)} className="ff-pass-card">
+    <div
+      style={{ ...passCardStyle(c), cursor: "pointer" }}
+      className="ff-pass-card"
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+    >
       <div style={passHeaderStyle(c)}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.15em" }}>{t.pass_no}</div>
         <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em" }}>{event.code}</div>
@@ -848,17 +881,16 @@ function PassCard({
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "10px 14px", background: c.bgAlt, borderTop: `2px dashed ${c.border}` }}>
+      {/* Footer bar: photo count on the left, click affordance on the right.
+          The slide-nav dots moved below the hero — this bar now just hints
+          that the card is clickable. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "10px 14px", background: c.bgAlt, borderTop: `2px dashed ${c.border}` }}>
         <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 10, color: c.purple, fontWeight: 700, letterSpacing: "0.05em" }}>
           {event.photoCount > 0 ? `${event.photoCount.toLocaleString()} ${t.photos_count}` : "· UPCOMING"}
         </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          {FEATURED_EVENTS.map((_, i) => (
-            <button key={i} onClick={() => setIdx(i)} aria-label={`featured ${i + 1}`} style={{
-              width: i === idx ? 20 : 6, height: 6, background: i === idx ? c.purple : c.border,
-              border: "none", cursor: "pointer", padding: 0, transition: "all 0.2s",
-            }} />
-          ))}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 700, color: c.cyan, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          <span>{t.view_event}</span>
+          <ArrowRight size={11} strokeWidth={3} />
         </div>
       </div>
     </div>

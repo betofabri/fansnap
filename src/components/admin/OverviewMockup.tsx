@@ -5,8 +5,9 @@
 // Still brutalist (2px borders, corner brackets, section markers,
 // solid offset shadows, event codes everywhere) — just breathing.
 
-import React from "react";
+import React, { useState } from "react";
 import { THEMES } from "@/lib/theme";
+import TourSystem, { TOUR_STEPS } from "./TourSystem";
 
 const T = {
   ...THEMES.dark,
@@ -129,7 +130,7 @@ const NAV: NavItem[] = [
 
 function Sidebar() {
   return (
-    <aside style={{
+    <aside data-tour="sidebar" style={{
       width: 248, flexShrink: 0,
       borderRight: `2px solid ${T.border}`,
       background: T.bgDeep,
@@ -223,7 +224,7 @@ function Sidebar() {
 // TOP BAR — simpler
 // ============================================================
 
-function TopBar() {
+function TopBar({ onStartTour }: { onStartTour: () => void }) {
   return (
     <header style={{
       display: "flex", alignItems: "stretch",
@@ -243,7 +244,18 @@ function TopBar() {
       <div style={{ flex: 1 }} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 22px" }}>
-        <Pill color={T.green} dot dotPulse>ALL SYSTEMS</Pill>
+        <button
+          onClick={onStartTour}
+          className="fs-tour-launch"
+          style={{
+            fontFamily: mono, fontSize: 11, fontWeight: 700, color: T.cyan,
+            background: "transparent", border: `2px solid ${T.cyan}`,
+            padding: "8px 14px", letterSpacing: "0.18em", cursor: "pointer",
+            transition: "transform 120ms, box-shadow 120ms",
+          }}>▸ TOUR</button>
+        <span data-tour="topbar-status" style={{ display: "inline-flex" }}>
+          <Pill color={T.green} dot dotPulse>ALL SYSTEMS</Pill>
+        </span>
         <button style={{
           fontFamily: mono, fontSize: 11, fontWeight: 700, color: T.inkSoft,
           background: "transparent", border: `2px solid ${T.border}`,
@@ -260,7 +272,7 @@ function TopBar() {
 
 function PageHeader() {
   return (
-    <div style={{
+    <div data-tour="page-header" style={{
       padding: "44px 44px 36px",
       borderBottom: `2px solid ${T.border}`,
       display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "end",
@@ -394,7 +406,7 @@ function KPICard({ kpi, index }: { kpi: Kpi; index: number }) {
 
 function KPIRow() {
   return (
-    <div style={{
+    <div data-tour="kpi-row" style={{
       padding: "32px 44px",
       display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 22,
     }}>
@@ -452,7 +464,7 @@ function heatColor(v: number) {
 
 function EventHeatmap() {
   return (
-    <section style={{
+    <section data-tour="heatmap" style={{
       position: "relative", background: T.bgPaper,
       border: `2px solid ${T.border}`, overflow: "hidden",
     }}>
@@ -504,11 +516,13 @@ function EventHeatmap() {
             animationDelay: `${100 + idx * 40}ms`,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 16 }}>
-              <span style={{
-                fontFamily: mono, fontSize: 11, fontWeight: 700, color: modelColor(e.model),
-                border: `1.5px solid ${modelColor(e.model)}`, padding: "3px 7px",
-                letterSpacing: "0.06em", whiteSpace: "nowrap",
-              }}>{e.code}</span>
+              <span
+                data-tour={idx === 0 ? "event-code" : undefined}
+                style={{
+                  fontFamily: mono, fontSize: 11, fontWeight: 700, color: modelColor(e.model),
+                  border: `1.5px solid ${modelColor(e.model)}`, padding: "3px 7px",
+                  letterSpacing: "0.06em", whiteSpace: "nowrap",
+                }}>{e.code}</span>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{
                   fontFamily: display, fontSize: 14, fontWeight: 600,
@@ -544,7 +558,7 @@ function EventHeatmap() {
                 fontFamily: display, fontWeight: 700, fontSize: 24,
                 letterSpacing: "-0.03em", color: T.ink, lineHeight: 1,
               }}>{e.matches.toLocaleString()}</div>
-              <div style={{ marginTop: 8 }}>
+              <div data-tour={idx === 0 ? "status-pill" : undefined} style={{ marginTop: 8 }}>
                 <Pill color={statusColor(e.status)} dot={e.status === "LIVE"} dotPulse={e.status === "LIVE"}>
                   {e.status}
                 </Pill>
@@ -579,7 +593,7 @@ const FEED: FeedRow[] = [
 
 function TerminalFeed() {
   return (
-    <section style={{
+    <section data-tour="feed" style={{
       position: "relative", background: T.bgDeep,
       border: `2px solid ${T.border}`, display: "flex", flexDirection: "column",
       height: "100%", overflow: "hidden", minHeight: 560,
@@ -659,7 +673,7 @@ function GMVChart() {
   const innerH = HEIGHT - TOP_PAD - BOTTOM_PAD;
 
   return (
-    <section style={{
+    <section data-tour="chart" style={{
       position: "relative", background: T.bgPaper,
       border: `2px solid ${T.border}`, overflow: "hidden",
     }}>
@@ -824,16 +838,26 @@ function FooterStrip() {
 // ============================================================
 
 export default function OverviewMockup() {
+  const [tourOpen, setTourOpen] = useState(false);
+
   return (
     <>
       <MockupStyles />
+      <style>{`
+        .fs-tour-launch:hover {
+          background: ${T.cyan} !important;
+          color: ${T.bg} !important;
+          transform: translate(-1px, -1px);
+          box-shadow: 3px 3px 0 0 ${T.purple};
+        }
+      `}</style>
       <div style={{ display: "flex", minHeight: "100vh", background: T.bg, minWidth: 1280 }}>
         <Sidebar />
         <main style={{
           flex: 1, display: "flex", flexDirection: "column",
           background: T.bg, position: "relative", minWidth: 0,
         }}>
-          <TopBar />
+          <TopBar onStartTour={() => setTourOpen(true)} />
           <PageHeader />
           <KPIRow />
           <div style={{
@@ -850,6 +874,12 @@ export default function OverviewMockup() {
           <FooterStrip />
         </main>
       </div>
+      {tourOpen && (
+        <TourSystem
+          steps={TOUR_STEPS.overview}
+          onClose={() => setTourOpen(false)}
+        />
+      )}
     </>
   );
 }
