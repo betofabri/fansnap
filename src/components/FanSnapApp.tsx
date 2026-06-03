@@ -24,6 +24,7 @@ import {
   getPhotosForEvent, PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
 } from "@/lib/mock";
 import { scanSelfie, prefetchFaceModels, type ScanResult } from "@/lib/face-recognition";
+import { BUILD_SHA, BUILD_TIME } from "@/lib/build-info";
 import {
   loadCart, saveCart, clearCart, addToCart, updateQty, removeLine,
   makeLineId, computeTotals, formatMXN, newOrderNumber, newOxxoReference,
@@ -340,6 +341,18 @@ function Header({
           <button onClick={onLogo} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <FanSnapLogo size="md" theme={theme} />
           </button>
+          {/* Build pill — short git SHA + local timestamp so Beto can eyeball
+              whether a deploy actually replaced the previous version. */}
+          <div
+            style={buildPillStyle(c)}
+            title={`Build ${BUILD_SHA} — generated ${BUILD_TIME}`}
+            aria-label={`Build ${BUILD_SHA} at ${BUILD_TIME}`}
+          >
+            <span style={{ color: c.cyan, fontWeight: 700 }}>v</span>
+            <span>{BUILD_SHA}</span>
+            <span style={{ opacity: 0.45 }} className="ff-desktop-only">·</span>
+            <span style={{ opacity: 0.6 }} className="ff-desktop-only">{BUILD_TIME}</span>
+          </div>
           <div className="ff-desktop-only" style={poweredByStyle(c)}>
             <span style={{ opacity: 0.65 }}>{t.powered_by}</span>{" "}
             <span style={{ color: c.purple, fontWeight: 700 }}>O&amp;CO</span>
@@ -2741,6 +2754,17 @@ const navLinkStyle = (c: Theme): React.CSSProperties => ({
 const poweredByStyle = (c: Theme): React.CSSProperties => ({
   fontFamily: "var(--font-mono), monospace", fontSize: 10, color: c.inkSoft,
   letterSpacing: "0.05em", whiteSpace: "nowrap",
+});
+
+const buildPillStyle = (c: Theme): React.CSSProperties => ({
+  display: "inline-flex", alignItems: "center", gap: 5,
+  padding: "3px 8px",
+  background: c.bgPaper, border: `1.5px solid ${c.border}`,
+  fontFamily: "var(--font-mono), monospace", fontSize: 9,
+  color: c.inkSoft, letterSpacing: "0.05em",
+  whiteSpace: "nowrap", flexShrink: 0,
+  // soft pulse so a fresh deploy is noticeable for the first second
+  animation: "fadeUp 0.4s ease-out",
 });
 
 const themeToggleStyle = (c: Theme): React.CSSProperties => ({
