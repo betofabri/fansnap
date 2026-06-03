@@ -151,6 +151,21 @@ export const EVENTS: readonly Event[] = [
     image: eventImg("BB-001", 1200, 800),
     imageHero: eventImg("BB-001", 1920, 1080),
   },
+  // ── INTERNAL / DEMO EVENT (real face-match test) ─────────────────────────
+  // Festa da Firma — Omelete Company's internal party. Used as the demo
+  // sandbox for end-to-end face-recognition with real photos Beto uploads.
+  // Drop photos in public/mock/events/ff-26/ and the next deploy re-indexes
+  // them automatically.
+  {
+    id: 10, code: "FF-26", name: "Festa da Firma",
+    venue: "Omelete Company", city: "São Paulo", country: "BR",
+    date: "2026-06-02", category: "parties",
+    photoCount: 0, photogCount: 1,
+    color: "#9D4EFF", initials: "FF",
+    status: "recent", featured: true,
+    image: eventImg("FF-26", 1200, 800),
+    imageHero: eventImg("FF-26", 1920, 1080),
+  },
   // ── RECENT ───────────────────────────────────────────────────────────────
   {
     id: 3, code: "RO-014", name: "Rosalía — Motomami World Tour",

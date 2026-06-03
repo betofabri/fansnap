@@ -1,0 +1,3 @@
+# Drop FESTA DA FIRMA photos here. Any filename, .jpg/.png/.webp/.avif.
+# First photo (alphabetical) becomes the event cover.
+# After dropping, run `npm run deploy` to face-index + push live.

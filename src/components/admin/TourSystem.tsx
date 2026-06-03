@@ -1,18 +1,9 @@
 "use client";
 
-// FanSnap · Admin · Tour System
-// Game-tutorial style — a floating callout that follows the cursor with
-// smart offset and a 4-strip dim isolating the current target. Hooks into
-// elements via [data-tour="<id>"] selectors so the tour stays decoupled
-// from the page markup.
-//
-// Wiring (from any page):
-//   import TourSystem, { TOUR_STEPS } from "@/components/admin/TourSystem";
-//   const [open, setOpen] = useState(false);
-//   {open && <TourSystem steps={TOUR_STEPS.overview} onClose={() => setOpen(false)} />}
-//
-// Add data-tour="<id>" attrs to the elements you want highlighted. The selector
-// in each step matches by [data-tour="<selector>"].
+// FanSnap · Admin · Tour System (menu-only, calm)
+// A small floating callout that follows the cursor with smart anchoring.
+// 4-strip dim isolates the current target. Targets are wired via
+// [data-tour="<id>"] attributes on the page elements.
 
 import React, { useEffect, useState } from "react";
 import { THEMES } from "@/lib/theme";
@@ -30,102 +21,102 @@ const display = "var(--font-grotesk, 'Space Grotesk'), system-ui, sans-serif";
 // ---------- types ----------
 
 export type TourAccent = "purple" | "cyan" | "pink" | "green";
+export type TourAnchor = "auto" | "target-right" | "target-left" | "center";
 
 export type TourStep = {
-  selector: string;             // value of [data-tour="<selector>"]
-  kicker: string;               // "STEP 01 / 10"
-  title: string;                // big display title
-  body: string;                 // 2-3 sentence explanation
-  bullets?: string[];           // optional inline bullets
-  accent?: TourAccent;          // outline color override
-  align?: "auto" | "center";    // center = ignore mouse, pin tooltip to viewport center
+  selector: string;
+  kicker: string;
+  title: string;
+  body: string;
+  bullets?: string[];
+  accent?: TourAccent;
+  anchor?: TourAnchor;
 };
 
 const accentColor = (a?: TourAccent) =>
   a === "cyan" ? T.cyan : a === "pink" ? T.pink : a === "green" ? T.green : T.purple;
 
-// ---------- TOUR CONTENT (Overview page) ----------
+// ---------- TOUR CONTENT (sidebar menu walkthrough) ----------
 
 export const TOUR_STEPS: Record<string, TourStep[]> = {
-  overview: [
+  menu: [
     {
-      selector: "page-header",
-      kicker: "STEP 01 / 10",
-      title: "Welcome to Mission Control",
-      body: "This is the live overview — every match, every sale, every fan in one feed. Use the arrows or click NEXT to walk through each block.",
-      bullets: ["4 KPIs at the top", "Event heatmap + live feed", "GMV chart at the bottom"],
+      selector: "nav-overview",
+      kicker: "MENU · 01 / 09",
+      title: "Overview",
+      body: "You're here. Live KPIs, event heatmap, sale feed and 7-day GMV — the room-level view of the whole platform.",
       accent: "purple",
+      anchor: "target-right",
     },
     {
-      selector: "sidebar",
-      kicker: "STEP 02 / 10",
-      title: "9 sections of the back-office",
-      body: "Numbered like a festival pass. The active one shows cyan corner brackets. Badges signal volume (142 events) or attention (pink ! on OPS).",
-      bullets: ["Cyan badge = roster live", "Pink badge = alert pending"],
+      selector: "nav-events",
+      kicker: "MENU · 02 / 09",
+      title: "Events",
+      body: "Every event in one filterable list — by business model, status, category, date. New events start as a 3-step wizard.",
+      bullets: ["Filters: marketplace · official · sponsored", "Detail tabs: photographers / photos / sales"],
       accent: "purple",
+      anchor: "target-right",
     },
     {
-      selector: "topbar-status",
-      kicker: "STEP 03 / 10",
-      title: "Systems health, at a glance",
-      body: "Green dot pulses while D1, R2 and the Worker are all responding. If anything drops, this pill turns pink before you find out from a fan.",
-      accent: "green",
-    },
-    {
-      selector: "kpi-row",
-      kicker: "STEP 04 / 10",
-      title: "The four numbers that matter today",
-      body: "GMV, scans, fans, photographers. Big number now, delta vs. baseline, mini trend on the right. The pink LIVE dot on Scans means it ticks every second.",
-      bullets: ["▲ green = up", "▼ pink = down", "Sparkline = last hour"],
-      accent: "purple",
-    },
-    {
-      selector: "heatmap",
-      kicker: "STEP 05 / 10",
-      title: "24 hours of activity per event",
-      body: "One row per active event, 24 cells per row — each cell is one hour. Darker purple = more face matches that hour. Empty (graphite) = silent.",
-      bullets: ["Hours 00 06 12 18 labeled", "Cells with ≥ 8 print the number"],
-      accent: "purple",
-    },
-    {
-      selector: "event-code",
-      kicker: "STEP 06 / 10",
-      title: "Event codes carry the business model",
-      body: "Every event has a short code (BB-001, CCXP-26). The border color tells you the deal type at a glance — no need to dig into details.",
-      bullets: ["Purple = Official (Ocesa, CCXP)", "Cyan = Marketplace (self-serve)", "Pink = Sponsored (B2B flat fee)"],
+      selector: "nav-photographers",
+      kicker: "MENU · 03 / 09",
+      title: "Photographers",
+      body: "The bank — roster, FanSnap score, tier, commission editor. Plus pending applications, featured slots and payouts history.",
+      bullets: ["Cyan 23 = live on field now", "Score = match × rating ÷ refund"],
       accent: "cyan",
+      anchor: "target-right",
     },
     {
-      selector: "status-pill",
-      kicker: "STEP 07 / 10",
-      title: "Status pills tell you the phase",
-      body: "Each event has a real-time phase. Pink LIVE pulses while photographers are uploading right now. Indexing, uploading, sponsored, idle each map to a color.",
-      bullets: ["LIVE (pink) pulses", "UPLOADING (cyan)", "INDEXING (purple)", "SPONSORED (green) · IDLE (grey)"],
-      accent: "pink",
-    },
-    {
-      selector: "feed",
-      kicker: "STEP 08 / 10",
-      title: "Live feed — everything, in order",
-      body: "Every sale, scan, refund, alert and crew join lands here as it happens. Timestamp on the left, event code in the body, dollar values bold.",
-      bullets: ["~2.4 events per second peak", "Auto-scrolls newest at top"],
-      accent: "pink",
-    },
-    {
-      selector: "chart",
-      kicker: "STEP 09 / 10",
-      title: "7 days of GMV, stacked by business model",
-      body: "Bars stack Marketplace (cyan) → Official (purple) → Sponsored (pink) bottom up. The best day of the week wears a solid purple offset shadow — Saturday here.",
-      bullets: ["TOTAL · 7D on the right", "Forecast band at the bottom"],
-      accent: "cyan",
-    },
-    {
-      selector: "page-header",
-      kicker: "STEP 10 / 10",
-      title: "You're set — happy ops",
-      body: "Click any pin in the dashboard to drill down. Press ESC any time to close this tour. You can re-open it from the ▸ TOUR button up top.",
+      selector: "nav-sales",
+      kicker: "MENU · 04 / 09",
+      title: "Sales",
+      body: "Live orders, refunds, disputes, OXXO settlement queue (Conekta T+1/T+2) and Stripe payouts.",
+      bullets: ["Badge tracks next order ID"],
       accent: "purple",
-      align: "center",
+      anchor: "target-right",
+    },
+    {
+      selector: "nav-fans",
+      kicker: "MENU · 05 / 09",
+      title: "Fans",
+      body: "Scan logs for LFPDPPP audit, consent records, repeat customers and cross-event activity.",
+      bullets: ["30-day deletion-request SLA tracker"],
+      accent: "purple",
+      anchor: "target-right",
+    },
+    {
+      selector: "nav-b2b",
+      kicker: "MENU · 06 / 09",
+      title: "B2B · Sponsored",
+      body: "Sponsored-deal pipeline — leads, contracts, renewal forecast. The CRM-lite layer for the brands that pay flat fees.",
+      bullets: ["Avg deal: US$ 3–15k / event", "Renewal forecast over next 90d"],
+      accent: "purple",
+      anchor: "target-right",
+    },
+    {
+      selector: "nav-finance",
+      kicker: "MENU · 07 / 09",
+      title: "Finance",
+      body: "The CFO view — GMV by business model, net, EBITDA proxy, IVA (16% MX), MXN vs USD breakdown, cash buffer days.",
+      accent: "purple",
+      anchor: "target-right",
+    },
+    {
+      selector: "nav-operations",
+      kicker: "MENU · 08 / 09",
+      title: "Operations",
+      body: "R2 usage + cost, face-index health, Worker observability and the job queue (watermarking, face-indexing, payouts).",
+      bullets: ["Pink ! = something needs you", "Today: R2 bucket 78%"],
+      accent: "pink",
+      anchor: "target-right",
+    },
+    {
+      selector: "nav-settings",
+      kicker: "MENU · 09 / 09",
+      title: "Settings",
+      body: "Team admins + roles, API keys + webhooks, brand config — tagline, hero copy, featured photographer slots.",
+      accent: "purple",
+      anchor: "target-right",
     },
   ],
 };
@@ -136,7 +127,6 @@ function useMousePosition(active: boolean) {
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   useEffect(() => {
     if (!active) return;
-    // Initialize to viewport center on activation so the tip doesn't snap from (0,0).
     setPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     const onMove = (e: MouseEvent) => setPos({ x: e.clientX, y: e.clientY });
     window.addEventListener("mousemove", onMove, { passive: true });
@@ -152,15 +142,14 @@ function useTargetRect(selector: string | null, active: boolean) {
     const el = document.querySelector<HTMLElement>(`[data-tour="${selector}"]`);
     if (!el) { setRect(null); return; }
 
-    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
 
     let raf = 0;
     const update = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => setRect(el.getBoundingClientRect()));
     };
-    // Initial measure once scroll lands.
-    const t = window.setTimeout(update, 380);
+    const t = window.setTimeout(update, 280);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
@@ -175,33 +164,50 @@ function useTargetRect(selector: string | null, active: boolean) {
 
 // ---------- tooltip ----------
 
-const TIP_W = 380;
-const TIP_GAP = 28;
+const TIP_W = 340;
+const TIP_GAP = 22;
+const TIP_H_EST = 280;
 
 type TooltipProps = {
   step: TourStep;
   index: number;
   total: number;
   mouse: { x: number; y: number };
-  centered: boolean;
+  rect: DOMRect | null;
   onPrev: () => void;
   onNext: () => void;
   onClose: () => void;
 };
 
-function Tooltip({ step, index, total, mouse, centered, onPrev, onNext, onClose }: TooltipProps) {
+function Tooltip({ step, index, total, mouse, rect, onPrev, onNext, onClose }: TooltipProps) {
   const accent = accentColor(step.accent);
   const wW = typeof window !== "undefined" ? window.innerWidth : 1440;
   const wH = typeof window !== "undefined" ? window.innerHeight : 900;
 
-  // Estimate height for offset math — tooltip auto-sizes, this is just for flip detection.
-  const TIP_H_EST = 380;
-
   let x: number, y: number;
-  if (centered) {
+  const anchor = step.anchor ?? "auto";
+
+  if (anchor === "center" || !rect) {
     x = (wW - TIP_W) / 2;
     y = Math.max(80, (wH - TIP_H_EST) / 2);
+  } else if (anchor === "target-right") {
+    // Anchor X to the right of target; Y follows mouse softly,
+    // clamped to viewport and biased to align near target top.
+    x = rect.right + TIP_GAP;
+    if (x + TIP_W > wW - 16) x = wW - 16 - TIP_W;
+    const desiredY = mouse.y - TIP_H_EST / 3;
+    y = Math.max(16, Math.min(desiredY, wH - 16 - TIP_H_EST));
+    // If mouse hasn't drifted into target area yet, bias to target top.
+    if (Math.abs(mouse.x - (rect.left + rect.width / 2)) > 200) {
+      y = Math.max(16, Math.min(rect.top - 8, wH - 16 - TIP_H_EST));
+    }
+  } else if (anchor === "target-left") {
+    x = rect.left - TIP_GAP - TIP_W;
+    if (x < 16) x = 16;
+    const desiredY = mouse.y - TIP_H_EST / 3;
+    y = Math.max(16, Math.min(desiredY, wH - 16 - TIP_H_EST));
   } else {
+    // auto: cursor-follow with edge flip
     x = mouse.x + TIP_GAP;
     y = mouse.y + TIP_GAP;
     if (x + TIP_W > wW - 16) x = mouse.x - TIP_GAP - TIP_W;
@@ -217,58 +223,58 @@ function Tooltip({ step, index, total, mouse, centered, onPrev, onNext, onClose 
       position: "fixed", left: x, top: y,
       width: TIP_W, maxWidth: "calc(100vw - 32px)",
       background: T.bgPaper,
-      border: `3px solid ${accent}`,
-      boxShadow: `8px 8px 0 0 ${T.cyan}`,
-      padding: 22,
-      display: "flex", flexDirection: "column", gap: 14,
+      border: `2px solid ${accent}`,
+      boxShadow: `4px 4px 0 0 ${T.cyan}`,
+      padding: 20,
+      display: "flex", flexDirection: "column", gap: 12,
       pointerEvents: "auto",
       zIndex: 1010,
-      transition: "left 180ms cubic-bezier(0.2, 0.8, 0.2, 1), top 180ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-      animation: "fs-tour-pop 0.32s cubic-bezier(0.2, 0.8, 0.2, 1.4)",
+      transition: "left 200ms cubic-bezier(0.2, 0.8, 0.2, 1), top 200ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+      animation: "fs-tour-pop 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both",
     }}>
-      {/* corner brackets */}
-      <span style={{ position: "absolute", top: -1, left: -1, width: 14, height: 14, borderTop: `2px solid ${T.cyan}`, borderLeft: `2px solid ${T.cyan}` }} />
-      <span style={{ position: "absolute", top: -1, right: -1, width: 14, height: 14, borderTop: `2px solid ${T.cyan}`, borderRight: `2px solid ${T.cyan}` }} />
-      <span style={{ position: "absolute", bottom: -1, left: -1, width: 14, height: 14, borderBottom: `2px solid ${T.cyan}`, borderLeft: `2px solid ${T.cyan}` }} />
-      <span style={{ position: "absolute", bottom: -1, right: -1, width: 14, height: 14, borderBottom: `2px solid ${T.cyan}`, borderRight: `2px solid ${T.cyan}` }} />
+      {/* corner brackets — small, cyan, dashboard-consistent */}
+      <span style={{ position: "absolute", top: -1, left: -1, width: 12, height: 12, borderTop: `2px solid ${T.cyan}`, borderLeft: `2px solid ${T.cyan}` }} />
+      <span style={{ position: "absolute", top: -1, right: -1, width: 12, height: 12, borderTop: `2px solid ${T.cyan}`, borderRight: `2px solid ${T.cyan}` }} />
+      <span style={{ position: "absolute", bottom: -1, left: -1, width: 12, height: 12, borderBottom: `2px solid ${T.cyan}`, borderLeft: `2px solid ${T.cyan}` }} />
+      <span style={{ position: "absolute", bottom: -1, right: -1, width: 12, height: 12, borderBottom: `2px solid ${T.cyan}`, borderRight: `2px solid ${T.cyan}` }} />
 
       {/* header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{
-          fontFamily: mono, fontSize: 11, fontWeight: 700, color: accent,
-          border: `2px solid ${accent}`, padding: "3px 9px", letterSpacing: "0.1em",
+          fontFamily: mono, fontSize: 10, fontWeight: 700, color: accent,
+          border: `1.5px solid ${accent}`, padding: "3px 8px", letterSpacing: "0.14em",
         }}>{step.kicker}</span>
         <button
           onClick={onClose}
           style={{
             fontFamily: mono, fontSize: 10, fontWeight: 700, color: T.inkMute,
-            background: "transparent", border: `1.5px solid ${T.border}`,
-            padding: "5px 9px", cursor: "pointer", letterSpacing: "0.16em",
+            background: "transparent", border: `1px solid ${T.border}`,
+            padding: "4px 8px", cursor: "pointer", letterSpacing: "0.16em",
           }}
         >SKIP · ESC</button>
       </div>
 
       {/* title */}
       <h3 style={{
-        margin: 0, fontFamily: display, fontWeight: 700, fontSize: 22,
+        margin: 0, fontFamily: display, fontWeight: 700, fontSize: 20,
         letterSpacing: "-0.02em", lineHeight: 1.15, color: T.ink,
       }}>{step.title}</h3>
 
       {/* body */}
       <p style={{
-        margin: 0, fontFamily: display, fontSize: 14, lineHeight: 1.55,
+        margin: 0, fontFamily: display, fontSize: 13, lineHeight: 1.55,
         color: T.inkSoft,
       }}>{step.body}</p>
 
       {/* bullets */}
       {step.bullets && step.bullets.length > 0 && (
-        <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
+        <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
           {step.bullets.map((b, i) => (
             <li key={i} style={{
-              display: "flex", gap: 9, alignItems: "baseline",
-              fontFamily: mono, fontSize: 12, color: T.inkSoft, letterSpacing: "0.02em", lineHeight: 1.4,
+              display: "flex", gap: 8, alignItems: "baseline",
+              fontFamily: mono, fontSize: 11, color: T.inkSoft, letterSpacing: "0.02em", lineHeight: 1.4,
             }}>
-              <span style={{ color: accent, fontWeight: 700 }}>▸</span>
+              <span style={{ color: accent }}>▸</span>
               <span>{b}</span>
             </li>
           ))}
@@ -276,10 +282,10 @@ function Tooltip({ step, index, total, mouse, centered, onPrev, onNext, onClose 
       )}
 
       {/* step pip indicator */}
-      <div style={{ display: "flex", gap: 5, marginTop: 4, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
         {Array.from({ length: total }).map((_, i) => (
           <span key={i} style={{
-            width: i === index ? 26 : 8, height: 8,
+            width: i === index ? 18 : 6, height: 6,
             background: i === index ? accent : (i < index ? T.inkSoft : T.border),
             transition: "all 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
           }} />
@@ -287,16 +293,16 @@ function Tooltip({ step, index, total, mouse, centered, onPrev, onNext, onClose 
       </div>
 
       {/* nav buttons */}
-      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
         <button
           onClick={onPrev}
           disabled={index === 0}
           style={{
             flex: 1,
-            fontFamily: mono, fontSize: 11, fontWeight: 700,
+            fontFamily: mono, fontSize: 10, fontWeight: 700,
             color: index === 0 ? T.inkMute : T.inkSoft,
-            background: "transparent", border: `2px solid ${T.border}`,
-            padding: "11px 12px", letterSpacing: "0.18em",
+            background: "transparent", border: `1.5px solid ${T.border}`,
+            padding: "9px 10px", letterSpacing: "0.18em",
             cursor: index === 0 ? "not-allowed" : "pointer",
             opacity: index === 0 ? 0.4 : 1, textTransform: "uppercase",
           }}
@@ -307,34 +313,28 @@ function Tooltip({ step, index, total, mouse, centered, onPrev, onNext, onClose 
             className="fs-tour-cta"
             style={{
               flex: 1.6,
-              fontFamily: mono, fontSize: 11, fontWeight: 700,
-              color: T.bg, background: T.cyan, border: `2px solid ${T.cyan}`,
-              padding: "11px 12px", letterSpacing: "0.18em", cursor: "pointer",
-              boxShadow: `4px 4px 0 0 ${T.purple}`, textTransform: "uppercase",
+              fontFamily: mono, fontSize: 10, fontWeight: 700,
+              color: T.bg, background: T.cyan, border: `1.5px solid ${T.cyan}`,
+              padding: "9px 10px", letterSpacing: "0.18em", cursor: "pointer",
+              boxShadow: `3px 3px 0 0 ${T.purple}`, textTransform: "uppercase",
               transition: "transform 120ms, box-shadow 120ms",
             }}
-          >Finish ✓</button>
+          >Done ✓</button>
         ) : (
           <button
             onClick={onNext}
             className="fs-tour-cta"
             style={{
               flex: 1.6,
-              fontFamily: mono, fontSize: 11, fontWeight: 700,
-              color: T.bg, background: T.purple, border: `2px solid ${T.purple}`,
-              padding: "11px 12px", letterSpacing: "0.18em", cursor: "pointer",
-              boxShadow: `4px 4px 0 0 ${T.cyan}`, textTransform: "uppercase",
+              fontFamily: mono, fontSize: 10, fontWeight: 700,
+              color: T.bg, background: T.purple, border: `1.5px solid ${T.purple}`,
+              padding: "9px 10px", letterSpacing: "0.18em", cursor: "pointer",
+              boxShadow: `3px 3px 0 0 ${T.cyan}`, textTransform: "uppercase",
               transition: "transform 120ms, box-shadow 120ms",
             }}
           >Next ›</button>
         )}
       </div>
-
-      {/* keyboard hint */}
-      <div style={{
-        fontFamily: mono, fontSize: 9, color: T.inkMute, letterSpacing: "0.2em",
-        borderTop: `1px dashed ${T.border}`, paddingTop: 10, textAlign: "center",
-      }}>← → ARROWS · ESC TO EXIT</div>
     </div>
   );
 }
@@ -347,23 +347,21 @@ export default function TourSystem({
   const [step, setStep] = useState(0);
   const total = steps.length;
   const current = steps[step];
-  const centered = current.align === "center";
+  const centered = current.anchor === "center";
 
   const mouse = useMousePosition(true);
   const rect = useTargetRect(centered ? null : current.selector, true);
 
-  // Keyboard nav
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { e.preventDefault(); onClose(); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); setStep(s => Math.min(s + 1, total - 1)); }
-      else if (e.key === "ArrowLeft")  { e.preventDefault(); setStep(s => Math.max(s - 1, 0)); }
+      else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); setStep(s => Math.min(s + 1, total - 1)); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); setStep(s => Math.max(s - 1, 0)); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, total]);
 
-  // Lock page scroll while tour is open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -374,8 +372,8 @@ export default function TourSystem({
   const wW = typeof window !== "undefined" ? window.innerWidth : 1440;
   const wH = typeof window !== "undefined" ? window.innerHeight : 900;
 
-  // 4-strip dim around the target rect
-  const PAD = 10;
+  // 4-strip dim around the target
+  const PAD = 6;
   const t = rect ? Math.max(0, rect.top - PAD) : 0;
   const l = rect ? Math.max(0, rect.left - PAD) : 0;
   const r = rect ? Math.min(wW, rect.right + PAD) : 0;
@@ -383,65 +381,55 @@ export default function TourSystem({
 
   const dimStyle: React.CSSProperties = {
     position: "fixed",
-    background: "rgba(6,6,10,0.78)",
-    backdropFilter: "blur(2px)",
-    WebkitBackdropFilter: "blur(2px)",
+    background: "rgba(6,6,10,0.55)",
     pointerEvents: "auto",
-    transition: "all 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+    transition: "all 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
   };
 
   return (
     <>
-      {/* Animations + hover boosts scoped inline */}
       <style>{`
         @keyframes fs-tour-pop {
-          from { opacity: 0; transform: scale(0.94) translateY(6px); }
+          from { opacity: 0; transform: scale(0.97) translateY(4px); }
           to   { opacity: 1; transform: scale(1)    translateY(0); }
         }
-        @keyframes fs-tour-march {
-          to { background-position: 24px 0, -24px 0, 0 24px, 0 -24px; }
-        }
-        .fs-tour-cta:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 0 ${T.cyan} !important; }
+        .fs-tour-cta:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 0 ${T.cyan} !important; }
         .fs-tour-cta:active { transform: translate(0, 0); box-shadow: 2px 2px 0 0 ${T.cyan} !important; }
       `}</style>
 
       <div style={{ position: "fixed", inset: 0, zIndex: 1000, pointerEvents: "none" }}>
         {rect && !centered ? (
           <>
-            {/* 4 dim strips */}
             <div style={{ ...dimStyle, left: 0, top: 0, right: 0, height: t }} onClick={onClose} />
             <div style={{ ...dimStyle, left: 0, top: t, width: l, height: b - t }} onClick={onClose} />
             <div style={{ ...dimStyle, left: r, top: t, right: 0, height: b - t }} onClick={onClose} />
             <div style={{ ...dimStyle, left: 0, top: b, right: 0, bottom: 0 }} onClick={onClose} />
 
-            {/* Target highlight outline */}
+            {/* highlight outline — subtle, dashboard-consistent */}
             <div style={{
               position: "fixed",
               left: l, top: t, width: r - l, height: b - t,
-              border: `3px solid ${accent}`,
-              boxShadow: `8px 8px 0 0 ${T.cyan}, -1px -1px 0 0 ${T.cyan}`,
+              border: `2px solid ${accent}`,
+              boxShadow: `4px 4px 0 0 ${T.cyan}`,
               pointerEvents: "none",
-              transition: "all 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+              transition: "all 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
             }}>
-              {/* corner brackets, slightly larger to read on the highlight */}
-              <span style={{ position: "absolute", top: -3, left: -3, width: 22, height: 22, borderTop: `3px solid ${T.cyan}`, borderLeft: `3px solid ${T.cyan}` }} />
-              <span style={{ position: "absolute", top: -3, right: -3, width: 22, height: 22, borderTop: `3px solid ${T.cyan}`, borderRight: `3px solid ${T.cyan}` }} />
-              <span style={{ position: "absolute", bottom: -3, left: -3, width: 22, height: 22, borderBottom: `3px solid ${T.cyan}`, borderLeft: `3px solid ${T.cyan}` }} />
-              <span style={{ position: "absolute", bottom: -3, right: -3, width: 22, height: 22, borderBottom: `3px solid ${T.cyan}`, borderRight: `3px solid ${T.cyan}` }} />
+              <span style={{ position: "absolute", top: -2, left: -2, width: 12, height: 12, borderTop: `2px solid ${T.cyan}`, borderLeft: `2px solid ${T.cyan}` }} />
+              <span style={{ position: "absolute", top: -2, right: -2, width: 12, height: 12, borderTop: `2px solid ${T.cyan}`, borderRight: `2px solid ${T.cyan}` }} />
+              <span style={{ position: "absolute", bottom: -2, left: -2, width: 12, height: 12, borderBottom: `2px solid ${T.cyan}`, borderLeft: `2px solid ${T.cyan}` }} />
+              <span style={{ position: "absolute", bottom: -2, right: -2, width: 12, height: 12, borderBottom: `2px solid ${T.cyan}`, borderRight: `2px solid ${T.cyan}` }} />
             </div>
           </>
         ) : (
-          // No rect (centered final step, or target not yet measured) — full dim
           <div style={{ ...dimStyle, inset: 0 }} onClick={onClose} />
         )}
 
-        {/* tooltip */}
         <Tooltip
           step={current}
           index={step}
           total={total}
           mouse={mouse}
-          centered={centered}
+          rect={rect}
           onPrev={() => setStep(s => Math.max(s - 1, 0))}
           onNext={() => setStep(s => Math.min(s + 1, total - 1))}
           onClose={onClose}

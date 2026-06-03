@@ -158,10 +158,13 @@ function Sidebar() {
           const accent =
             item.accent === "pink" ? T.pink :
             item.accent === "cyan" ? T.cyan : T.purple;
+          // Slug for data-tour: "B2B" → "b2b", "PHOTOGRAPHERS" → "photographers"
+          const tourId = `nav-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
           return (
             <a
               key={item.n}
               href="#"
+              data-tour={tourId}
               className="fs-nav-item"
               style={{
                 position: "relative", display: "flex", alignItems: "center", gap: 14,
@@ -876,7 +879,7 @@ export default function OverviewMockup() {
       </div>
       {tourOpen && (
         <TourSystem
-          steps={TOUR_STEPS.overview}
+          steps={TOUR_STEPS.menu}
           onClose={() => setTourOpen(false)}
         />
       )}
