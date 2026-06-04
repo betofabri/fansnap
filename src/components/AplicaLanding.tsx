@@ -18,7 +18,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  ArrowRight, ArrowDown, Check, Mail, Phone, MapPin, Link2, Camera, Loader2,
+  ArrowRight, ArrowDown, Check, Mail, Phone, MapPin, Link2, Camera, Loader2, X,
 } from "lucide-react";
 
 // ─── Sober palette local to this page ───────────────────────────────────────
@@ -141,7 +141,7 @@ function Hero() {
       <div style={{
         position: "relative",
         maxWidth: 1200, margin: "0 auto",
-        padding: "clamp(80px, 12vw, 160px) clamp(20px, 4vw, 40px) clamp(80px, 10vw, 140px)",
+        padding: "clamp(64px, 9vw, 132px) clamp(20px, 4vw, 40px) clamp(48px, 6vw, 88px)",
       }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8,
@@ -150,7 +150,7 @@ function Hero() {
           color: c.accent,
           fontFamily: FONT_MONO, fontSize: 11,
           letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 700,
-          marginBottom: 20,
+          marginBottom: 14,
         }}>
           <span style={{
             width: 6, height: 6, borderRadius: "50%", background: c.accent,
@@ -168,7 +168,7 @@ function Hero() {
           letterSpacing: "0.32em",
           textTransform: "uppercase",
           color: c.inkSoft,
-          marginBottom: 18,
+          marginBottom: 14,
         }}>
           Ocesa <span style={{ opacity: 0.4 }}>·</span> CCXP <span style={{ color: c.ink, opacity: 0.85 }}>presenta:</span>
         </div>
@@ -179,7 +179,7 @@ function Hero() {
           fontWeight: 700,
           letterSpacing: "-0.04em",
           lineHeight: 0.96,
-          margin: "0 0 28px 0",
+          margin: "0 0 22px 0",
           maxWidth: 880,
           textWrap: "balance",
         }}>
@@ -194,7 +194,7 @@ function Hero() {
           color: c.inkSoft,
           lineHeight: 1.55,
           maxWidth: 640,
-          margin: "0 0 44px 0",
+          margin: "0 0 32px 0",
         }}>
           Cada concierto, convención, obra y fiesta es un momento que merece quedarse.
           Tu cámara lo convierte en algo que se puede tocar, regalar, recordar. Nosotros
@@ -245,8 +245,8 @@ function Features() {
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "clamp(20px, 2vw, 32px)",
-          marginTop: 48,
+          gap: "clamp(16px, 1.6vw, 24px)",
+          marginTop: 32,
         }}>
           {items.map((s) => (
             <div key={s.n} style={{
@@ -289,6 +289,7 @@ function Apply() {
   const [bigEventExperience, setBigEventExperience] = useState<boolean | null>(null);
   const [bigEventNotes, setBigEventNotes] = useState("");
   const [submit, setSubmit] = useState<SubmitState>({ stage: "idle" });
+  const [showRefer, setShowRefer] = useState(false);
 
   const successRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -398,7 +399,7 @@ function Apply() {
           perfil y proponerte el tier correcto. Todo es confidencial.
         </p>
 
-        <form onSubmit={onSubmit} style={{ marginTop: 48 }}>
+        <form onSubmit={onSubmit} style={{ marginTop: 32 }}>
           {/* Required */}
           <FormGroup
             label="Sobre ti"
@@ -513,10 +514,10 @@ function Apply() {
             )}
           </FormGroup>
 
-          {/* Submit */}
+          {/* Submit + secondary referral CTA */}
           <div style={{
-            marginTop: 40, paddingTop: 32, borderTop: `1px solid ${c.border}`,
-            display: "flex", flexDirection: "column", gap: 18, alignItems: "flex-start",
+            marginTop: 32, paddingTop: 28, borderTop: `1px solid ${c.border}`,
+            display: "flex", flexDirection: "column", gap: 16, alignItems: "stretch",
           }}>
             {submit.stage === "error" && (
               <div style={{
@@ -529,32 +530,68 @@ function Apply() {
               </div>
             )}
 
+            {/* BIG primary submit — main action of the page. */}
             <button
               type="submit"
               disabled={!canSubmit}
               style={{
                 ...primaryCTA,
-                padding: "18px 28px",
-                fontSize: 15,
-                opacity: canSubmit ? 1 : 0.4,
+                padding: "24px 32px",
+                fontSize: 18,
+                width: "100%",
+                justifyContent: "center",
+                letterSpacing: "0.1em",
+                gap: 14,
+                opacity: canSubmit ? 1 : 0.45,
                 cursor: canSubmit ? "pointer" : "not-allowed",
               }}
-              className="apl-cta-primary"
+              className="apl-cta-primary apl-cta-big"
             >
               {submit.stage === "submitting" ? (
                 <>
-                  <Loader2 size={16} className="apl-spin" />
+                  <Loader2 size={20} className="apl-spin" />
                   <span>Enviando…</span>
                 </>
               ) : (
                 <>
                   <span>Enviar aplicación</span>
-                  <ArrowRight size={16} strokeWidth={2.5} />
+                  <ArrowRight size={20} strokeWidth={2.5} />
                 </>
               )}
             </button>
 
-            <div style={{ fontSize: 13, color: c.inkMute, maxWidth: 480, lineHeight: 1.55 }}>
+            {/* "o" divider between primary apply and secondary referral. */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+              fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute,
+              letterSpacing: "0.2em", textTransform: "uppercase",
+              margin: "4px 0",
+            }}>
+              <span style={{ flex: 1, height: 1, background: c.border }} />
+              <span>o</span>
+              <span style={{ flex: 1, height: 1, background: c.border }} />
+            </div>
+
+            {/* Secondary CTA — refer another photographer. Same full width
+                so the funnel feels parallel: aplicas tú o indicas a alguien. */}
+            <button
+              type="button"
+              onClick={() => setShowRefer(true)}
+              style={{
+                ...secondaryCTA,
+                padding: "20px 28px",
+                fontSize: 15,
+                width: "100%",
+                justifyContent: "center",
+                letterSpacing: "0.1em",
+              }}
+              className="apl-cta-secondary"
+            >
+              <span>Indicar a un fotógrafo</span>
+              <ArrowRight size={16} strokeWidth={2.5} />
+            </button>
+
+            <div style={{ fontSize: 13, color: c.inkMute, maxWidth: 520, lineHeight: 1.55, marginTop: 4 }}>
               Al enviar aceptas que revisemos tu portafolio y compartamos esta
               información con la curaduría de FanSnap. Confidencial. No SPAM. Sin
               compromiso.
@@ -562,7 +599,234 @@ function Apply() {
           </div>
         </form>
       </div>
+
+      {showRefer && (
+        <ReferModal onClose={() => setShowRefer(false)} />
+      )}
     </section>
+  );
+}
+
+// ─── Referral modal ────────────────────────────────────────────────────────
+type ReferState =
+  | { stage: "idle" }
+  | { stage: "sending" }
+  | { stage: "sent"; code: string }
+  | { stage: "error"; message: string };
+
+function ReferModal({ onClose }: { onClose: () => void }) {
+  const [referrerEmail, setReferrerEmail] = useState("");
+  const [referredName, setReferredName] = useState("");
+  const [referredContact, setReferredContact] = useState("");
+  const [referredPortfolio, setReferredPortfolio] = useState("");
+  const [note, setNote] = useState("");
+  const [state, setState] = useState<ReferState>({ stage: "idle" });
+
+  const canSubmit =
+    referrerEmail.includes("@") &&
+    referredName.trim() &&
+    referredContact.trim() &&
+    state.stage !== "sending";
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setState({ stage: "sending" });
+    try {
+      const res = await fetch("/fansnap/api/photographers/refer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referrerEmail, referredName, referredContact, referredPortfolio, note, language: "es" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setState({ stage: "error", message: err.error || `Error ${res.status}` });
+        return;
+      }
+      const data = await res.json() as { referralCode: string };
+      setState({ stage: "sent", code: data.referralCode });
+    } catch (err) {
+      setState({ stage: "error", message: err instanceof Error ? err.message : "Network error" });
+    }
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)",
+        display: "grid", placeItems: "center",
+        padding: "clamp(16px, 4vw, 40px)",
+        animation: "apl-fade-in 0.18s ease-out",
+      }}
+    >
+      <div style={{
+        position: "relative",
+        background: c.bg, border: `1px solid ${c.borderStrong}`,
+        maxWidth: 580, width: "100%",
+        maxHeight: "90vh", overflowY: "auto",
+        padding: "clamp(24px, 4vw, 40px)",
+      }}>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: "absolute", top: 16, right: 16,
+            width: 36, height: 36,
+            background: "transparent", border: `1px solid ${c.border}`,
+            color: c.inkSoft, cursor: "pointer",
+            display: "grid", placeItems: "center",
+            transition: "all 0.15s",
+          }}
+          className="apl-link"
+        >
+          <X size={16} strokeWidth={2.5} />
+        </button>
+
+        {state.stage === "sent" ? (
+          <>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "6px 12px",
+              background: "rgba(157,78,255,0.12)", border: `1px solid ${c.premium}66`,
+              color: c.premium,
+              fontFamily: FONT_MONO, fontSize: 11,
+              letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 700,
+              marginBottom: 22,
+            }}>
+              <Check size={13} strokeWidth={3} />
+              <span>Indicación recibida</span>
+            </div>
+            <h3 style={{
+              fontFamily: FONT_GROTESK, fontSize: "clamp(24px, 3vw, 32px)",
+              fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.1,
+              margin: "0 0 12px 0",
+            }}>Gracias por la referencia.</h3>
+            <p style={{ fontSize: 15, color: c.inkSoft, lineHeight: 1.55, margin: "0 0 24px 0" }}>
+              Le mandamos una invitación personal a <strong style={{ color: c.ink }}>{referredName}</strong>.
+              Si entra al roster, te avisamos.
+            </p>
+            <div style={{ display: "inline-block", padding: "14px 20px", background: c.surface, border: `1px solid ${c.border}` }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 5 }}>
+                Código de referencia
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 22, color: c.premium, fontWeight: 700, letterSpacing: "0.06em" }}>
+                {state.code}
+              </div>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={onSubmit}>
+            <div style={{
+              fontFamily: FONT_MONO, fontSize: 11, color: c.accent,
+              letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 700,
+              marginBottom: 14,
+            }}>
+              Indicación
+            </div>
+            <h3 style={{
+              fontFamily: FONT_GROTESK, fontSize: "clamp(24px, 3vw, 32px)",
+              fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.1,
+              margin: "0 0 8px 0",
+            }}>Indicá a un fotógrafo.</h3>
+            <p style={{ fontSize: 14, color: c.inkSoft, lineHeight: 1.55, margin: "0 0 24px 0" }}>
+              Le mandamos una invitación personal de tu parte. Tú no necesitas estar en el roster para indicar.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <Field
+                label="Tu email *" value={referrerEmail} onChange={setReferrerEmail}
+                type="email" icon={<Mail size={14} strokeWidth={2.2} />} fullWidth required
+              />
+              <Field
+                label="Nombre del fotógrafo *" value={referredName} onChange={setReferredName}
+                icon={<Camera size={14} strokeWidth={2.2} />} fullWidth required
+              />
+              <Field
+                label="Su email o WhatsApp *" value={referredContact} onChange={setReferredContact}
+                icon={<Phone size={14} strokeWidth={2.2} />} fullWidth required
+              />
+              <Field
+                label="Su portafolio (opcional)" value={referredPortfolio} onChange={setReferredPortfolio}
+                icon={<Link2 size={14} strokeWidth={2.2} />} fullWidth
+              />
+              <label style={{ display: "block" }}>
+                <div style={{
+                  fontFamily: FONT_MONO, fontSize: 11, color: c.ink,
+                  letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700,
+                  marginBottom: 9,
+                }}>Por qué lo recomiendas (opcional)</div>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  placeholder="Una línea sobre su trabajo, dónde lo viste cubrir, etc."
+                  style={{
+                    width: "100%", padding: "14px 16px",
+                    background: c.surfaceStrong, color: c.ink,
+                    border: `1.5px solid ${c.borderStrong}`,
+                    fontFamily: FONT_GROTESK, fontSize: 15,
+                    resize: "vertical", outline: "none",
+                    transition: "border-color 0.15s",
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = c.accent; e.currentTarget.style.background = c.bg; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = c.borderStrong; e.currentTarget.style.background = c.surfaceStrong; }}
+                />
+              </label>
+            </div>
+
+            {state.stage === "error" && (
+              <div style={{
+                marginTop: 20,
+                padding: "10px 14px",
+                background: "rgba(255,59,110,0.08)",
+                border: "1px solid rgba(255,59,110,0.4)",
+                color: "#FF3B6E", fontSize: 14,
+              }}>
+                {state.message}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              style={{
+                ...primaryCTA,
+                width: "100%", marginTop: 24,
+                padding: "18px 28px", fontSize: 16,
+                justifyContent: "center", letterSpacing: "0.1em",
+                opacity: canSubmit ? 1 : 0.45,
+                cursor: canSubmit ? "pointer" : "not-allowed",
+              }}
+              className="apl-cta-primary"
+            >
+              {state.stage === "sending" ? (
+                <>
+                  <Loader2 size={18} className="apl-spin" />
+                  <span>Enviando…</span>
+                </>
+              ) : (
+                <>
+                  <span>Enviar indicación</span>
+                  <ArrowRight size={18} strokeWidth={2.5} />
+                </>
+              )}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -593,7 +857,7 @@ function Footer() {
 
 // ─── Bits ──────────────────────────────────────────────────────────────────
 const sectionStyle: React.CSSProperties = {
-  padding: "clamp(72px, 10vw, 140px) clamp(20px, 4vw, 40px)",
+  padding: "clamp(44px, 5.5vw, 84px) clamp(20px, 4vw, 40px)",
 };
 
 const sectionInner: React.CSSProperties = {
@@ -657,7 +921,7 @@ function FormGroup({
 }: { label: string; sub?: string; children: React.ReactNode; optional?: boolean }) {
   return (
     <div style={{
-      paddingBottom: 36, marginBottom: 36,
+      paddingBottom: 26, marginBottom: 26,
       borderBottom: `1px solid ${c.border}`,
     }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
@@ -703,18 +967,19 @@ function Field({
   return (
     <label style={{ display: "block", gridColumn: fullWidth ? "1 / -1" : undefined }}>
       <div style={{
-        fontFamily: FONT_MONO, fontSize: 11, color: c.inkSoft,
-        letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 600,
-        marginBottom: 8,
+        fontFamily: FONT_MONO, fontSize: 11, color: c.ink,
+        letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700,
+        marginBottom: 9,
       }}>{label}</div>
       <div style={{
         position: "relative",
-        background: c.bg, border: `1px solid ${c.border}`,
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "0 14px",
-        transition: "border-color 0.15s",
+        background: c.surfaceStrong,
+        border: `1.5px solid ${c.borderStrong}`,
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "0 16px",
+        transition: "border-color 0.15s, box-shadow 0.15s, background 0.15s",
       }} className="apl-field">
-        {icon && <span style={{ color: c.inkMute, flexShrink: 0 }}>{icon}</span>}
+        {icon && <span style={{ color: c.accent, flexShrink: 0, opacity: 0.85 }}>{icon}</span>}
         <input
           type={type}
           value={value}
@@ -722,11 +987,11 @@ function Field({
           placeholder={placeholder}
           required={required}
           style={{
-            flex: 1, padding: "14px 0",
+            flex: 1, padding: "17px 0",
             background: "transparent",
             border: "none", outline: "none",
             color: c.ink,
-            fontFamily: FONT_GROTESK, fontSize: 15, fontWeight: 500,
+            fontFamily: FONT_GROTESK, fontSize: 16, fontWeight: 500,
             letterSpacing: "-0.005em",
             minWidth: 0,
           }}
@@ -811,10 +1076,15 @@ const globalCSS = `
     color: ${c.ink};
   }
   .apl-field:focus-within {
-    border-color: ${c.borderFocus};
+    border-color: ${c.accent} !important;
+    background: ${c.bg} !important;
+    box-shadow: 0 0 0 4px ${c.accentSoft};
   }
   .apl-chip:hover {
     border-color: ${c.borderFocus};
+  }
+  .apl-chip-on:hover {
+    box-shadow: 0 0 0 3px ${c.accentSoft};
   }
   @keyframes apl-spin { to { transform: rotate(360deg); } }
   .apl-spin { animation: apl-spin 0.8s linear infinite; }
@@ -822,6 +1092,16 @@ const globalCSS = `
   @keyframes apl-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.3; transform: scale(0.7); }
+  }
+
+  @keyframes apl-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .apl-cta-big:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(0,229,255,0.28);
   }
 
   @media (max-width: 600px) {
