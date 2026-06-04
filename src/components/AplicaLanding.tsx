@@ -65,6 +65,7 @@ export default function AplicaLanding() {
       <style>{globalCSS}</style>
       <Topbar />
       <Hero />
+      <Features />
       <Apply />
       <Footer />
     </div>
@@ -210,6 +211,60 @@ function Hero() {
             <span>Aplicar al roster</span>
             <ArrowDown size={16} strokeWidth={2.5} />
           </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Features (3 value-prop cards) ─────────────────────────────────────────
+function Features() {
+  const items = [
+    {
+      n: "01",
+      title: "Acreditación oficial",
+      body: "Entras al roster como fotógrafo de cobertura de nuestros eventos. Te invitamos a cubrir lo que coincide con tu perfil.",
+    },
+    {
+      n: "02",
+      title: "Tú cubres. Nosotros vendemos.",
+      body: "Tú haces lo que mejor haces. La plataforma indexa cada rostro, encuentra al fan y procesa cada venta — sin tu intervención.",
+    },
+    {
+      n: "03",
+      title: "Más ventas, más tier, más ganancia.",
+      body: "Cuantas más fotos vendas, más subes de tier. Cada nivel deja más comisión en tu bolsillo en cada venta.",
+    },
+  ];
+  return (
+    <section style={sectionStyle}>
+      <div style={sectionInner}>
+        <SectionLabel>Para fotógrafos</SectionLabel>
+        <h2 style={sectionTitle}>Tres razones para entrar.</h2>
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "clamp(20px, 2vw, 32px)",
+          marginTop: 48,
+        }}>
+          {items.map((s) => (
+            <div key={s.n} style={{
+              padding: "clamp(24px, 3vw, 36px)",
+              background: c.surface,
+              border: `1px solid ${c.border}`,
+            }}>
+              <div style={{
+                fontFamily: FONT_MONO, fontSize: 12, color: c.accent,
+                letterSpacing: "0.2em", fontWeight: 700, marginBottom: 18,
+              }}>{s.n}</div>
+              <div style={{
+                fontFamily: FONT_GROTESK, fontSize: 23, fontWeight: 700,
+                letterSpacing: "-0.02em", marginBottom: 12, lineHeight: 1.15,
+              }}>{s.title}</div>
+              <div style={{ fontSize: 15, color: c.inkSoft, lineHeight: 1.6 }}>{s.body}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
