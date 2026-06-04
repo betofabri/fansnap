@@ -34,6 +34,8 @@ const c = {
   borderFocus: "rgba(0,229,255,0.55)",
   accent: "#00E5FF",        // cyan — used sparingly
   accentSoft: "rgba(0,229,255,0.12)",
+  magenta: "#FF2D87",       // magenta — word highlights in body
+  magentaSoft: "rgba(255,45,135,0.12)",
   premium: "#9D4EFF",       // purple — only on success state
 };
 
@@ -59,6 +61,19 @@ const MEXICAN_CITIES = [
   "Puebla",
   "Tijuana",
   "Otra ciudad",
+];
+
+// Phone country codes. México first + pre-selected since the launch market is
+// MX; LATAM neighbours follow, then a small global tail.
+const COUNTRY_CODES: { flag: string; code: string; name: string }[] = [
+  { flag: "🇲🇽", code: "+52", name: "México" },
+  { flag: "🇧🇷", code: "+55", name: "Brasil" },
+  { flag: "🇦🇷", code: "+54", name: "Argentina" },
+  { flag: "🇨🇱", code: "+56", name: "Chile" },
+  { flag: "🇨🇴", code: "+57", name: "Colombia" },
+  { flag: "🇵🇪", code: "+51", name: "Perú" },
+  { flag: "🇺🇸", code: "+1",  name: "USA" },
+  { flag: "🇪🇸", code: "+34", name: "España" },
 ];
 
 const EQUIPMENT_OPTIONS = [
@@ -192,34 +207,35 @@ function Hero() {
         padding: "clamp(56px, 8vw, 120px) clamp(20px, 4vw, 40px) clamp(36px, 5vw, 72px)",
         textAlign: "center",
       }}>
+        {/* Cyan pill — now carries 'Ocesa · CCXP presenta:'. Authority
+            cascade in one box: presenter inside the brand-color frame. */}
         <div style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          padding: "6px 12px",
+          display: "inline-flex", alignItems: "center", gap: 10,
+          padding: "8px 14px",
           background: c.accentSoft, border: `1px solid ${c.accent}55`,
           color: c.accent,
           fontFamily: FONT_MONO, fontSize: 11,
           letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 700,
-          marginBottom: 14,
+          marginBottom: 18,
         }}>
           <span style={{
             width: 6, height: 6, borderRadius: "50%", background: c.accent,
             animation: "apl-pulse 2.4s ease-in-out infinite",
           }} />
-          <span>Stay tuned</span>
+          <span>Ocesa <span style={{ opacity: 0.55 }}>·</span> CCXP <span style={{ color: "#fff" }}>presenta:</span></span>
         </div>
 
-        {/* Presenter line — co-branding tag right above the headline.
-            Reads as 'Marquee Pictures presents…' authority cascade. */}
+        {/* Audience tag — 'PARA FOTÓGRAFOS' identifies who this page is for. */}
         <div style={{
           fontFamily: FONT_MONO,
-          fontSize: "clamp(12px, 1vw, 14px)",
+          fontSize: "clamp(11px, 0.9vw, 13px)",
           fontWeight: 700,
           letterSpacing: "0.32em",
           textTransform: "uppercase",
           color: c.inkSoft,
           marginBottom: 14,
         }}>
-          Ocesa <span style={{ opacity: 0.4 }}>·</span> CCXP <span style={{ color: c.ink, opacity: 0.85 }}>presenta:</span>
+          Para fotógrafos
         </div>
 
         <h1 style={{
@@ -238,21 +254,40 @@ function Hero() {
           }}>nadie</em> olvida.
         </h1>
 
+        {/* Body — three lines. The middle line carries the magenta accent
+            on 'audiencia' + 'monetización' so the photographer's value
+            words pop without overwhelming. */}
         <p style={{
           fontSize: "clamp(17px, 1.4vw, 20px)",
           color: c.inkSoft,
           lineHeight: 1.55,
-          maxWidth: 640,
-          margin: "0 auto 32px",
+          maxWidth: 680,
+          margin: "0 auto 14px",
         }}>
           Cada concierto, convención, obra y fiesta es un momento que merece quedarse.
-          Tu cámara lo convierte en algo que se puede tocar, regalar, recordar. Nosotros
-          ponemos la tecnología, la audiencia y el escenario. Tú pones la mirada y nosotros
-          hacemos el resto.
-          <br />
-          <span style={{ color: c.ink, fontWeight: 500 }}>
-            Bienvenido al roster oficial de FanSnap.
-          </span>
+        </p>
+        <p style={{
+          fontSize: "clamp(17px, 1.4vw, 20px)",
+          color: c.inkSoft,
+          lineHeight: 1.55,
+          maxWidth: 720,
+          margin: "0 auto 22px",
+        }}>
+          Tú pones <span style={{ color: c.ink, fontWeight: 600 }}>la mirada</span> y nosotros
+          ponemos la <span style={{ color: c.accent, fontWeight: 600 }}>tecnología</span>,
+          la <span style={{ color: c.magenta, fontWeight: 600 }}>audiencia</span> y
+          la <span style={{ color: c.magenta, fontWeight: 600 }}>monetización</span>.
+        </p>
+        <p style={{
+          fontSize: "clamp(15px, 1.2vw, 17px)",
+          color: c.ink,
+          lineHeight: 1.55,
+          maxWidth: 680,
+          margin: "0 auto 32px",
+          fontWeight: 500,
+        }}>
+          Súmate al <span style={{ color: c.accent, fontWeight: 700 }}>closed beta</span> de FanSnap,
+          la plataforma oficial de fotógrafos de Ocesa y Omelete Company.
         </p>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
@@ -273,64 +308,78 @@ function Features() {
       n: "01",
       title: "Acreditación oficial",
       body: "Entras al roster como fotógrafo de cobertura de nuestros eventos. Te invitamos a cubrir lo que coincide con tu perfil.",
-      // Photographer working with serious camera at an event — represents the
-      // 'official photographer' badge.
       image: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=900&q=80",
       imagePos: "center 30%",
+      featured: false,
     },
     {
       n: "02",
       title: "Tú cubres. Nosotros vendemos.",
       body: "Tú haces lo que mejor haces. La plataforma indexa cada rostro, encuentra al fan y procesa cada venta — sin tu intervención.",
-      // Festival crowd from above — represents the scale of audience the
-      // platform reaches on the photographer's behalf.
       image: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=900&q=80",
       imagePos: "center 55%",
+      featured: true,
     },
     {
       n: "03",
       title: "Más ventas, más tier, más ganancia.",
       body: "Cuantas más fotos vendas, más subes de tier. Cada nivel deja más comisión en tu bolsillo en cada venta.",
-      // Stage at peak moment — represents the climactic, sellable shot and
-      // the financial upside that follows.
       image: "https://images.unsplash.com/photo-1535320903710-d993d3d77d29?auto=format&fit=crop&w=900&q=80",
       imagePos: "center 40%",
+      featured: false,
     },
   ];
   return (
     <section style={sectionStyle}>
-      <div style={sectionInner}>
+      <div style={{ ...sectionInner, textAlign: "center" }}>
         <SectionLabel>Para fotógrafos</SectionLabel>
-        <h2 style={sectionTitle}>Entiende FanSnap.</h2>
+        <h2 style={{ ...sectionTitle, margin: "0 auto 0" }}>Entiende FanSnap.</h2>
 
+        {/* 3-column grid with the middle column 20% wider on desktop.
+            alignItems: center keeps the smaller side cards vertically
+            centered against the taller middle card. Falls back to a
+            single column on mobile via .apl-features-grid responsive. */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gridTemplateColumns: "1fr 1.2fr 1fr",
           gap: "clamp(14px, 1.4vw, 22px)",
-          marginTop: 22,
-        }}>
+          alignItems: "center",
+          marginTop: 28,
+          textAlign: "left",
+        }} className="apl-features-grid">
           {items.map((s) => (
             <div key={s.n} style={{
               background: c.surface,
-              border: `1px solid ${c.border}`,
+              border: `1px solid ${s.featured ? c.accent + "55" : c.border}`,
               overflow: "hidden",
               display: "flex", flexDirection: "column",
+              boxShadow: s.featured ? `0 12px 36px rgba(0,229,255,0.10)` : "none",
             }}>
               {/* Text first — the number, title and body lead. */}
-              <div style={{ padding: "clamp(20px, 2.4vw, 28px) clamp(20px, 2.4vw, 28px) clamp(16px, 2vw, 22px)" }}>
+              <div style={{
+                padding: s.featured
+                  ? "clamp(28px, 3.2vw, 40px) clamp(28px, 3.2vw, 40px) clamp(22px, 2.6vw, 30px)"
+                  : "clamp(20px, 2.4vw, 28px) clamp(20px, 2.4vw, 28px) clamp(16px, 2vw, 22px)",
+              }}>
                 <div style={{
-                  fontFamily: FONT_MONO, fontSize: 12, color: c.accent,
-                  letterSpacing: "0.2em", fontWeight: 700, marginBottom: 12,
+                  fontFamily: FONT_MONO, fontSize: s.featured ? 13 : 12, color: c.accent,
+                  letterSpacing: "0.2em", fontWeight: 700, marginBottom: s.featured ? 14 : 12,
                 }}>{s.n}</div>
                 <div style={{
-                  fontFamily: FONT_GROTESK, fontSize: 22, fontWeight: 700,
-                  letterSpacing: "-0.02em", marginBottom: 10, lineHeight: 1.15,
+                  fontFamily: FONT_GROTESK,
+                  fontSize: s.featured ? 26 : 22,
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  marginBottom: s.featured ? 12 : 10,
+                  lineHeight: 1.15,
                 }}>{s.title}</div>
-                <div style={{ fontSize: 15, color: c.inkSoft, lineHeight: 1.55 }}>{s.body}</div>
+                <div style={{
+                  fontSize: s.featured ? 16 : 15,
+                  color: c.inkSoft, lineHeight: 1.55,
+                }}>{s.body}</div>
               </div>
 
-              {/* Card image at the bottom — visual punctuation, like a
-                  pulled-from-the-event proof under the words. */}
+              {/* Card image at the bottom */}
               <div style={{
                 position: "relative",
                 aspectRatio: "16/9",
@@ -341,7 +390,6 @@ function Features() {
                 borderTop: `1px solid ${c.border}`,
                 marginTop: "auto",
               }}>
-                {/* Soft top fade so the photo blends into the card body. */}
                 <div style={{
                   position: "absolute", inset: 0,
                   background: `linear-gradient(0deg, rgba(14,14,17,0) 50%, rgba(14,14,17,0.55) 100%)`,
@@ -366,9 +414,11 @@ function Apply() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [countryCode, setCountryCode] = useState("+52"); // México default
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [portfolio, setPortfolio] = useState("");
+  const [verification, setVerification] = useState<"email" | "whatsapp" | null>(null);
   const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<string[]>([]);
   const [bigEventExperience, setBigEventExperience] = useState<boolean | null>(null);
@@ -390,6 +440,7 @@ function Apply() {
     phone.trim() &&
     city.trim() &&
     portfolio.trim() &&
+    verification !== null &&
     submit.stage !== "submitting";
 
   const toggle = (list: string[], value: string): string[] =>
@@ -408,7 +459,12 @@ function Apply() {
           fullName: `${firstName.trim()} ${lastName.trim()}`,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          email, phone, city, portfolio,
+          email,
+          phone: `${countryCode} ${phone.trim()}`,
+          countryCode,
+          phoneNumber: phone.trim(),
+          verification, // "email" | "whatsapp"
+          city, portfolio,
           eventTypes, equipment,
           bigEventExperience: bigEventExperience === true,
           bigEventNotes: bigEventExperience === true ? bigEventNotes : "",
@@ -510,13 +566,10 @@ function Apply() {
                 icon={<Mail size={14} strokeWidth={2.2} />}
                 required
               />
-              <Field
+              <PhoneField
                 label="Teléfono / WhatsApp *"
-                value={phone} onChange={setPhone}
-                type="tel"
-                icon={<Phone size={14} strokeWidth={2.2} />}
-                placeholder="+52 55 1234 5678"
-                required
+                countryCode={countryCode} setCountryCode={setCountryCode}
+                phone={phone} setPhone={setPhone}
               />
             </FormRow>
             <FormRow cols={2}>
@@ -604,9 +657,43 @@ function Apply() {
             )}
           </FormGroup>
 
+          {/* Verification method picker — required, asked just before
+              submit so it's the last decision the user makes. Magenta
+              accent on the active choice ties it to the brand 'audiencia
+              y monetización' wording in the hero. */}
+          <div style={{
+            marginTop: 24, paddingTop: 24, borderTop: `1px solid ${c.border}`,
+          }}>
+            <div style={{
+              fontFamily: FONT_MONO, fontSize: 11, color: c.accent,
+              letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700,
+              marginBottom: 9,
+            }}>
+              Cómo prefieres recibir el código de verificación *
+            </div>
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
+            }} className="apl-form-row">
+              <VerificationChip
+                active={verification === "email"}
+                icon={<Mail size={16} strokeWidth={2.2} />}
+                label="Por email"
+                sub={email || "el email de arriba"}
+                onClick={() => setVerification("email")}
+              />
+              <VerificationChip
+                active={verification === "whatsapp"}
+                icon={<Phone size={16} strokeWidth={2.2} />}
+                label="Por WhatsApp"
+                sub={phone ? `${countryCode} ${phone}` : "el teléfono de arriba"}
+                onClick={() => setVerification("whatsapp")}
+              />
+            </div>
+          </div>
+
           {/* Submit + secondary referral CTA */}
           <div style={{
-            marginTop: 32, paddingTop: 28, borderTop: `1px solid ${c.border}`,
+            marginTop: 22, paddingTop: 22, borderTop: `1px solid ${c.border}`,
             display: "flex", flexDirection: "column", gap: 16, alignItems: "stretch",
           }}>
             {submit.stage === "error" && (
@@ -1006,6 +1093,55 @@ const secondaryCTA: React.CSSProperties = {
   textDecoration: "none", transition: "all 0.15s",
 };
 
+function VerificationChip({
+  active, icon, label, sub, onClick,
+}: {
+  active: boolean; icon: React.ReactNode; label: string; sub: string; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "16px 18px", textAlign: "left",
+        background: active ? c.magentaSoft : "rgba(0,229,255,0.045)",
+        border: `1.5px solid ${active ? c.magenta : "rgba(0,229,255,0.35)"}`,
+        boxShadow: active ? `0 0 0 4px rgba(255,45,135,0.18)` : "none",
+        color: c.ink,
+        cursor: "pointer", transition: "all 0.15s",
+        fontFamily: "inherit",
+      }}
+    >
+      <span style={{
+        width: 38, height: 38, flexShrink: 0,
+        border: `1.5px solid ${active ? c.magenta : c.borderStrong}`,
+        background: active ? c.magenta : "transparent",
+        display: "grid", placeItems: "center",
+        color: active ? c.bg : c.accent,
+      }}>
+        {icon}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: FONT_GROTESK, fontSize: 14, fontWeight: 700,
+          letterSpacing: "0.05em", textTransform: "uppercase",
+          color: active ? c.magenta : c.ink, marginBottom: 3,
+        }}>
+          {label}
+        </div>
+        <div style={{
+          fontFamily: FONT_MONO, fontSize: 11, color: c.inkSoft,
+          letterSpacing: "0.04em",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {sub}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function FormGroup({
   label, sub, children, optional,
 }: { label: string; sub?: string; children: React.ReactNode; optional?: boolean }) {
@@ -1044,6 +1180,91 @@ function FormRow({ children, cols = 1 }: { children: React.ReactNode; cols?: 1 |
     }} className={cols === 2 ? "apl-form-row" : ""}>
       {children}
     </div>
+  );
+}
+
+function PhoneField({
+  label, countryCode, setCountryCode, phone, setPhone,
+}: {
+  label: string;
+  countryCode: string; setCountryCode: (v: string) => void;
+  phone: string; setPhone: (v: string) => void;
+}) {
+  return (
+    <label style={{ display: "block" }}>
+      <div style={{
+        fontFamily: FONT_MONO, fontSize: 11, color: c.accent,
+        letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700,
+        marginBottom: 9,
+      }}>{label}</div>
+      <div style={{
+        position: "relative",
+        background: "rgba(0,229,255,0.045)",
+        border: `1.5px solid rgba(0,229,255,0.35)`,
+        display: "flex", alignItems: "stretch", gap: 0,
+        padding: "0 0 0 12px",
+        transition: "border-color 0.15s, box-shadow 0.15s, background 0.15s",
+      }} className="apl-field">
+        <span style={{ display: "flex", alignItems: "center", color: c.accent, flexShrink: 0 }}>
+          <Phone size={14} strokeWidth={2.2} />
+        </span>
+
+        {/* Country code dropdown — narrow column on the left. */}
+        <div style={{
+          position: "relative",
+          display: "flex", alignItems: "center",
+          paddingLeft: 10, paddingRight: 4,
+          borderRight: `1px solid rgba(0,229,255,0.25)`,
+          marginLeft: 10,
+        }}>
+          <select
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value)}
+            style={{
+              padding: "17px 22px 17px 0",
+              background: "transparent",
+              border: "none", outline: "none",
+              color: c.ink,
+              fontFamily: FONT_GROTESK, fontSize: 16, fontWeight: 600,
+              letterSpacing: "-0.005em",
+              appearance: "none", WebkitAppearance: "none",
+              cursor: "pointer",
+              minWidth: 78,
+            }}
+          >
+            {COUNTRY_CODES.map((cc) => (
+              <option key={cc.code} value={cc.code} style={{ background: c.bg, color: c.ink }}>
+                {cc.flag} {cc.code}
+              </option>
+            ))}
+          </select>
+          <span style={{
+            position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+            pointerEvents: "none", color: c.accent, opacity: 0.85, display: "flex",
+          }}>
+            <ChevronDown size={14} strokeWidth={2.5} />
+          </span>
+        </div>
+
+        {/* The phone number — flex 1 on the right. */}
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="55 1234 5678"
+          required
+          style={{
+            flex: 1, padding: "17px 16px 17px 14px",
+            background: "transparent",
+            border: "none", outline: "none",
+            color: c.ink,
+            fontFamily: FONT_GROTESK, fontSize: 16, fontWeight: 500,
+            letterSpacing: "-0.005em",
+            minWidth: 0,
+          }}
+        />
+      </div>
+    </label>
   );
 }
 
@@ -1255,6 +1476,10 @@ const globalCSS = `
   .apl-cta-big:hover {
     transform: translateY(-2px);
     box-shadow: 0 14px 36px rgba(0,229,255,0.28);
+  }
+
+  @media (max-width: 880px) {
+    .apl-features-grid { grid-template-columns: 1fr !important; }
   }
 
   @media (max-width: 600px) {
