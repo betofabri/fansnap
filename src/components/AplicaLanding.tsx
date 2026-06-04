@@ -65,7 +65,6 @@ export default function AplicaLanding() {
       <style>{globalCSS}</style>
       <Topbar />
       <Hero />
-      <Process />
       <Apply />
       <Footer />
     </div>
@@ -89,24 +88,24 @@ function Topbar() {
           display: "inline-flex", alignItems: "center", gap: 10,
           color: c.ink, textDecoration: "none",
         }}>
-          <span style={{ fontFamily: FONT_GROTESK, fontWeight: 700, fontSize: 18, letterSpacing: "-0.02em" }}>
+          <span style={{ fontFamily: FONT_GROTESK, fontWeight: 700, fontSize: 19, letterSpacing: "-0.02em" }}>
             fan<span style={{ color: c.accent }}>Snap</span>
           </span>
           <span style={{ width: 1, height: 14, background: c.border }} />
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: c.inkSoft, letterSpacing: "0.18em", textTransform: "uppercase" }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkSoft, letterSpacing: "0.18em", textTransform: "uppercase" }}>
             Roster Oficial
           </span>
         </a>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, letterSpacing: "0.15em", textTransform: "uppercase" }} className="apl-desktop">
+          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, letterSpacing: "0.15em", textTransform: "uppercase" }} className="apl-desktop">
             MX · 2026
           </span>
           <a href="#aplicar" style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             padding: "8px 14px",
             background: "transparent", border: `1px solid ${c.borderStrong}`,
-            color: c.ink, fontSize: 11, fontWeight: 600,
+            color: c.ink, fontSize: 12, fontWeight: 600,
             letterSpacing: "0.08em", textTransform: "uppercase",
             textDecoration: "none", transition: "all 0.15s",
           }} className="apl-link">
@@ -123,13 +122,14 @@ function Topbar() {
 function Hero() {
   return (
     <section style={{ position: "relative", overflow: "hidden" }}>
-      {/* Atmospheric image — a wide concert-ish shot. Darkened heavily so
-          the headline reads cleanly. */}
+      {/* Atmospheric image — wide festival crowd with stage lights.
+          Curated Unsplash shot (Anthony Delanoix). Darkened heavily so the
+          headline reads cleanly and the brand tone stays sober. */}
       <div style={{
         position: "absolute", inset: 0,
-        backgroundImage: "url(https://picsum.photos/seed/fansnap-apl-hero/2200/1400)",
+        backgroundImage: "url(https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=2400&q=80)",
         backgroundSize: "cover", backgroundPosition: "center 35%",
-        filter: "grayscale(0.4) contrast(1.1) brightness(0.45)",
+        filter: "grayscale(0.3) contrast(1.05) brightness(0.5)",
       }} />
       {/* Dark vignette so the bottom fade naturally into the next section. */}
       <div style={{
@@ -147,7 +147,7 @@ function Hero() {
           padding: "6px 12px",
           background: c.accentSoft, border: `1px solid ${c.accent}55`,
           color: c.accent,
-          fontFamily: FONT_MONO, fontSize: 10,
+          fontFamily: FONT_MONO, fontSize: 11,
           letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 700,
           marginBottom: 20,
         }}>
@@ -162,7 +162,7 @@ function Hero() {
             Reads as 'Marquee Pictures presents…' authority cascade. */}
         <div style={{
           fontFamily: FONT_MONO,
-          fontSize: "clamp(11px, 1vw, 13px)",
+          fontSize: "clamp(12px, 1vw, 14px)",
           fontWeight: 700,
           letterSpacing: "0.32em",
           textTransform: "uppercase",
@@ -174,7 +174,7 @@ function Hero() {
 
         <h1 style={{
           fontFamily: FONT_GROTESK,
-          fontSize: "clamp(40px, 7.5vw, 96px)",
+          fontSize: "clamp(41px, 7.5vw, 97px)",
           fontWeight: 700,
           letterSpacing: "-0.04em",
           lineHeight: 0.96,
@@ -189,7 +189,7 @@ function Hero() {
         </h1>
 
         <p style={{
-          fontSize: "clamp(16px, 1.4vw, 19px)",
+          fontSize: "clamp(17px, 1.4vw, 20px)",
           color: c.inkSoft,
           lineHeight: 1.55,
           maxWidth: 640,
@@ -210,63 +210,6 @@ function Hero() {
             <span>Aplicar al roster</span>
             <ArrowDown size={16} strokeWidth={2.5} />
           </a>
-          <a href="#proceso" style={secondaryCTA} className="apl-cta-secondary">
-            <span>Cómo funciona</span>
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Process (3 steps) ─────────────────────────────────────────────────────
-function Process() {
-  const steps = [
-    {
-      n: "01",
-      title: "Aplicas",
-      body: "Llenas el formulario con tu portafolio. Revisamos tu trabajo y tu disponibilidad. Te respondemos en 5 días hábiles.",
-    },
-    {
-      n: "02",
-      title: "Te credenciamos",
-      body: "Si encajas, entras al roster con un tier (Standard / Pro / VIP). Te invitamos a cubrir los eventos que coinciden con tu perfil.",
-    },
-    {
-      n: "03",
-      title: "Cubres y cobras",
-      body: "Subes las fotos a tu portal. El sistema las indexa, los fans se buscan, compran. Tu split sale automático.",
-    },
-  ];
-  return (
-    <section id="proceso" style={sectionStyle}>
-      <div style={sectionInner}>
-        <SectionLabel>Cómo trabajamos juntos</SectionLabel>
-        <h2 style={sectionTitle}>Tres pasos. Sin papeleo extraño.</h2>
-
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "clamp(20px, 2vw, 32px)",
-          marginTop: 48,
-        }}>
-          {steps.map((s) => (
-            <div key={s.n} style={{
-              padding: "clamp(24px, 3vw, 36px)",
-              background: c.surface,
-              border: `1px solid ${c.border}`,
-            }}>
-              <div style={{
-                fontFamily: FONT_MONO, fontSize: 11, color: c.accent,
-                letterSpacing: "0.2em", fontWeight: 700, marginBottom: 18,
-              }}>{s.n}</div>
-              <div style={{
-                fontFamily: FONT_GROTESK, fontSize: 22, fontWeight: 700,
-                letterSpacing: "-0.02em", marginBottom: 12,
-              }}>{s.title}</div>
-              <div style={{ fontSize: 14, color: c.inkSoft, lineHeight: 1.6 }}>{s.body}</div>
-            </div>
-          ))}
         </div>
       </div>
     </section>
@@ -358,7 +301,7 @@ function Apply() {
               padding: "6px 12px",
               background: "rgba(157,78,255,0.12)", border: `1px solid ${c.premium}66`,
               color: c.premium,
-              fontFamily: FONT_MONO, fontSize: 10,
+              fontFamily: FONT_MONO, fontSize: 11,
               letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 700,
               marginBottom: 28,
             }}>
@@ -366,21 +309,21 @@ function Apply() {
               <span>Aplicación recibida</span>
             </div>
             <h2 style={{ ...sectionTitle, marginBottom: 14 }}>Estás en la cola.</h2>
-            <p style={{ fontSize: 16, color: c.inkSoft, lineHeight: 1.55, maxWidth: 560, marginBottom: 32 }}>
+            <p style={{ fontSize: 17, color: c.inkSoft, lineHeight: 1.55, maxWidth: 560, marginBottom: 32 }}>
               Te enviamos la confirmación a <strong style={{ color: c.ink, fontWeight: 600 }}>{email}</strong>.
               El equipo de curaduría revisa tu portafolio y te responde en hasta 5 días hábiles.
             </p>
 
             <div style={{ display: "inline-block", padding: "16px 24px", background: c.bg, border: `1px solid ${c.border}` }}>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 6 }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 6 }}>
                 Código de protocolo
               </div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: "clamp(20px, 2.5vw, 28px)", color: c.premium, fontWeight: 700, letterSpacing: "0.06em" }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: "clamp(21px, 2.5vw, 29px)", color: c.premium, fontWeight: 700, letterSpacing: "0.06em" }}>
                 {submit.code}
               </div>
             </div>
 
-            <div style={{ fontSize: 13, color: c.inkMute, marginTop: 28, maxWidth: 480, lineHeight: 1.55 }}>
+            <div style={{ fontSize: 14, color: c.inkMute, marginTop: 28, maxWidth: 480, lineHeight: 1.55 }}>
               Guarda este código. Si necesitas referenciar tu aplicación por email o
               WhatsApp, este es el número.
             </div>
@@ -505,7 +448,7 @@ function Apply() {
                   width: "100%", padding: "12px 14px",
                   background: c.bg, color: c.ink,
                   border: `1px solid ${c.border}`,
-                  fontFamily: FONT_GROTESK, fontSize: 14,
+                  fontFamily: FONT_GROTESK, fontSize: 15,
                   resize: "vertical", outline: "none",
                   transition: "border-color 0.15s",
                 }}
@@ -525,7 +468,7 @@ function Apply() {
                 padding: "10px 14px",
                 background: "rgba(255,59,110,0.08)",
                 border: "1px solid rgba(255,59,110,0.4)",
-                color: "#FF3B6E", fontSize: 13,
+                color: "#FF3B6E", fontSize: 14,
               }}>
                 {submit.message}
               </div>
@@ -537,7 +480,7 @@ function Apply() {
               style={{
                 ...primaryCTA,
                 padding: "18px 28px",
-                fontSize: 14,
+                fontSize: 15,
                 opacity: canSubmit ? 1 : 0.4,
                 cursor: canSubmit ? "pointer" : "not-allowed",
               }}
@@ -556,7 +499,7 @@ function Apply() {
               )}
             </button>
 
-            <div style={{ fontSize: 12, color: c.inkMute, maxWidth: 480, lineHeight: 1.55 }}>
+            <div style={{ fontSize: 13, color: c.inkMute, maxWidth: 480, lineHeight: 1.55 }}>
               Al enviar aceptas que revisemos tu portafolio y compartamos esta
               información con la curaduría de FanSnap. Confidencial. No SPAM. Sin
               compromiso.
@@ -580,7 +523,7 @@ function Footer() {
         maxWidth: 1200, margin: "0 auto",
         display: "flex", flexWrap: "wrap", justifyContent: "space-between",
         alignItems: "center", gap: 16,
-        fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute,
+        fontFamily: FONT_MONO, fontSize: 12, color: c.inkMute,
         letterSpacing: "0.12em", textTransform: "uppercase",
       }}>
         <div>© 2026 FanSnap · Roster oficial</div>
@@ -604,7 +547,7 @@ const sectionInner: React.CSSProperties = {
 
 const sectionTitle: React.CSSProperties = {
   fontFamily: FONT_GROTESK,
-  fontSize: "clamp(28px, 4vw, 52px)",
+  fontSize: "clamp(29px, 4vw, 53px)",
   fontWeight: 700,
   letterSpacing: "-0.035em",
   lineHeight: 1.05,
@@ -614,7 +557,7 @@ const sectionTitle: React.CSSProperties = {
 };
 
 const sectionSub: React.CSSProperties = {
-  fontSize: "clamp(14px, 1.2vw, 17px)",
+  fontSize: "clamp(15px, 1.2vw, 18px)",
   color: c.inkSoft,
   lineHeight: 1.55,
   maxWidth: 580,
@@ -624,7 +567,7 @@ const sectionSub: React.CSSProperties = {
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontFamily: FONT_MONO, fontSize: 11, color: c.accent,
+      fontFamily: FONT_MONO, fontSize: 12, color: c.accent,
       letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 700,
       marginBottom: 18,
     }}>
@@ -638,7 +581,7 @@ const primaryCTA: React.CSSProperties = {
   padding: "14px 22px",
   background: c.accent, color: c.bg,
   border: "none", fontFamily: FONT_GROTESK,
-  fontSize: 13, fontWeight: 700, letterSpacing: "0.08em",
+  fontSize: 14, fontWeight: 700, letterSpacing: "0.08em",
   textTransform: "uppercase", cursor: "pointer",
   textDecoration: "none", transition: "all 0.15s",
 };
@@ -649,7 +592,7 @@ const secondaryCTA: React.CSSProperties = {
   background: "transparent", color: c.ink,
   border: `1px solid ${c.borderStrong}`,
   fontFamily: FONT_GROTESK,
-  fontSize: 13, fontWeight: 600, letterSpacing: "0.08em",
+  fontSize: 14, fontWeight: 600, letterSpacing: "0.08em",
   textTransform: "uppercase", cursor: "pointer",
   textDecoration: "none", transition: "all 0.15s",
 };
@@ -664,12 +607,12 @@ function FormGroup({
     }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
         <div style={{
-          fontFamily: FONT_GROTESK, fontSize: 20, fontWeight: 700,
+          fontFamily: FONT_GROTESK, fontSize: 21, fontWeight: 700,
           letterSpacing: "-0.02em", color: c.ink,
         }}>{label}</div>
         {optional && (
           <span style={{
-            fontFamily: FONT_MONO, fontSize: 9, color: c.inkMute,
+            fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute,
             letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 600,
             padding: "3px 8px", border: `1px solid ${c.border}`,
           }}>
@@ -677,7 +620,7 @@ function FormGroup({
           </span>
         )}
       </div>
-      {sub && <div style={{ fontSize: 13, color: c.inkSoft, marginBottom: 20 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 14, color: c.inkSoft, marginBottom: 20 }}>{sub}</div>}
       {children}
     </div>
   );
@@ -705,7 +648,7 @@ function Field({
   return (
     <label style={{ display: "block", gridColumn: fullWidth ? "1 / -1" : undefined }}>
       <div style={{
-        fontFamily: FONT_MONO, fontSize: 10, color: c.inkSoft,
+        fontFamily: FONT_MONO, fontSize: 11, color: c.inkSoft,
         letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 600,
         marginBottom: 8,
       }}>{label}</div>
@@ -728,7 +671,7 @@ function Field({
             background: "transparent",
             border: "none", outline: "none",
             color: c.ink,
-            fontFamily: FONT_GROTESK, fontSize: 14, fontWeight: 500,
+            fontFamily: FONT_GROTESK, fontSize: 15, fontWeight: 500,
             letterSpacing: "-0.005em",
             minWidth: 0,
           }}
@@ -759,7 +702,7 @@ function CheckboxChip({
         background: selected ? c.accentSoft : c.bg,
         border: `1px solid ${selected ? c.accent + "66" : c.border}`,
         color: selected ? c.accent : c.ink,
-        fontFamily: FONT_GROTESK, fontSize: 13, fontWeight: 500,
+        fontFamily: FONT_GROTESK, fontSize: 14, fontWeight: 500,
         cursor: "pointer", transition: "all 0.15s",
       }}
       className="apl-chip"
@@ -789,7 +732,7 @@ function YesNoChip({
         background: selected ? c.accent : c.bg,
         border: `1px solid ${selected ? c.accent : c.borderStrong}`,
         color: selected ? c.bg : c.ink,
-        fontFamily: FONT_GROTESK, fontSize: 13, fontWeight: 700,
+        fontFamily: FONT_GROTESK, fontSize: 14, fontWeight: 700,
         letterSpacing: "0.08em", textTransform: "uppercase",
         cursor: "pointer", transition: "all 0.15s",
         minWidth: 90,
