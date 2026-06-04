@@ -18,7 +18,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  ArrowRight, ArrowDown, Check, Mail, Phone, MapPin, Link2, Camera, Loader2, X,
+  ArrowRight, ArrowDown, Check, Mail, Phone, MapPin, Link2, Camera, Loader2, X, ChevronDown,
 } from "lucide-react";
 
 // ─── Sober palette local to this page ───────────────────────────────────────
@@ -48,6 +48,17 @@ const EVENT_TYPES = [
   "Teatro",
   "Corporativos",
   "Maratones",
+];
+
+// Top 5 Mexican metro areas by population — these are where the launch
+// events will live and where most photographer applications will come from.
+const MEXICAN_CITIES = [
+  "Ciudad de México",
+  "Guadalajara",
+  "Monterrey",
+  "Puebla",
+  "Tijuana",
+  "Otra ciudad",
 ];
 
 const EQUIPMENT_OPTIONS = [
@@ -179,6 +190,7 @@ function Hero() {
         position: "relative",
         maxWidth: 1200, margin: "0 auto",
         padding: "clamp(56px, 8vw, 120px) clamp(20px, 4vw, 40px) clamp(36px, 5vw, 72px)",
+        textAlign: "center",
       }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8,
@@ -216,7 +228,7 @@ function Hero() {
           fontWeight: 700,
           letterSpacing: "-0.04em",
           lineHeight: 0.96,
-          margin: "0 0 22px 0",
+          margin: "0 auto 22px",
           maxWidth: 880,
           textWrap: "balance",
         }}>
@@ -231,7 +243,7 @@ function Hero() {
           color: c.inkSoft,
           lineHeight: 1.55,
           maxWidth: 640,
-          margin: "0 0 32px 0",
+          margin: "0 auto 32px",
         }}>
           Cada concierto, convención, obra y fiesta es un momento que merece quedarse.
           Tu cámara lo convierte en algo que se puede tocar, regalar, recordar. Nosotros
@@ -243,37 +255,12 @@ function Hero() {
           </span>
         </p>
 
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
           <a href="#aplicar" style={primaryCTA} className="apl-cta-primary">
             <span>Aplicar al roster</span>
             <ArrowDown size={16} strokeWidth={2.5} />
           </a>
         </div>
-      </div>
-
-      {/* Dot navigation centered at the bottom of the hero. */}
-      <div style={{
-        position: "absolute", left: 0, right: 0, bottom: 22,
-        display: "flex", justifyContent: "center", gap: 8,
-        zIndex: 3, pointerEvents: "auto",
-      }}>
-        {HERO_SLIDES.map((_, i) => {
-          const isActive = i === idx;
-          return (
-            <button
-              key={i}
-              onClick={() => setIdx(i)}
-              aria-label={`Slide ${i + 1}`}
-              style={{
-                width: isActive ? 28 : 8, height: 8,
-                background: isActive ? c.accent : "rgba(255,255,255,0.35)",
-                border: "none", padding: 0, cursor: "pointer",
-                transition: "all 0.3s ease",
-                boxShadow: isActive ? `0 0 10px ${c.accent}` : "none",
-              }}
-            />
-          );
-        })}
       </div>
     </section>
   );
@@ -314,7 +301,7 @@ function Features() {
     <section style={sectionStyle}>
       <div style={sectionInner}>
         <SectionLabel>Para fotógrafos</SectionLabel>
-        <h2 style={sectionTitle}>Tres razones para entrar.</h2>
+        <h2 style={sectionTitle}>Entiende FanSnap.</h2>
 
         <div style={{
           display: "grid",
@@ -496,16 +483,11 @@ function Apply() {
       <div style={sectionInner}>
         <SectionLabel>Aplica</SectionLabel>
         <h2 style={sectionTitle}>Llena el formulario.</h2>
-        <p style={sectionSub}>
-          Solo cinco campos son obligatorios. El resto nos ayuda a entender mejor tu
-          perfil y proponerte el tier correcto. Todo es confidencial.
-        </p>
 
         <form onSubmit={onSubmit} style={{ marginTop: 22 }}>
           {/* Required */}
           <FormGroup
             label="Sobre ti"
-            sub="Los esenciales — solo lo necesario para hablar contigo."
           >
             <FormRow cols={2}>
               <Field
@@ -538,11 +520,12 @@ function Apply() {
               />
             </FormRow>
             <FormRow cols={2}>
-              <Field
+              <SelectField
                 label="Ciudad de operación *"
                 value={city} onChange={setCity}
+                options={MEXICAN_CITIES}
                 icon={<MapPin size={14} strokeWidth={2.2} />}
-                placeholder="CDMX, GDL, MTY…"
+                placeholder="Elige una ciudad…"
                 required
               />
               <Field
@@ -1061,6 +1044,69 @@ function FormRow({ children, cols = 1 }: { children: React.ReactNode; cols?: 1 |
     }} className={cols === 2 ? "apl-form-row" : ""}>
       {children}
     </div>
+  );
+}
+
+function SelectField({
+  label, value, onChange, options, required, fullWidth, icon, placeholder,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  options: readonly string[]; required?: boolean; fullWidth?: boolean;
+  icon?: React.ReactNode; placeholder?: string;
+}) {
+  return (
+    <label style={{ display: "block", gridColumn: fullWidth ? "1 / -1" : undefined }}>
+      <div style={{
+        fontFamily: FONT_MONO, fontSize: 11, color: c.accent,
+        letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700,
+        marginBottom: 9,
+      }}>{label}</div>
+      <div style={{
+        position: "relative",
+        background: "rgba(0,229,255,0.045)",
+        border: `1.5px solid rgba(0,229,255,0.35)`,
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "0 16px",
+        transition: "border-color 0.15s, box-shadow 0.15s, background 0.15s",
+      }} className="apl-field">
+        {icon && <span style={{ color: c.accent, flexShrink: 0 }}>{icon}</span>}
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          style={{
+            flex: 1, padding: "17px 24px 17px 0",
+            background: "transparent",
+            border: "none", outline: "none",
+            color: value ? c.ink : c.inkMute,
+            fontFamily: FONT_GROTESK, fontSize: 16, fontWeight: 500,
+            letterSpacing: "-0.005em",
+            minWidth: 0,
+            appearance: "none",
+            WebkitAppearance: "none",
+            cursor: "pointer",
+          }}
+        >
+          <option value="" disabled style={{ background: c.bg, color: c.inkMute }}>
+            {placeholder ?? "Selecciona…"}
+          </option>
+          {options.map((opt) => (
+            <option key={opt} value={opt} style={{ background: c.bg, color: c.ink }}>
+              {opt}
+            </option>
+          ))}
+        </select>
+        {/* Caret indicator (just a visual hint — actual click is on the
+            invisible native select). */}
+        <span style={{
+          position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
+          pointerEvents: "none", color: c.accent, opacity: 0.85,
+          display: "flex",
+        }}>
+          <ChevronDown size={16} strokeWidth={2.5} />
+        </span>
+      </div>
+    </label>
   );
 }
 
