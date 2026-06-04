@@ -120,18 +120,55 @@ function Topbar() {
 }
 
 // ─── Hero ──────────────────────────────────────────────────────────────────
+
+// Atmospheric stage / crowd shots cycled in the hero. Each gets a slow
+// Ken Burns zoom while it's visible, then cross-fades to the next.
+const HERO_SLIDES: { url: string; pos: string }[] = [
+  { url: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=2400&q=80", pos: "center 35%" },
+  { url: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=2400&q=80", pos: "center 55%" },
+  { url: "https://images.unsplash.com/photo-1535320903710-d993d3d77d29?auto=format&fit=crop&w=2400&q=80", pos: "center 45%" },
+  { url: "https://images.unsplash.com/photo-1493676304819-0d7a8d026dcf?auto=format&fit=crop&w=2400&q=80", pos: "center 50%" },
+];
+
 function Hero() {
+  const [idx, setIdx] = useState(0);
+  const SLIDE_MS = 6000;
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setIdx((i) => (i + 1) % HERO_SLIDES.length);
+    }, SLIDE_MS);
+    return () => clearInterval(tick);
+  }, []);
+
   return (
     <section style={{ position: "relative", overflow: "hidden" }}>
-      {/* Atmospheric image — wide festival crowd with stage lights.
-          Curated Unsplash shot (Anthony Delanoix). Darkened heavily so the
-          headline reads cleanly and the brand tone stays sober. */}
-      <div style={{
-        position: "absolute", inset: 0,
-        backgroundImage: "url(https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=2400&q=80)",
-        backgroundSize: "cover", backgroundPosition: "center 35%",
-        filter: "grayscale(0.3) contrast(1.05) brightness(0.5)",
-      }} />
+      {/* Stacked slides — only the active one is at opacity 1. The active
+          slide also slowly scales up (Ken Burns) for the duration it's
+          visible; inactive slides snap back to scale 1 ready for next
+          appearance. Cross-fade 1.4s. */}
+      {HERO_SLIDES.map((slide, i) => {
+        const active = i === idx;
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute", inset: 0,
+              backgroundImage: `url(${slide.url})`,
+              backgroundSize: "cover",
+              backgroundPosition: slide.pos,
+              filter: "grayscale(0.3) contrast(1.05) brightness(0.5)",
+              opacity: active ? 1 : 0,
+              transform: active ? "scale(1.07)" : "scale(1)",
+              transformOrigin: "center center",
+              transition: active
+                ? "opacity 1.4s ease, transform 8s linear"
+                : "opacity 1.4s ease, transform 0.6s ease",
+              willChange: "opacity, transform",
+            }}
+          />
+        );
+      })}
       {/* Dark vignette so the bottom fade naturally into the next section. */}
       <div style={{
         position: "absolute", inset: 0,
@@ -213,6 +250,31 @@ function Hero() {
           </a>
         </div>
       </div>
+
+      {/* Dot navigation centered at the bottom of the hero. */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, bottom: 22,
+        display: "flex", justifyContent: "center", gap: 8,
+        zIndex: 3, pointerEvents: "auto",
+      }}>
+        {HERO_SLIDES.map((_, i) => {
+          const isActive = i === idx;
+          return (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              aria-label={`Slide ${i + 1}`}
+              style={{
+                width: isActive ? 28 : 8, height: 8,
+                background: isActive ? c.accent : "rgba(255,255,255,0.35)",
+                border: "none", padding: 0, cursor: "pointer",
+                transition: "all 0.3s ease",
+                boxShadow: isActive ? `0 0 10px ${c.accent}` : "none",
+              }}
+            />
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -267,26 +329,8 @@ function Features() {
               overflow: "hidden",
               display: "flex", flexDirection: "column",
             }}>
-              {/* Card image — atmospheric, desaturated so the photo grain
-                  carries mood instead of competing with the headline. */}
-              <div style={{
-                position: "relative",
-                aspectRatio: "16/10",
-                backgroundImage: `url(${s.image})`,
-                backgroundSize: "cover",
-                backgroundPosition: s.imagePos,
-                filter: "grayscale(0.35) contrast(1.05) brightness(0.78)",
-                borderBottom: `1px solid ${c.border}`,
-              }}>
-                {/* Soft gradient overlay so the bottom edge of the photo
-                    flows into the card body color. */}
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: `linear-gradient(180deg, rgba(14,14,17,0) 50%, rgba(14,14,17,0.6) 100%)`,
-                }} />
-              </div>
-
-              <div style={{ padding: "clamp(20px, 2.4vw, 28px)" }}>
+              {/* Text first — the number, title and body lead. */}
+              <div style={{ padding: "clamp(20px, 2.4vw, 28px) clamp(20px, 2.4vw, 28px) clamp(16px, 2vw, 22px)" }}>
                 <div style={{
                   fontFamily: FONT_MONO, fontSize: 12, color: c.accent,
                   letterSpacing: "0.2em", fontWeight: 700, marginBottom: 12,
@@ -296,6 +340,25 @@ function Features() {
                   letterSpacing: "-0.02em", marginBottom: 10, lineHeight: 1.15,
                 }}>{s.title}</div>
                 <div style={{ fontSize: 15, color: c.inkSoft, lineHeight: 1.55 }}>{s.body}</div>
+              </div>
+
+              {/* Card image at the bottom — visual punctuation, like a
+                  pulled-from-the-event proof under the words. */}
+              <div style={{
+                position: "relative",
+                aspectRatio: "16/9",
+                backgroundImage: `url(${s.image})`,
+                backgroundSize: "cover",
+                backgroundPosition: s.imagePos,
+                filter: "grayscale(0.35) contrast(1.05) brightness(0.78)",
+                borderTop: `1px solid ${c.border}`,
+                marginTop: "auto",
+              }}>
+                {/* Soft top fade so the photo blends into the card body. */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: `linear-gradient(0deg, rgba(14,14,17,0) 50%, rgba(14,14,17,0.55) 100%)`,
+                }} />
               </div>
             </div>
           ))}
