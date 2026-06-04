@@ -66,7 +66,6 @@ export default function AplicaLanding() {
       <Topbar />
       <Hero />
       <Process />
-      <Tiers />
       <Apply />
       <Footer />
     </div>
@@ -149,11 +148,28 @@ function Hero() {
           background: c.accentSoft, border: `1px solid ${c.accent}55`,
           color: c.accent,
           fontFamily: FONT_MONO, fontSize: 10,
-          letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 600,
-          marginBottom: 32,
+          letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 700,
+          marginBottom: 20,
         }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.accent }} />
-          <span>Pre-lanzamiento · México 2026</span>
+          <span style={{
+            width: 6, height: 6, borderRadius: "50%", background: c.accent,
+            animation: "apl-pulse 2.4s ease-in-out infinite",
+          }} />
+          <span>Stay tuned</span>
+        </div>
+
+        {/* Presenter line — co-branding tag right above the headline.
+            Reads as 'Marquee Pictures presents…' authority cascade. */}
+        <div style={{
+          fontFamily: FONT_MONO,
+          fontSize: "clamp(11px, 1vw, 13px)",
+          fontWeight: 700,
+          letterSpacing: "0.32em",
+          textTransform: "uppercase",
+          color: c.inkSoft,
+          marginBottom: 18,
+        }}>
+          Ocesa <span style={{ opacity: 0.4 }}>·</span> CCXP <span style={{ color: c.ink, opacity: 0.85 }}>presenta:</span>
         </div>
 
         <h1 style={{
@@ -198,30 +214,8 @@ function Hero() {
             <span>Cómo funciona</span>
           </a>
         </div>
-
-        {/* Soft credential strip */}
-        <div style={{
-          display: "flex", flexWrap: "wrap", gap: "clamp(24px, 4vw, 48px)",
-          marginTop: "clamp(56px, 8vw, 96px)",
-          fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute,
-          letterSpacing: "0.12em", textTransform: "uppercase",
-        }}>
-          <CredentialItem label="Lanzamiento" value="Q3 2026" />
-          <CredentialItem label="Mercados" value="CDMX · GDL · MTY" />
-          <CredentialItem label="Tiers" value="Standard · Pro · VIP" />
-          <CredentialItem label="Pagos" value="Stripe + OXXO" />
-        </div>
       </div>
     </section>
-  );
-}
-
-function CredentialItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ color: c.inkMute, marginBottom: 4 }}>{label}</div>
-      <div style={{ color: c.ink, fontFamily: FONT_GROTESK, fontWeight: 600, fontSize: 14, letterSpacing: "-0.01em", textTransform: "none" }}>{value}</div>
-    </div>
   );
 }
 
@@ -271,97 +265,6 @@ function Process() {
                 letterSpacing: "-0.02em", marginBottom: 12,
               }}>{s.title}</div>
               <div style={{ fontSize: 14, color: c.inkSoft, lineHeight: 1.6 }}>{s.body}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Tiers ─────────────────────────────────────────────────────────────────
-function Tiers() {
-  const tiers = [
-    {
-      name: "Standard",
-      commission: "50%",
-      description: "Entras pagando por venta. Sin garantía mínima. Ideal para empezar y construir reputación.",
-      perks: ["Acceso al roster", "Eventos abiertos", "Pago por venta"],
-    },
-    {
-      name: "Pro",
-      commission: "60%",
-      description: "Más comisión + bonificación si pegas metas mensuales. Para fotógrafos con track record.",
-      perks: ["Comisión ampliada", "Bonus por meta", "Prioridad en invitaciones"],
-      featured: true,
-    },
-    {
-      name: "VIP",
-      commission: "40%",
-      description: "Comisión menor a cambio de cachê fijo o garantía mínima. Solo por invitación.",
-      perks: ["Cachê o garantía", "Eventos premium", "Curaduría editorial"],
-    },
-  ];
-  return (
-    <section style={{ ...sectionStyle, background: c.surface, borderTop: `1px solid ${c.border}`, borderBottom: `1px solid ${c.border}` }}>
-      <div style={sectionInner}>
-        <SectionLabel>Tiers</SectionLabel>
-        <h2 style={sectionTitle}>Tres niveles. Tú decides cuál encajas.</h2>
-        <p style={{ ...sectionSub }}>
-          Empezamos contigo en Standard. Cuando entregas, subes. La diferencia está
-          en cómo se reparte la venta y qué se exige.
-        </p>
-
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "clamp(16px, 1.5vw, 24px)",
-          marginTop: 44,
-        }}>
-          {tiers.map((tier) => (
-            <div key={tier.name} style={{
-              position: "relative",
-              padding: "clamp(28px, 3vw, 40px)",
-              background: tier.featured ? c.surfaceStrong : c.bg,
-              border: tier.featured
-                ? `1px solid ${c.accent}55`
-                : `1px solid ${c.border}`,
-            }}>
-              {tier.featured && (
-                <div style={{
-                  position: "absolute", top: -1, right: -1,
-                  background: c.accent, color: c.bg,
-                  fontFamily: FONT_MONO, fontSize: 9,
-                  fontWeight: 700, letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  padding: "4px 10px",
-                }}>Más popular</div>
-              )}
-              <div style={{
-                fontFamily: FONT_MONO, fontSize: 11, color: c.inkSoft,
-                letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, marginBottom: 14,
-              }}>{tier.name}</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 16 }}>
-                <span style={{ fontFamily: FONT_GROTESK, fontSize: 52, fontWeight: 700, letterSpacing: "-0.04em" }}>{tier.commission}</span>
-                <span style={{ fontSize: 12, color: c.inkSoft }}>del neto</span>
-              </div>
-              <div style={{ fontSize: 14, color: c.inkSoft, lineHeight: 1.55, marginBottom: 22 }}>
-                {tier.description}
-              </div>
-              <ul style={{
-                listStyle: "none", padding: 0, margin: 0,
-                display: "flex", flexDirection: "column", gap: 9,
-              }}>
-                {tier.perks.map((perk) => (
-                  <li key={perk} style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    fontSize: 13, color: c.ink,
-                  }}>
-                    <Check size={14} strokeWidth={2.5} style={{ color: c.accent, flexShrink: 0 }} />
-                    <span>{perk}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
           ))}
         </div>
@@ -917,6 +820,11 @@ const globalCSS = `
   }
   @keyframes apl-spin { to { transform: rotate(360deg); } }
   .apl-spin { animation: apl-spin 0.8s linear infinite; }
+
+  @keyframes apl-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.7); }
+  }
 
   @media (max-width: 600px) {
     .apl-form-row { grid-template-columns: 1fr !important; }
