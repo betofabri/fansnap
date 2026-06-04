@@ -160,10 +160,10 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { n: "01", label: "OVERVIEW",       href: "/admin",                tourId: "nav-overview" },
-  { n: "02", label: "EVENTS",         tourId: "nav-events",          badge: "142", comingSoon: true },
+  { n: "02", label: "EVENTS",         href: "/admin/events",         tourId: "nav-events",          badge: "142" },
   { n: "03", label: "PHOTOGRAPHERS",  href: "/admin/photographers",  tourId: "nav-photographers",  badge: "23",  accent: "cyan" },
   { n: "04", label: "SALES",          tourId: "nav-sales",           comingSoon: true },
-  { n: "05", label: "FANS",           tourId: "nav-fans",            comingSoon: true },
+  { n: "05", label: "FANS",           href: "/admin/fans",           tourId: "nav-fans" },
   { n: "06", label: "B2B",            tourId: "nav-b2b",             dim: true, comingSoon: true },
   { n: "07", label: "FINANCE",        tourId: "nav-finance",         dim: true, comingSoon: true },
   { n: "08", label: "OPERATIONS",     tourId: "nav-operations",      dim: true, comingSoon: true },
@@ -365,5 +365,178 @@ export function AdminShell({
         </main>
       </div>
     </>
+  );
+}
+
+// ============================================================
+// Filter rail / Table helpers (shared across list pages)
+// ============================================================
+
+export function FilterCheckbox<K extends string>({
+  label, value, set, onToggle, color = T.purple,
+}: { label: string; value: K; set: Set<K>; onToggle: (v: K) => void; color?: string }) {
+  const checked = set.has(value);
+  return (
+    <label style={{
+      display: "flex", alignItems: "center", gap: 9,
+      padding: "5px 0", cursor: "pointer",
+      fontFamily: display, fontSize: 13, fontWeight: 500,
+      color: checked ? T.ink : T.inkSoft,
+    }}>
+      <span style={{
+        width: 14, height: 14,
+        border: `2px solid ${checked ? color : T.border}`,
+        background: checked ? color : "transparent",
+        display: "grid", placeItems: "center",
+      }}>
+        {checked && (
+          <span style={{ width: 6, height: 6, background: T.bg, display: "block" }} />
+        )}
+      </span>
+      <span>{label}</span>
+    </label>
+  );
+}
+
+export function FilterGroup({
+  n, title, children,
+}: { n: string; title: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      paddingTop: 18, paddingBottom: 18,
+      borderTop: `1px dashed ${T.border}`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
+        <span style={{
+          fontFamily: mono, fontSize: 10, fontWeight: 700, color: T.purple,
+          border: `1.5px solid ${T.purple}`, padding: "1px 6px", letterSpacing: "0.06em",
+        }}>{n}</span>
+        <span style={{
+          fontFamily: mono, fontSize: 10, color: T.inkMute,
+          letterSpacing: "0.2em", textTransform: "uppercase",
+        }}>{title}</span>
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+export function Slider({
+  label, value, onChange, color = T.purple, max = 100, suffix,
+}: { label: string; value: number; onChange: (n: number) => void; color?: string; max?: number; suffix?: string }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontFamily: display, fontSize: 13, color: T.inkSoft }}>{label}</span>
+        <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 700, color }}>{value}{suffix ?? ""}</span>
+      </div>
+      <div style={{
+        position: "relative", height: 4, background: T.border, marginBottom: 6,
+      }}>
+        <div style={{
+          position: "absolute", left: 0, top: 0, bottom: 0,
+          width: `${(value / max) * 100}%`, background: color,
+        }} />
+        <input
+          type="range" min={0} max={max} value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{
+            position: "absolute", inset: -6, width: "100%", height: 16,
+            opacity: 0, cursor: "pointer",
+          }}
+        />
+        <div style={{
+          position: "absolute", left: `calc(${(value / max) * 100}% - 6px)`, top: -4,
+          width: 12, height: 12, background: color,
+          border: `2px solid ${T.ink}`, pointerEvents: "none",
+        }} />
+      </div>
+    </div>
+  );
+}
+
+export function SortHead({
+  label, k, sort, onSort, align = "left",
+}: {
+  label: string; k: string;
+  sort: { key: string; dir: "asc" | "desc" };
+  onSort: (k: string) => void; align?: "left" | "right";
+}) {
+  const active = sort.key === k;
+  return (
+    <button onClick={() => onSort(k)} style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      justifyContent: align === "right" ? "flex-end" : "flex-start",
+      fontFamily: mono, fontSize: 10, fontWeight: 700,
+      color: active ? T.ink : T.inkMute, letterSpacing: "0.18em",
+      background: "transparent", border: "none", padding: 0, cursor: "pointer",
+      width: "100%", textAlign: align,
+    }}>
+      <span>{label}</span>
+      <span style={{ width: 9, color: active ? T.cyan : "transparent", fontSize: 9 }}>
+        {sort.dir === "desc" ? "▾" : "▴"}
+      </span>
+    </button>
+  );
+}
+
+export function MiniKpi({
+  label, value, unit, delta, color, live, index = 0,
+}: {
+  label: string; value: string; unit?: string; delta?: string;
+  color?: string; live?: boolean; index?: number;
+}) {
+  return (
+    <div style={{
+      position: "relative", background: T.bgPaper,
+      border: `2px solid ${T.border}`, padding: "18px 20px 16px",
+      display: "flex", flexDirection: "column", gap: 10,
+      animation: "fs-fadeUp 0.5s ease-out both", animationDelay: `${index * 50}ms`,
+    }}>
+      <CornerBrackets color={T.cyan} size={11} thickness={2} inset={-1} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{
+          fontFamily: mono, fontSize: 10, fontWeight: 700, color: T.inkSoft,
+          letterSpacing: "0.18em",
+        }}>{label}</span>
+        {live && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            fontFamily: mono, fontSize: 9, fontWeight: 700, color: T.pink,
+            letterSpacing: "0.2em",
+          }}>
+            <StatusDot color={T.pink} size={6} /> LIVE
+          </span>
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{
+          fontFamily: display, fontWeight: 700, fontSize: 38,
+          letterSpacing: "-0.04em", lineHeight: 1, color: color ?? T.ink,
+        }}>{value}</span>
+        {unit && <span style={{
+          fontFamily: mono, fontSize: 10, color: T.inkMute, letterSpacing: "0.18em",
+        }}>{unit}</span>}
+      </div>
+      {delta && <span style={{ fontFamily: mono, fontSize: 10, color: T.inkMute, letterSpacing: "0.04em" }}>
+        {delta}
+      </span>}
+    </div>
+  );
+}
+
+export function Avatar({
+  initials, hue, size = 40, dim = false,
+}: { initials: string; hue: number; size?: number; dim?: boolean }) {
+  return (
+    <div style={{
+      width: size, height: size, flexShrink: 0,
+      background: `hsl(${hue}, ${dim ? 10 : 55}%, ${dim ? 22 : 32}%)`,
+      border: `2px solid ${T.ink}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: display, fontWeight: 700, fontSize: size * 0.4, color: T.ink,
+      letterSpacing: "-0.02em",
+      opacity: dim ? 0.6 : 1,
+    }}>{initials}</div>
   );
 }

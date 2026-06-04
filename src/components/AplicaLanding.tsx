@@ -141,7 +141,7 @@ function Hero() {
       <div style={{
         position: "relative",
         maxWidth: 1200, margin: "0 auto",
-        padding: "clamp(64px, 9vw, 132px) clamp(20px, 4vw, 40px) clamp(48px, 6vw, 88px)",
+        padding: "clamp(56px, 8vw, 120px) clamp(20px, 4vw, 40px) clamp(36px, 5vw, 72px)",
       }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8,
@@ -224,16 +224,28 @@ function Features() {
       n: "01",
       title: "Acreditación oficial",
       body: "Entras al roster como fotógrafo de cobertura de nuestros eventos. Te invitamos a cubrir lo que coincide con tu perfil.",
+      // Photographer working with serious camera at an event — represents the
+      // 'official photographer' badge.
+      image: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=900&q=80",
+      imagePos: "center 30%",
     },
     {
       n: "02",
       title: "Tú cubres. Nosotros vendemos.",
       body: "Tú haces lo que mejor haces. La plataforma indexa cada rostro, encuentra al fan y procesa cada venta — sin tu intervención.",
+      // Festival crowd from above — represents the scale of audience the
+      // platform reaches on the photographer's behalf.
+      image: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=900&q=80",
+      imagePos: "center 55%",
     },
     {
       n: "03",
       title: "Más ventas, más tier, más ganancia.",
       body: "Cuantas más fotos vendas, más subes de tier. Cada nivel deja más comisión en tu bolsillo en cada venta.",
+      // Stage at peak moment — represents the climactic, sellable shot and
+      // the financial upside that follows.
+      image: "https://images.unsplash.com/photo-1535320903710-d993d3d77d29?auto=format&fit=crop&w=900&q=80",
+      imagePos: "center 40%",
     },
   ];
   return (
@@ -245,24 +257,46 @@ function Features() {
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "clamp(16px, 1.6vw, 24px)",
-          marginTop: 32,
+          gap: "clamp(14px, 1.4vw, 22px)",
+          marginTop: 22,
         }}>
           {items.map((s) => (
             <div key={s.n} style={{
-              padding: "clamp(24px, 3vw, 36px)",
               background: c.surface,
               border: `1px solid ${c.border}`,
+              overflow: "hidden",
+              display: "flex", flexDirection: "column",
             }}>
+              {/* Card image — atmospheric, desaturated so the photo grain
+                  carries mood instead of competing with the headline. */}
               <div style={{
-                fontFamily: FONT_MONO, fontSize: 12, color: c.accent,
-                letterSpacing: "0.2em", fontWeight: 700, marginBottom: 18,
-              }}>{s.n}</div>
-              <div style={{
-                fontFamily: FONT_GROTESK, fontSize: 23, fontWeight: 700,
-                letterSpacing: "-0.02em", marginBottom: 12, lineHeight: 1.15,
-              }}>{s.title}</div>
-              <div style={{ fontSize: 15, color: c.inkSoft, lineHeight: 1.6 }}>{s.body}</div>
+                position: "relative",
+                aspectRatio: "16/10",
+                backgroundImage: `url(${s.image})`,
+                backgroundSize: "cover",
+                backgroundPosition: s.imagePos,
+                filter: "grayscale(0.35) contrast(1.05) brightness(0.78)",
+                borderBottom: `1px solid ${c.border}`,
+              }}>
+                {/* Soft gradient overlay so the bottom edge of the photo
+                    flows into the card body color. */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: `linear-gradient(180deg, rgba(14,14,17,0) 50%, rgba(14,14,17,0.6) 100%)`,
+                }} />
+              </div>
+
+              <div style={{ padding: "clamp(20px, 2.4vw, 28px)" }}>
+                <div style={{
+                  fontFamily: FONT_MONO, fontSize: 12, color: c.accent,
+                  letterSpacing: "0.2em", fontWeight: 700, marginBottom: 12,
+                }}>{s.n}</div>
+                <div style={{
+                  fontFamily: FONT_GROTESK, fontSize: 22, fontWeight: 700,
+                  letterSpacing: "-0.02em", marginBottom: 10, lineHeight: 1.15,
+                }}>{s.title}</div>
+                <div style={{ fontSize: 15, color: c.inkSoft, lineHeight: 1.55 }}>{s.body}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -279,7 +313,8 @@ type SubmitState =
   | { stage: "error"; message: string };
 
 function Apply() {
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
@@ -299,7 +334,8 @@ function Apply() {
   }, [submit.stage]);
 
   const canSubmit =
-    fullName.trim() &&
+    firstName.trim() &&
+    lastName.trim() &&
     email.includes("@") &&
     phone.trim() &&
     city.trim() &&
@@ -319,7 +355,10 @@ function Apply() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName, email, phone, city, portfolio,
+          fullName: `${firstName.trim()} ${lastName.trim()}`,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email, phone, city, portfolio,
           eventTypes, equipment,
           bigEventExperience: bigEventExperience === true,
           bigEventNotes: bigEventExperience === true ? bigEventNotes : "",
@@ -399,18 +438,23 @@ function Apply() {
           perfil y proponerte el tier correcto. Todo es confidencial.
         </p>
 
-        <form onSubmit={onSubmit} style={{ marginTop: 32 }}>
+        <form onSubmit={onSubmit} style={{ marginTop: 22 }}>
           {/* Required */}
           <FormGroup
             label="Sobre ti"
             sub="Los esenciales — solo lo necesario para hablar contigo."
           >
-            <FormRow>
+            <FormRow cols={2}>
               <Field
-                label="Nombre completo *"
-                value={fullName} onChange={setFullName}
+                label="Nombre *"
+                value={firstName} onChange={setFirstName}
                 icon={<Camera size={14} strokeWidth={2.2} />}
-                fullWidth required
+                required
+              />
+              <Field
+                label="Apellido *"
+                value={lastName} onChange={setLastName}
+                required
               />
             </FormRow>
             <FormRow cols={2}>
@@ -774,14 +818,14 @@ function ReferModal({ onClose }: { onClose: () => void }) {
                   placeholder="Una línea sobre su trabajo, dónde lo viste cubrir, etc."
                   style={{
                     width: "100%", padding: "14px 16px",
-                    background: c.surfaceStrong, color: c.ink,
-                    border: `1.5px solid ${c.borderStrong}`,
+                    background: "rgba(0,229,255,0.045)", color: c.ink,
+                    border: `1.5px solid rgba(0,229,255,0.35)`,
                     fontFamily: FONT_GROTESK, fontSize: 15,
                     resize: "vertical", outline: "none",
-                    transition: "border-color 0.15s",
+                    transition: "border-color 0.15s, background 0.15s",
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = c.accent; e.currentTarget.style.background = c.bg; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = c.borderStrong; e.currentTarget.style.background = c.surfaceStrong; }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = c.accent; e.currentTarget.style.background = "rgba(0,229,255,0.085)"; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(0,229,255,0.35)"; e.currentTarget.style.background = "rgba(0,229,255,0.045)"; }}
                 />
               </label>
             </div>
@@ -857,7 +901,7 @@ function Footer() {
 
 // ─── Bits ──────────────────────────────────────────────────────────────────
 const sectionStyle: React.CSSProperties = {
-  padding: "clamp(44px, 5.5vw, 84px) clamp(20px, 4vw, 40px)",
+  padding: "clamp(28px, 4vw, 56px) clamp(20px, 4vw, 40px)",
 };
 
 const sectionInner: React.CSSProperties = {
@@ -921,7 +965,7 @@ function FormGroup({
 }: { label: string; sub?: string; children: React.ReactNode; optional?: boolean }) {
   return (
     <div style={{
-      paddingBottom: 26, marginBottom: 26,
+      paddingBottom: 20, marginBottom: 20,
       borderBottom: `1px solid ${c.border}`,
     }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
@@ -967,19 +1011,19 @@ function Field({
   return (
     <label style={{ display: "block", gridColumn: fullWidth ? "1 / -1" : undefined }}>
       <div style={{
-        fontFamily: FONT_MONO, fontSize: 11, color: c.ink,
+        fontFamily: FONT_MONO, fontSize: 11, color: c.accent,
         letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700,
         marginBottom: 9,
       }}>{label}</div>
       <div style={{
         position: "relative",
-        background: c.surfaceStrong,
-        border: `1.5px solid ${c.borderStrong}`,
+        background: "rgba(0,229,255,0.045)",
+        border: `1.5px solid rgba(0,229,255,0.35)`,
         display: "flex", alignItems: "center", gap: 12,
         padding: "0 16px",
         transition: "border-color 0.15s, box-shadow 0.15s, background 0.15s",
       }} className="apl-field">
-        {icon && <span style={{ color: c.accent, flexShrink: 0, opacity: 0.85 }}>{icon}</span>}
+        {icon && <span style={{ color: c.accent, flexShrink: 0 }}>{icon}</span>}
         <input
           type={type}
           value={value}
@@ -1077,7 +1121,7 @@ const globalCSS = `
   }
   .apl-field:focus-within {
     border-color: ${c.accent} !important;
-    background: ${c.bg} !important;
+    background: rgba(0,229,255,0.085) !important;
     box-shadow: 0 0 0 4px ${c.accentSoft};
   }
   .apl-chip:hover {
