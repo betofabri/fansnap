@@ -1,286 +1,13 @@
 "use client";
 
 // FanSnap · Admin · Overview — Slice 0 + Slice 1, calmer iteration.
-// Less ambient mono noise, larger numbers, more whitespace.
-// Still brutalist (2px borders, corner brackets, section markers,
-// solid offset shadows, event codes everywhere) — just breathing.
+// Shell (Sidebar + TopBar) lives in _kit so all admin pages share it.
 
-import React, { useState } from "react";
-import { THEMES } from "@/lib/theme";
-import NavInspector, { NAV_INFO } from "./TourSystem";
-
-const T = {
-  ...THEMES.dark,
-  bgDeep: "#06060A",
-  borderStrong: "#2E2E3D",
-  green: "#3DDC97",
-};
-
-const mono = "var(--font-mono, 'JetBrains Mono'), ui-monospace, monospace";
-const display = "var(--font-grotesk, 'Space Grotesk'), system-ui, sans-serif";
-
-// ---------- primitives ----------
-
-function CornerBrackets({
-  color = T.cyan, size = 16, thickness = 2, inset = -1,
-}: { color?: string; size?: number; thickness?: number; inset?: number }) {
-  const corner = (s: React.CSSProperties): React.CSSProperties => ({
-    position: "absolute", width: size, height: size,
-    borderColor: color, borderStyle: "solid", borderWidth: 0,
-    pointerEvents: "none", ...s,
-  });
-  return (
-    <>
-      <span style={corner({ top: inset, left: inset, borderTopWidth: thickness, borderLeftWidth: thickness })} />
-      <span style={corner({ top: inset, right: inset, borderTopWidth: thickness, borderRightWidth: thickness })} />
-      <span style={corner({ bottom: inset, left: inset, borderBottomWidth: thickness, borderLeftWidth: thickness })} />
-      <span style={corner({ bottom: inset, right: inset, borderBottomWidth: thickness, borderRightWidth: thickness })} />
-    </>
-  );
-}
-
-function SectionMarker({
-  n, label, color = T.purple,
-}: { n: string; label?: string; color?: string }) {
-  return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-      <span style={{
-        fontFamily: mono, fontSize: 13, fontWeight: 700, color,
-        border: `2px solid ${color}`, padding: "3px 9px", letterSpacing: "0.04em",
-      }}>{n}</span>
-      {label && (
-        <span style={{
-          fontFamily: mono, fontSize: 12, color: T.inkSoft,
-          letterSpacing: "0.18em", textTransform: "uppercase",
-        }}>{label}</span>
-      )}
-    </div>
-  );
-}
-
-function Pill({
-  color, bg, border, children, dot, dotPulse,
-}: {
-  color: string; bg?: string; border?: string;
-  children: React.ReactNode; dot?: boolean; dotPulse?: boolean;
-}) {
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 7,
-      fontFamily: mono, fontSize: 11, fontWeight: 700,
-      letterSpacing: "0.16em", textTransform: "uppercase",
-      color, background: bg || "transparent",
-      border: `1.5px solid ${border || color}`,
-      padding: "4px 10px", whiteSpace: "nowrap",
-    }}>
-      {dot && (
-        <span
-          className={dotPulse ? "fs-pulse-dot" : ""}
-          style={{ width: 7, height: 7, borderRadius: "50%", background: color }}
-        />
-      )}
-      {children}
-    </span>
-  );
-}
-
-function StatusDot({ color, pulse = true }: { color: string; pulse?: boolean }) {
-  return (
-    <span
-      className={pulse ? "fs-pulse-dot" : ""}
-      style={{
-        display: "inline-block", width: 8, height: 8, borderRadius: "50%",
-        background: color, boxShadow: `0 0 0 2px ${color}22`,
-      }}
-    />
-  );
-}
-
-// Local keyframes — scoped fs- prefix so they don't collide with globals.css.
-function MockupStyles() {
-  return (
-    <style>{`
-      @keyframes fs-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
-      @keyframes fs-fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-      .fs-pulse-dot { animation: fs-pulse 1.4s ease-in-out infinite; }
-      .fs-nav-item:hover { background: ${T.bgAlt} !important; color: ${T.ink} !important; }
-      .fs-cta-primary:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 0 ${T.cyan} !important; }
-    `}</style>
-  );
-}
-
-// ============================================================
-// SIDEBAR
-// ============================================================
-
-type NavAccent = "purple" | "cyan" | "pink";
-type NavItem = { n: string; label: string; active?: boolean; badge?: string; accent?: NavAccent; dim?: boolean };
-
-const NAV: NavItem[] = [
-  { n: "01", label: "OVERVIEW",       active: true },
-  { n: "02", label: "EVENTS",         badge: "142" },
-  { n: "03", label: "PHOTOGRAPHERS",  badge: "23",  accent: "cyan" },
-  { n: "04", label: "SALES" },
-  { n: "05", label: "FANS" },
-  { n: "06", label: "B2B",            dim: true },
-  { n: "07", label: "FINANCE",        dim: true },
-  { n: "08", label: "OPERATIONS",     dim: true },
-  { n: "09", label: "SETTINGS" },
-];
-
-function Sidebar() {
-  // Hover state — only the number badge of each nav item triggers it.
-  const [hovered, setHovered] = useState<{ id: string; rect: DOMRect } | null>(null);
-
-  return (
-    <>
-    <aside data-tour="sidebar" style={{
-      width: 248, flexShrink: 0,
-      borderRight: `2px solid ${T.border}`,
-      background: T.bgDeep,
-      display: "flex", flexDirection: "column",
-      position: "sticky", top: 0, height: "100vh",
-    }}>
-      <div style={{
-        borderBottom: `2px solid ${T.border}`,
-        padding: "26px 22px 24px",
-        display: "flex", alignItems: "baseline", gap: 10,
-      }}>
-        <div style={{
-          fontFamily: display, fontWeight: 700, fontSize: 26,
-          letterSpacing: "-0.035em", color: T.ink,
-        }}>FAN<span style={{ color: T.purple }}>SNAP</span></div>
-        <span style={{
-          fontFamily: mono, fontSize: 10, fontWeight: 700,
-          color: T.cyan, border: `1.5px solid ${T.cyan}`,
-          padding: "2px 6px", letterSpacing: "0.2em",
-        }}>ADMIN</span>
-      </div>
-
-      <nav style={{ padding: "18px 12px", flex: 1, overflowY: "auto" }}>
-        {NAV.map((item) => {
-          const dim = !!item.dim;
-          const accent = dim
-            ? T.inkMute
-            : item.accent === "pink" ? T.pink
-            : item.accent === "cyan" ? T.cyan
-            : T.purple;
-          // Slug: "B2B" → "b2b", "PHOTOGRAPHERS" → "photographers"
-          const tourId = `nav-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
-          return (
-            <a
-              key={item.n}
-              href="#"
-              data-tour={tourId}
-              className={dim ? "fs-nav-item fs-nav-dim" : "fs-nav-item"}
-              style={{
-                position: "relative", display: "flex", alignItems: "center", gap: 14,
-                padding: "14px 14px", marginBottom: 4,
-                textDecoration: "none",
-                color: dim ? T.inkMute : (item.active ? T.ink : T.inkSoft),
-                background: item.active ? T.bgPaper : "transparent",
-                border: item.active ? `2px solid ${T.borderStrong}` : "2px solid transparent",
-                opacity: dim ? 0.45 : 1,
-                transition: "background 120ms, color 120ms, opacity 120ms",
-              }}
-            >
-              {item.active && <CornerBrackets color={T.cyan} size={11} thickness={2} inset={-2} />}
-              {/* Number badge — the ONLY hover trigger for the inspector. */}
-              <span
-                onMouseEnter={(e) => {
-                  const row = e.currentTarget.closest<HTMLAnchorElement>("a");
-                  if (row) setHovered({ id: tourId, rect: row.getBoundingClientRect() });
-                }}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  fontFamily: mono, fontSize: 12, fontWeight: 700,
-                  color: accent, width: 20, cursor: "help",
-                  textAlign: "center", letterSpacing: "0.04em",
-                }}
-              >{item.n}</span>
-              <span style={{
-                fontFamily: display, fontSize: 14, fontWeight: item.active ? 700 : 500,
-                letterSpacing: "0.02em", textTransform: "uppercase", flex: 1,
-              }}>{item.label}</span>
-              {item.badge && !dim && (
-                <span style={{
-                  fontFamily: mono, fontSize: 10, fontWeight: 700,
-                  color: item.accent === "pink" ? T.pink : T.inkMute,
-                  border: `1px solid ${item.accent === "pink" ? T.pink : T.border}`,
-                  padding: "2px 6px",
-                }}>{item.badge}</span>
-              )}
-            </a>
-          );
-        })}
-      </nav>
-
-      <div style={{ borderTop: `2px solid ${T.border}`, padding: "18px 16px 22px" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12,
-          border: `2px solid ${T.border}`, padding: "10px 12px",
-          background: T.bgAlt, position: "relative",
-        }}>
-          <div style={{
-            width: 36, height: 36, background: T.purple,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: display, fontWeight: 700, fontSize: 14, color: T.bg,
-            border: `2px solid ${T.ink}`,
-          }}>BF</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.1 }}>Beto Fabri</div>
-            <div style={{
-              fontFamily: mono, fontSize: 10, color: T.inkMute,
-              letterSpacing: "0.15em", marginTop: 3,
-            }}>USR-001 · ADMIN</div>
-          </div>
-        </div>
-      </div>
-    </aside>
-    <NavInspector
-      info={hovered ? NAV_INFO[hovered.id] ?? null : null}
-      anchor={hovered?.rect ?? null}
-    />
-    </>
-  );
-}
-
-// ============================================================
-// TOP BAR — simpler (no tour button)
-// ============================================================
-
-function TopBar() {
-  return (
-    <header style={{
-      display: "flex", alignItems: "stretch",
-      borderBottom: `2px solid ${T.border}`,
-      background: T.bg, height: 64, flexShrink: 0,
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "0 26px",
-        fontFamily: mono, fontSize: 12, letterSpacing: "0.16em",
-      }}>
-        <span style={{ color: T.inkMute }}>ADMIN</span>
-        <span style={{ color: T.borderStrong }}>/</span>
-        <span style={{ color: T.ink, fontWeight: 700 }}>OVERVIEW</span>
-      </div>
-
-      <div style={{ flex: 1 }} />
-
-      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 22px" }}>
-        <span data-tour="topbar-status" style={{ display: "inline-flex" }}>
-          <Pill color={T.green} dot dotPulse>ALL SYSTEMS</Pill>
-        </span>
-        <button style={{
-          fontFamily: mono, fontSize: 11, fontWeight: 700, color: T.inkSoft,
-          background: "transparent", border: `2px solid ${T.border}`,
-          padding: "8px 12px", letterSpacing: "0.18em", cursor: "pointer",
-        }}>THEME · DARK</button>
-      </div>
-    </header>
-  );
-}
+import React from "react";
+import {
+  T, mono, display,
+  AdminShell, CornerBrackets, SectionMarker, Pill, StatusDot,
+} from "./_kit";
 
 // ============================================================
 // PAGE HEADER — bigger H1, calmer subtitle
@@ -855,31 +582,21 @@ function FooterStrip() {
 
 export default function OverviewMockup() {
   return (
-    <>
-      <MockupStyles />
-      <div style={{ display: "flex", minHeight: "100vh", background: T.bg, minWidth: 1280 }}>
-        <Sidebar />
-        <main style={{
-          flex: 1, display: "flex", flexDirection: "column",
-          background: T.bg, position: "relative", minWidth: 0,
-        }}>
-          <TopBar />
-          <PageHeader />
-          <KPIRow />
-          <div style={{
-            padding: "0 44px 32px",
-            display: "grid", gridTemplateColumns: "minmax(0, 1fr) 420px",
-            gap: 22, alignItems: "stretch",
-          }}>
-            <EventHeatmap />
-            <TerminalFeed />
-          </div>
-          <div style={{ padding: "0 44px 48px" }}>
-            <GMVChart />
-          </div>
-          <FooterStrip />
-        </main>
+    <AdminShell currentNav="nav-overview" breadcrumb="OVERVIEW">
+      <PageHeader />
+      <KPIRow />
+      <div style={{
+        padding: "0 44px 32px",
+        display: "grid", gridTemplateColumns: "minmax(0, 1fr) 420px",
+        gap: 22, alignItems: "stretch",
+      }}>
+        <EventHeatmap />
+        <TerminalFeed />
       </div>
-    </>
+      <div style={{ padding: "0 44px 48px" }}>
+        <GMVChart />
+      </div>
+      <FooterStrip />
+    </AdminShell>
   );
 }
