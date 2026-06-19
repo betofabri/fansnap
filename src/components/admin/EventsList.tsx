@@ -1,480 +1,562 @@
 "use client";
 
-// FanSnap · Admin · Events List (Slice 3)
-// 142 lifetime events, filterable by model / status / category / city / date.
+// FanSnap · Admin · Events — REAL data over the D1 `events` table.
+// Row click → detail drawer (edit / trash there). Soft delete → trash
+// (recoverable); both trashing and permanent-delete require typing DELETE.
+// API: /api/admin/events (GET/POST/PATCH/DELETE, ?trash=1, ?permanent=1).
 
-import React, { useMemo, useState } from "react";
-import Link from "next/link";
-import {
-  T, mono, display,
-  AdminShell, CornerBrackets, SectionMarker, Pill,
-  FilterCheckbox, FilterGroup, MiniKpi, SortHead,
-} from "./_kit";
+import { useEffect, useState, useCallback } from "react";
+import { T, mono, display, AdminShell, GridBg } from "./_kit";
 
-// ============================================================
-// Types + mock data
-// ============================================================
-
-type BizModel = "OFF" | "MKT" | "SPO";
-type EvtStatus = "LIVE" | "SCHEDULED" | "INDEXING" | "UPLOADING" | "ARCHIVED";
-type Category = "Music" | "Conventions" | "Sports" | "Parties" | "Corporate";
-type City = "CDMX" | "MTY" | "GDL" | "SP" | "BOG";
-
-type Event = {
+interface EventRow {
+  id: string;
   code: string;
   name: string;
-  venue: string;
-  city: City;
-  cityFull: string;
-  model: BizModel;
-  category: Category;
-  date: string;       // display date "MAY 28"
-  dateSort: number;   // sort key (days from epoch-ish)
-  photogs: number;
-  photos: number;
-  matchRate: number;  // 0-100 or 0 if no data
-  gmvK: number;
-  status: EvtStatus;
+  business_model: string;
+  category: string;
+  venue: string | null;
+  city: string | null;
+  country: string | null;
+  start_at: string;
+  status: string;
+  featured: number;
+  cover_color: string | null;
+  photo_count: number;
+  photographer_count: number;
+  sponsor_fee_cents: number | null;
+  deleted_at: string | null;
+}
+
+const STATUSES = ["draft", "upcoming", "live", "recent", "archived"];
+const MODELS = ["official", "marketplace", "sponsored"];
+const CATEGORIES = ["music", "conventions", "sports", "parties", "corporate"];
+
+const STATUS_COLOR: Record<string, string> = {
+  live: T.pink, upcoming: "#FFD166", recent: T.cyan, draft: T.inkMute, archived: T.inkMute,
+};
+const MODEL_COLOR: Record<string, string> = {
+  official: T.purple, marketplace: T.cyan, sponsored: T.pink,
 };
 
-const EVENTS: Event[] = [
-  { code: "BB-001",  name: "BAD BUNNY · WORLD'S HOTTEST TOUR", venue: "FORO SOL",                city: "CDMX", cityFull: "Ciudad de México", model: "OFF", category: "Music",       date: "MAY 28", dateSort: 28,  photogs: 5, photos: 2841, matchRate: 91, gmvK: 42.8, status: "LIVE" },
-  { code: "CCXP-26", name: "CCXP MX · DAY 02",                  venue: "CITIBANAMEX",             city: "CDMX", cityFull: "Ciudad de México", model: "OFF", category: "Conventions", date: "MAY 28", dateSort: 28,  photogs: 7, photos: 1908, matchRate: 84, gmvK: 18.1, status: "LIVE" },
-  { code: "ANIM-08", name: "ANIME FRIENDS MX · DAY 01",         venue: "WTC",                     city: "CDMX", cityFull: "Ciudad de México", model: "SPO", category: "Conventions", date: "MAY 28", dateSort: 28,  photogs: 4, photos: 921,  matchRate: 72, gmvK: 0,    status: "LIVE" },
-  { code: "MAR-21",  name: "MARATÓN CDMX · 21K",                venue: "RUTA",                    city: "CDMX", cityFull: "Ciudad de México", model: "OFF", category: "Sports",      date: "MAY 26", dateSort: 26,  photogs: 4, photos: 1208, matchRate: 78, gmvK: 9.4,  status: "INDEXING" },
-  { code: "KARO-12", name: "KAROL G · MAÑANA SERÁ BONITO",      venue: "ESTADIO AZTECA",          city: "CDMX", cityFull: "Ciudad de México", model: "OFF", category: "Music",       date: "JUN 12", dateSort: 43,  photogs: 3, photos: 612,  matchRate: 82, gmvK: 6.2,  status: "INDEXING" },
-  { code: "ROSA-04", name: "ROSALÍA · MOTOMAMI · MX LEG",       venue: "AUDITORIO NACIONAL",      city: "CDMX", cityFull: "Ciudad de México", model: "MKT", category: "Music",       date: "JUN 14", dateSort: 45,  photogs: 2, photos: 0,    matchRate: 0,  gmvK: 0,    status: "SCHEDULED" },
-  { code: "LL-26",   name: "LOLLAPALOOZA MX · DAY 01",          venue: "BOSQUE DE CHAPULTEPEC",   city: "CDMX", cityFull: "Ciudad de México", model: "OFF", category: "Music",       date: "JUN 28", dateSort: 59,  photogs: 0, photos: 0,    matchRate: 0,  gmvK: 0,    status: "SCHEDULED" },
-  { code: "AE-08",   name: "ARCA Y EUROPA · DAY 01",            venue: "ARENA CDMX",              city: "CDMX", cityFull: "Ciudad de México", model: "MKT", category: "Music",       date: "JUL 04", dateSort: 65,  photogs: 0, photos: 0,    matchRate: 0,  gmvK: 0,    status: "SCHEDULED" },
-  { code: "EDC-26",  name: "EDC MÉXICO · DAY 03",               venue: "AUTÓDROMO HERMANOS R.",   city: "CDMX", cityFull: "Ciudad de México", model: "OFF", category: "Music",       date: "MAY 16", dateSort: 16,  photogs: 9, photos: 4012, matchRate: 88, gmvK: 68.4, status: "ARCHIVED" },
-  { code: "CC-26",   name: "COMIC CON CDMX · DAY 01",           venue: "WTC",                     city: "CDMX", cityFull: "Ciudad de México", model: "OFF", category: "Conventions", date: "MAR 22", dateSort: -38, photogs: 6, photos: 2208, matchRate: 80, gmvK: 32.8, status: "ARCHIVED" },
-  { code: "MX-MTN",  name: "MARATÓN MONTERREY · DAY 01",        venue: "RUTA",                    city: "MTY",  cityFull: "Monterrey",         model: "OFF", category: "Sports",      date: "MAY 04", dateSort: 4,   photogs: 3, photos: 988,  matchRate: 74, gmvK: 7.8,  status: "ARCHIVED" },
-  { code: "FCJ-22",  name: "FORÇA JOVEM · ANIVERSÁRIO",         venue: "ALLIANZ PARQUE",          city: "SP",   cityFull: "São Paulo",         model: "OFF", category: "Music",       date: "APR 14", dateSort: -14, photogs: 5, photos: 1408, matchRate: 76, gmvK: 24.4, status: "ARCHIVED" },
-  { code: "RO-014",  name: "ROCK AL PARQUE · STAGE A",          venue: "PARQUE SIMÓN BOLÍVAR",    city: "BOG",  cityFull: "Bogotá",            model: "MKT", category: "Music",       date: "MAY 22", dateSort: 22,  photogs: 2, photos: 488,  matchRate: 70, gmvK: 4.2,  status: "INDEXING" },
-  { code: "FF-26",   name: "FESTA DA FIRMA 2025",               venue: "OMELETE OFFICE",          city: "SP",   cityFull: "São Paulo",         model: "SPO", category: "Corporate",   date: "MAY 22", dateSort: 22,  photogs: 1, photos: 243,  matchRate: 88, gmvK: 0,    status: "ARCHIVED" },
-];
-
-// ============================================================
-// Helpers
-// ============================================================
-
-const modelColor = (m: BizModel) =>
-  m === "OFF" ? T.purple : m === "MKT" ? T.cyan : T.pink;
-const modelLabel = (m: BizModel) =>
-  m === "OFF" ? "OFFICIAL" : m === "MKT" ? "MARKET" : "SPONSORED";
-
-const statusColor = (s: EvtStatus) =>
-  s === "LIVE" ? T.pink :
-  s === "SCHEDULED" ? T.cyan :
-  s === "INDEXING" ? T.purple :
-  s === "UPLOADING" ? T.cyan :
-  T.inkMute;
-
-// ============================================================
-// Filter rail
-// ============================================================
-
-type Filters = {
-  search: string;
-  models: Set<BizModel>;
-  statuses: Set<EvtStatus>;
-  categories: Set<Category>;
-  cities: Set<City>;
-};
-
-const EMPTY_FILTERS: Filters = {
-  search: "",
-  models: new Set(),
-  statuses: new Set(),
-  categories: new Set(),
-  cities: new Set(),
-};
-
-function FilterRail({ filters, set }: {
-  filters: Filters;
-  set: React.Dispatch<React.SetStateAction<Filters>>;
-}) {
-  const toggle = <K extends string>(key: keyof Filters, v: K) => {
-    set(f => {
-      const s = new Set(f[key] as Set<K>);
-      if (s.has(v)) s.delete(v); else s.add(v);
-      return { ...f, [key]: s };
-    });
-  };
-
-  const hasAny =
-    !!filters.search ||
-    filters.models.size + filters.statuses.size +
-    filters.categories.size + filters.cities.size > 0;
-
-  return (
-    <aside style={{
-      width: 280, flexShrink: 0,
-      background: T.bgPaper,
-      border: `2px solid ${T.border}`,
-      padding: "22px 22px 28px",
-      position: "sticky", top: 88, alignSelf: "flex-start",
-      maxHeight: "calc(100vh - 110px)", overflowY: "auto",
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <SectionMarker n="F·1" label="FILTERS" />
-        {hasAny && (
-          <button onClick={() => set(EMPTY_FILTERS)}
-            style={{
-              fontFamily: mono, fontSize: 9, fontWeight: 700, color: T.pink,
-              background: "transparent", border: `1.5px solid ${T.pink}`,
-              padding: "3px 7px", letterSpacing: "0.18em", cursor: "pointer",
-            }}>CLEAR</button>
-        )}
-      </div>
-
-      <input type="text" placeholder="Search code, name or venue…"
-        value={filters.search}
-        onChange={(e) => set(f => ({ ...f, search: e.target.value }))}
-        style={{
-          width: "100%",
-          fontFamily: mono, fontSize: 12, color: T.ink,
-          background: T.bg, border: `2px solid ${T.border}`,
-          padding: "9px 11px", letterSpacing: "0.04em", outline: "none",
-        }}
-      />
-
-      <FilterGroup n="01" title="BUSINESS MODEL">
-        {(["OFF", "MKT", "SPO"] as BizModel[]).map(m => (
-          <FilterCheckbox key={m} label={modelLabel(m)} value={m} set={filters.models}
-            onToggle={(v) => toggle("models", v)} color={modelColor(m)} />
-        ))}
-      </FilterGroup>
-
-      <FilterGroup n="02" title="STATUS">
-        {(["LIVE", "SCHEDULED", "INDEXING", "UPLOADING", "ARCHIVED"] as EvtStatus[]).map(s => (
-          <FilterCheckbox key={s} label={s} value={s} set={filters.statuses}
-            onToggle={(v) => toggle("statuses", v)} color={statusColor(s)} />
-        ))}
-      </FilterGroup>
-
-      <FilterGroup n="03" title="CATEGORY">
-        {(["Music", "Conventions", "Sports", "Parties", "Corporate"] as Category[]).map(c => (
-          <FilterCheckbox key={c} label={c} value={c} set={filters.categories}
-            onToggle={(v) => toggle("categories", v)} />
-        ))}
-      </FilterGroup>
-
-      <FilterGroup n="04" title="CITY">
-        {(["CDMX", "MTY", "GDL", "SP", "BOG"] as City[]).map(c => (
-          <FilterCheckbox key={c}
-            label={c === "CDMX" ? "Ciudad de México" : c === "MTY" ? "Monterrey" : c === "GDL" ? "Guadalajara" : c === "SP" ? "São Paulo" : "Bogotá"}
-            value={c} set={filters.cities} onToggle={(v) => toggle("cities", v)} />
-        ))}
-      </FilterGroup>
-
-      <FilterGroup n="05" title="DATE RANGE">
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {["Past 7 days", "Past 30 days", "Past 90 days", "Past 12 months", "All time"].map((r, i) => (
-            <label key={r} style={{ display: "flex", gap: 9, alignItems: "center", cursor: "pointer", fontFamily: display, fontSize: 13, color: i === 4 ? T.ink : T.inkSoft }}>
-              <span style={{
-                width: 12, height: 12, borderRadius: "50%",
-                border: `2px solid ${i === 4 ? T.purple : T.border}`,
-                background: i === 4 ? T.purple : "transparent",
-              }} />
-              {r}
-            </label>
-          ))}
-        </div>
-      </FilterGroup>
-    </aside>
-  );
+function fmtDate(iso: string): string {
+  try {
+    const [y, m, d] = iso.split("T")[0].split("-").map(Number);
+    return new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+      .format(new Date(Date.UTC(y, m - 1, d)));
+  } catch { return iso; }
 }
-
-// ============================================================
-// Page header + KPIs
-// ============================================================
-
-function PageHeader() {
-  return (
-    <div style={{
-      padding: "44px 44px 30px",
-      borderBottom: `2px solid ${T.border}`,
-      display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "end",
-      position: "relative", overflow: "hidden",
-    }}>
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage:
-          `linear-gradient(to right, ${T.gridLine} 1px, transparent 1px),
-           linear-gradient(to bottom, ${T.gridLine} 1px, transparent 1px)`,
-        backgroundSize: "40px 40px",
-        maskImage: "linear-gradient(to right, black 0%, black 50%, transparent 100%)",
-        WebkitMaskImage: "linear-gradient(to right, black 0%, black 50%, transparent 100%)",
-      }} />
-      <div style={{ position: "relative" }}>
-        <SectionMarker n="02" label="LIVE PRODUCTION" color={T.purple} />
-        <h1 style={{
-          margin: "16px 0 12px",
-          fontFamily: display, fontSize: 56, fontWeight: 700,
-          letterSpacing: "-0.04em", lineHeight: 1, textTransform: "uppercase",
-        }}>
-          Events<span style={{ color: T.purple }}>.</span>
-        </h1>
-        <p style={{
-          margin: 0, color: T.inkSoft, fontSize: 17, lineHeight: 1.45, maxWidth: 600,
-        }}>
-          142 lifetime · 5 live now · 8 scheduled this month. Drill into a row for crew, photos, sales and pricing overrides.
-        </p>
-      </div>
-      <div style={{
-        position: "relative", display: "flex", alignItems: "center", gap: 12,
-      }}>
-        <button style={{
-          fontFamily: mono, fontSize: 11, fontWeight: 700, color: T.cyan,
-          background: "transparent", border: `2px solid ${T.cyan}`,
-          padding: "11px 16px", letterSpacing: "0.14em", textTransform: "uppercase",
-          cursor: "pointer",
-        }}>CLONE LAST</button>
-        <button
-          className="fs-cta-primary"
-          style={{
-            fontFamily: display, fontSize: 13, fontWeight: 700,
-            color: T.bg, background: T.purple,
-            border: `2px solid ${T.purple}`, padding: "11px 18px",
-            letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer",
-            boxShadow: `4px 4px 0 0 ${T.cyan}`,
-            transition: "transform 120ms, box-shadow 120ms",
-          }}>+ NEW EVENT</button>
-      </div>
-    </div>
-  );
-}
-
-function KPIRow() {
-  const KPIS = [
-    { label: "LIVE NOW",       value: "5",     unit: "EVT",  delta: "BB-001 + 4 more",       color: T.pink,   live: true },
-    { label: "LIFETIME",       value: "142",   unit: "EVT",  delta: "+8 this month",         color: T.ink },
-    { label: "GMV TODAY",      value: "$48.2K", unit: "MXN", delta: "+12.4% vs yesterday",   color: T.purple },
-    { label: "AVG MATCH RATE", value: "84%",   unit: "/100", delta: "+2 vs Q1",              color: T.cyan },
-  ];
-  return (
-    <div style={{
-      padding: "26px 44px 22px",
-      display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18,
-    }}>
-      {KPIS.map((k, i) => (
-        <MiniKpi key={k.label} {...k} index={i} />
-      ))}
-    </div>
-  );
-}
-
-// ============================================================
-// Table
-// ============================================================
-
-type SortKey = "name" | "dateSort" | "photogs" | "photos" | "matchRate" | "gmvK";
-
-function EventsTable({
-  rows, sort, setSort,
-}: {
-  rows: Event[];
-  sort: { key: SortKey; dir: "asc" | "desc" };
-  setSort: (s: { key: SortKey; dir: "asc" | "desc" }) => void;
-}) {
-  const onSort = (k: string) => {
-    const key = k as SortKey;
-    setSort(sort.key === key ? { key, dir: sort.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" });
-  };
-
-  return (
-    <section style={{
-      position: "relative", background: T.bgPaper,
-      border: `2px solid ${T.border}`, overflow: "hidden",
-    }}>
-      <CornerBrackets color={T.cyan} size={14} thickness={2} inset={-1} />
-
-      {/* head */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(280px, 1fr) 110px 120px 90px 80px 90px 90px 100px 110px",
-        padding: "16px 22px",
-        background: T.bgAlt, borderBottom: `2px solid ${T.border}`,
-        alignItems: "center", gap: 14,
-      }}>
-        <SortHead label="EVENT" k="name" sort={sort} onSort={onSort} />
-        <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 700, color: T.inkMute, letterSpacing: "0.18em" }}>MODEL</span>
-        <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 700, color: T.inkMute, letterSpacing: "0.18em" }}>CATEGORY</span>
-        <SortHead label="DATE" k="dateSort" sort={sort} onSort={onSort} />
-        <SortHead label="CREW" k="photogs" sort={sort} onSort={onSort} align="right" />
-        <SortHead label="PHOTOS" k="photos" sort={sort} onSort={onSort} align="right" />
-        <SortHead label="MATCH" k="matchRate" sort={sort} onSort={onSort} align="right" />
-        <SortHead label="GMV" k="gmvK" sort={sort} onSort={onSort} align="right" />
-        <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 700, color: T.inkMute, letterSpacing: "0.18em" }}>STATUS</span>
-      </div>
-
-      {/* rows */}
-      <div>
-        {rows.map((e, idx) => {
-          const dim = e.status === "ARCHIVED";
-          return (
-            <Link
-              key={e.code}
-              href={`/admin/events/${e.code}`}
-              className="fs-row"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(280px, 1fr) 110px 120px 90px 80px 90px 90px 100px 110px",
-                padding: "16px 22px", alignItems: "center", gap: 14,
-                borderTop: idx > 0 ? `1px dashed ${T.border}` : "none",
-                textDecoration: "none", color: T.ink,
-                opacity: dim ? 0.62 : 1,
-                animation: "fs-fadeUp 0.4s ease-out both",
-                animationDelay: `${idx * 25}ms`,
-              }}>
-              {/* event */}
-              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-                <span style={{
-                  fontFamily: mono, fontSize: 11, fontWeight: 700, color: modelColor(e.model),
-                  border: `1.5px solid ${modelColor(e.model)}`, padding: "3px 8px",
-                  letterSpacing: "0.06em", whiteSpace: "nowrap", flexShrink: 0,
-                }}>{e.code}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{
-                    fontFamily: display, fontSize: 14, fontWeight: 600,
-                    letterSpacing: "0.01em", textTransform: "uppercase", lineHeight: 1.1,
-                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                  }}>{e.name}</div>
-                  <div style={{
-                    fontFamily: mono, fontSize: 10, color: T.inkMute,
-                    letterSpacing: "0.12em", marginTop: 3,
-                  }}>{e.venue} · {e.cityFull}</div>
-                </div>
-              </div>
-
-              {/* model */}
-              <span style={{
-                fontFamily: mono, fontSize: 9, fontWeight: 700,
-                color: modelColor(e.model),
-                border: `1px solid ${modelColor(e.model)}`,
-                padding: "3px 7px", letterSpacing: "0.16em",
-                width: "fit-content",
-              }}>{modelLabel(e.model)}</span>
-
-              {/* category */}
-              <span style={{
-                fontFamily: mono, fontSize: 9, fontWeight: 700, color: T.inkSoft,
-                border: `1px solid ${T.border}`, padding: "3px 7px",
-                letterSpacing: "0.14em", textTransform: "uppercase", width: "fit-content",
-              }}>{e.category}</span>
-
-              {/* date */}
-              <span style={{
-                fontFamily: mono, fontSize: 12, fontWeight: 700, color: T.ink,
-                letterSpacing: "0.06em",
-              }}>{e.date}</span>
-
-              {/* crew */}
-              <span style={{
-                fontFamily: display, fontWeight: 600, fontSize: 16,
-                color: e.photogs === 0 ? T.inkMute : T.ink, textAlign: "right",
-              }}>{e.photogs > 0 ? e.photogs : "—"}</span>
-
-              {/* photos */}
-              <span style={{
-                fontFamily: mono, fontSize: 13, fontWeight: 700,
-                color: e.photos === 0 ? T.inkMute : T.ink, textAlign: "right",
-              }}>{e.photos > 0 ? e.photos.toLocaleString() : "—"}</span>
-
-              {/* match */}
-              <span style={{
-                fontFamily: mono, fontSize: 13, fontWeight: 700,
-                color: e.matchRate === 0 ? T.inkMute : T.ink, textAlign: "right",
-              }}>{e.matchRate > 0 ? `${e.matchRate}%` : "—"}</span>
-
-              {/* GMV */}
-              <span style={{
-                fontFamily: mono, fontSize: 13, fontWeight: 700,
-                color: e.gmvK === 0 ? (e.model === "SPO" ? T.green : T.inkMute) : T.ink,
-                textAlign: "right",
-              }}>{e.gmvK > 0 ? `$${e.gmvK.toFixed(1)}K` : e.model === "SPO" ? "FLAT FEE" : "—"}</span>
-
-              {/* status */}
-              <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                <Pill color={statusColor(e.status)}
-                  dot={e.status === "LIVE"} dotPulse={e.status === "LIVE"}>
-                  {e.status}
-                </Pill>
-              </div>
-            </Link>
-          );
-        })}
-
-        {rows.length === 0 && (
-          <div style={{
-            padding: "60px 22px", textAlign: "center",
-            color: T.inkMute, fontFamily: mono, fontSize: 12, letterSpacing: "0.15em",
-          }}>NO EVENTS MATCH THESE FILTERS</div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// ============================================================
-// Default export
-// ============================================================
 
 export default function EventsList() {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "dateSort", dir: "desc" });
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"active" | "trash">("active");
+  const [showNew, setShowNew] = useState(false);
+  const [detail, setDetail] = useState<EventRow | null>(null);
+  const [del, setDel] = useState<{ ev: EventRow; mode: "trash" | "permanent" } | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = filters.search.trim().toLowerCase();
-    return EVENTS.filter(e => {
-      if (q && !e.name.toLowerCase().includes(q)
-        && !e.code.toLowerCase().includes(q)
-        && !e.venue.toLowerCase().includes(q)) return false;
-      if (filters.models.size && !filters.models.has(e.model)) return false;
-      if (filters.statuses.size && !filters.statuses.has(e.status)) return false;
-      if (filters.categories.size && !filters.categories.has(e.category)) return false;
-      if (filters.cities.size && !filters.cities.has(e.city)) return false;
-      return true;
-    });
-  }, [filters]);
+  const load = useCallback(async (v: "active" | "trash") => {
+    setLoading(true); setError(null);
+    try {
+      const r = await fetch(`/fansnap/api/admin/events${v === "trash" ? "?trash=1" : ""}`, { cache: "no-store" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error ?? "Error");
+      setEvents(j.events ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al cargar");
+    } finally { setLoading(false); }
+  }, []);
+  useEffect(() => { void load(view); }, [load, view]);
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const sign = sort.dir === "desc" ? -1 : 1;
-    arr.sort((a, b) => {
-      if (sort.key === "name") return sign * a.name.localeCompare(b.name);
-      return sign * ((a[sort.key] as number) - (b[sort.key] as number));
-    });
-    return arr;
-  }, [filtered, sort]);
+  const patch = useCallback(async (id: string, fields: Record<string, unknown>) => {
+    setEvents((evs) => evs.map((e) => e.id === id ? { ...e, ...fields } as EventRow : e));
+    setDetail((d) => d && d.id === id ? { ...d, ...fields } as EventRow : d);
+    try {
+      await fetch("/fansnap/api/admin/events", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...fields }),
+      });
+    } catch { void load(view); }
+  }, [load, view]);
+
+  const restore = useCallback(async (id: string) => {
+    setEvents((evs) => evs.filter((e) => e.id !== id));
+    try {
+      await fetch("/fansnap/api/admin/events", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, restore: true }),
+      });
+    } catch { void load(view); }
+  }, [load, view]);
+
+  const doDelete = useCallback(async (ev: EventRow, mode: "trash" | "permanent") => {
+    setEvents((evs) => evs.filter((e) => e.id !== ev.id));
+    setDetail(null);
+    try {
+      await fetch(`/fansnap/api/admin/events?id=${encodeURIComponent(ev.id)}${mode === "permanent" ? "&permanent=1" : ""}`, { method: "DELETE" });
+    } catch { void load(view); }
+  }, [load, view]);
+
+  const kpis = {
+    total: events.length,
+    live: events.filter((e) => e.status === "live").length,
+    upcoming: events.filter((e) => e.status === "upcoming").length,
+    photos: events.reduce((n, e) => n + (e.photo_count || 0), 0),
+  };
 
   return (
     <AdminShell currentNav="nav-events" breadcrumb="EVENTS">
-      <PageHeader />
-      <KPIRow />
+      <div style={{ position: "relative", padding: "28px 32px 60px", flex: 1, overflow: "auto" }}>
+        <GridBg />
+        <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 14, marginBottom: 4 }}>
+            <h1 style={{ fontFamily: display, fontSize: 32, fontWeight: 700, letterSpacing: "-0.03em", color: T.ink, margin: 0 }}>Eventos</h1>
+            <span style={{ fontFamily: mono, fontSize: 11, color: T.inkMute, letterSpacing: "0.15em" }}>D1 LIVE</span>
+          </div>
+          <p style={{ fontFamily: display, fontSize: 14, color: T.inkSoft, margin: "0 0 22px", maxWidth: 620 }}>
+            Eventos reais do banco. Clique numa linha para ver detalhes, editar ou mover para a lixeira.
+          </p>
 
-      <div style={{
-        display: "grid", gridTemplateColumns: "280px 1fr",
-        gap: 22, padding: "0 44px 44px", alignItems: "flex-start",
-      }}>
-        <FilterRail filters={filters} set={setFilters} />
+          {view === "active" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 22 }}>
+              {[
+                { k: "Total", v: kpis.total, c: T.ink },
+                { k: "Ao vivo", v: kpis.live, c: T.pink },
+                { k: "Próximos", v: kpis.upcoming, c: "#FFD166" },
+                { k: "Fotos indexadas", v: kpis.photos.toLocaleString("es-MX"), c: T.cyan },
+              ].map((s, i) => (
+                <div key={i} style={{ background: T.bgPaper, border: `2px solid ${T.border}`, padding: "14px 16px" }}>
+                  <div style={{ fontFamily: display, fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: s.c }}>{s.v}</div>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: T.inkMute, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 4 }}>{s.k}</div>
+                </div>
+              ))}
+            </div>
+          )}
 
-        <div style={{ minWidth: 0 }}>
-          <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "baseline",
-            marginBottom: 12,
-            fontFamily: mono, fontSize: 11, color: T.inkMute, letterSpacing: "0.15em",
-          }}>
-            <span>
-              <span style={{ color: T.ink, fontWeight: 700 }}>{sorted.length}</span> OF {EVENTS.length} SHOWN
-            </span>
-            <span>SORTED BY {sort.key === "dateSort" ? "DATE" : sort.key.toUpperCase()} {sort.dir === "desc" ? "▾" : "▴"}</span>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+            <button onClick={() => { setView("active"); setShowNew(false); }} style={chip(view === "active")}>Ativos</button>
+            <button onClick={() => { setView("trash"); setShowNew(false); }} style={chip(view === "trash")}>🗑 Lixeira</button>
+            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+              <button onClick={() => void load(view)} style={chip(false)}>↻ Atualizar</button>
+              {view === "active" && (
+                <button onClick={() => setShowNew((v) => !v)} style={{ ...chip(showNew), borderColor: T.cyan, color: showNew ? T.bg : T.cyan, background: showNew ? T.cyan : "transparent" }}>+ Novo evento</button>
+              )}
+            </div>
           </div>
 
-          <EventsTable rows={sorted} sort={sort} setSort={setSort} />
+          {showNew && <NewEventForm onCreated={() => { setShowNew(false); void load("active"); }} />}
+
+          {loading && <Empty label="Carregando…" />}
+          {error && !loading && <Empty label={`Erro: ${error}`} color={T.pink} />}
+
+          {!loading && !error && (
+            <div style={{ border: `2px solid ${T.border}`, background: T.bgDeep, overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: display, fontSize: 13, minWidth: 760 }}>
+                <thead>
+                  <tr style={{ background: T.bgPaper }}>
+                    {(view === "active"
+                      ? ["Código", "Nome", "Modelo", "Data", "Local", "Fotos", "Fotógs", "Status", ""]
+                      : ["Código", "Nome", "Excluído em", "", ""]).map((h, i) => (
+                      <th key={i} style={th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((e) => view === "active" ? (
+                    <tr key={e.id} onClick={() => setDetail(e)} style={{ borderBottom: `1px solid ${T.border}`, cursor: "pointer" }} className="fs-evt-row">
+                      <td style={td}><span style={{ fontFamily: mono, fontSize: 12, color: T.cyan }}>{e.code}</span></td>
+                      <td style={{ ...td, fontWeight: 600, maxWidth: 240 }}>
+                        {e.featured ? <span style={{ color: "#FFD166", marginRight: 6 }}>★</span> : null}{e.name}
+                      </td>
+                      <td style={td}><Badge color={MODEL_COLOR[e.business_model] ?? T.inkMute} label={e.business_model} /></td>
+                      <td style={{ ...td, fontFamily: mono, fontSize: 12, color: T.inkSoft, whiteSpace: "nowrap" }}>{fmtDate(e.start_at)}</td>
+                      <td style={{ ...td, color: T.inkSoft, fontSize: 12 }}>{e.city || "—"}</td>
+                      <td style={{ ...td, fontFamily: mono, fontWeight: 700 }}>{(e.photo_count || 0).toLocaleString("es-MX")}</td>
+                      <td style={{ ...td, fontFamily: mono, color: e.photographer_count ? T.ink : T.inkMute }}>{e.photographer_count || 0}</td>
+                      <td style={td}><Badge color={STATUS_COLOR[e.status] ?? T.inkMute} label={e.status} /></td>
+                      <td style={td}><span style={{ color: T.inkMute, fontSize: 16 }}>›</span></td>
+                    </tr>
+                  ) : (
+                    <tr key={e.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                      <td style={td}><span style={{ fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{e.code}</span></td>
+                      <td style={{ ...td, fontWeight: 600 }}>{e.name}</td>
+                      <td style={{ ...td, fontFamily: mono, fontSize: 12, color: T.inkMute }}>{e.deleted_at ? fmtDate(e.deleted_at) : "—"}</td>
+                      <td style={td}><button onClick={() => restore(e.id)} style={{ ...chip(false), borderColor: T.cyan, color: T.cyan }}>↩ Restaurar</button></td>
+                      <td style={td}><button onClick={() => setDel({ ev: e, mode: "permanent" })} style={{ ...chip(false), borderColor: T.pink, color: T.pink }}>Apagar de vez</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {events.length === 0 && <Empty label={view === "trash" ? "Lixeira vazia." : "Nenhum evento."} />}
+            </div>
+          )}
         </div>
       </div>
+
+      {detail && (
+        <EventDrawer
+          ev={detail}
+          onClose={() => setDetail(null)}
+          onPatch={patch}
+          onCountChange={(id, n) => {
+            setEvents((evs) => evs.map((e) => e.id === id ? { ...e, photographer_count: n } : e));
+            setDetail((d) => d && d.id === id ? { ...d, photographer_count: n } : d);
+          }}
+          onTrash={() => setDel({ ev: detail, mode: "trash" })}
+        />
+      )}
+
+      {del && (
+        <ConfirmDeleteModal
+          ev={del.ev}
+          mode={del.mode}
+          onCancel={() => setDel(null)}
+          onConfirm={() => { doDelete(del.ev, del.mode); setDel(null); }}
+        />
+      )}
     </AdminShell>
   );
+}
+
+// ─── Detail drawer ─────────────────────────────────────────────────────────
+
+function EventDrawer({ ev, onClose, onPatch, onCountChange, onTrash }: {
+  ev: EventRow;
+  onClose: () => void;
+  onPatch: (id: string, fields: Record<string, unknown>) => void;
+  onCountChange: (id: string, n: number) => void;
+  onTrash: () => void;
+}) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.55)", display: "flex", justifyContent: "flex-end" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(460px, 92vw)", height: "100%", background: T.bgDeep, borderLeft: `2px solid ${T.border}`, overflowY: "auto", padding: 0 }}>
+        <div style={{ height: 6, background: ev.cover_color || T.purple }} />
+        <div style={{ padding: "24px 26px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+            <div>
+              <div style={{ fontFamily: mono, fontSize: 12, color: T.cyan, letterSpacing: "0.08em" }}>{ev.code}</div>
+              <h2 style={{ fontFamily: display, fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", color: T.ink, margin: "6px 0 0" }}>{ev.name}</h2>
+            </div>
+            <button onClick={onClose} aria-label="fechar" style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.inkSoft, cursor: "pointer", padding: "6px 10px", fontFamily: mono }}>✕</button>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "18px 0" }}>
+            <Badge color={STATUS_COLOR[ev.status] ?? T.inkMute} label={ev.status} />
+            <Badge color={MODEL_COLOR[ev.business_model] ?? T.inkMute} label={ev.business_model} />
+            <Badge color={T.inkSoft} label={ev.category} />
+          </div>
+
+          <Row k="Data" v={fmtDate(ev.start_at)} />
+          <Row k="Local" v={ev.venue || "—"} />
+          <Row k="Cidade" v={`${ev.city || "—"}${ev.country ? " · " + ev.country : ""}`} />
+          <Row k="Fotos indexadas" v={(ev.photo_count || 0).toLocaleString("es-MX")} />
+
+          {/* Quick edit */}
+          <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.border}` }}>
+            <Label>Editar</Label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+              <Field label="Status">
+                <select value={ev.status} onChange={(e) => onPatch(ev.id, { status: e.target.value })} style={sel}>
+                  {STATUSES.map((s) => <option key={s} value={s} style={opt}>{s}</option>)}
+                </select>
+              </Field>
+              <Field label="Modelo">
+                <select value={ev.business_model} onChange={(e) => onPatch(ev.id, { business_model: e.target.value })} style={sel}>
+                  {MODELS.map((m) => <option key={m} value={m} style={opt}>{m}</option>)}
+                </select>
+              </Field>
+            </div>
+            <button onClick={() => onPatch(ev.id, { featured: ev.featured ? 0 : 1 })}
+              style={{ ...chip(false), marginTop: 12, borderColor: ev.featured ? "#FFD166" : T.border, color: ev.featured ? "#FFD166" : T.inkSoft }}>
+              {ev.featured ? "★ Em destaque" : "☆ Destacar"}
+            </button>
+          </div>
+
+          {/* Operacional & financeiro */}
+          <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.border}` }}>
+            <Label>Operacional & financeiro</Label>
+            <div style={{ marginTop: 10 }}>
+              <Row k="Modelo de negócio" v={ev.business_model} />
+              <Row k="Fotos indexadas" v={(ev.photo_count || 0).toLocaleString("es-MX")} />
+              <Row k="Fotógrafos atribuídos" v={String(ev.photographer_count || 0)} />
+              {ev.business_model === "sponsored" && (
+                <Row k="Cachê de patrocínio" v={ev.sponsor_fee_cents != null ? `$${Math.round(ev.sponsor_fee_cents / 100).toLocaleString("es-MX")}` : "a definir"} />
+              )}
+              <Row k="Receita estimada" v="— (pedidos ainda não no D1)" />
+              <Row k="Comissão paga" v="— (pendente vendas)" />
+            </div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: T.inkMute, letterSpacing: "0.04em", marginTop: 8, lineHeight: 1.5 }}>
+              Receita/vendas aparecem quando o checkout gravar pedidos no D1. Aí também entra o split de comissão por fotógrafo (tier de cada um abaixo).
+            </div>
+          </div>
+
+          {/* Photographers — the event↔photographer relationship lives here */}
+          <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.border}` }}>
+            <EventPhotographers eventId={ev.id} onCountChange={(n) => onCountChange(ev.id, n)} />
+          </div>
+
+          {/* Danger zone */}
+          <div style={{ marginTop: 26, paddingTop: 18, borderTop: `1px solid ${T.border}` }}>
+            <button onClick={onTrash} style={{ background: "transparent", border: `1.5px solid ${T.pink}`, color: T.pink, cursor: "pointer", padding: "10px 16px", fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Mover para a lixeira
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Event ↔ Photographer assignments (inside the drawer) ────────────────────
+
+interface Assignment {
+  id: string; tier: string; commission_rate: number;
+  photographer_id: string; name: string | null; email: string; city: string | null;
+}
+interface RosterItem { id: string; name: string | null; email: string; city: string | null; }
+const TIERS = ["standard", "pro", "vip"];
+
+function EventPhotographers({ eventId, onCountChange }: { eventId: string; onCountChange: (n: number) => void }) {
+  const [rows, setRows] = useState<Assignment[]>([]);
+  const [roster, setRoster] = useState<RosterItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [picking, setPicking] = useState(false);
+  const [pickId, setPickId] = useState("");
+  const [pickTier, setPickTier] = useState("standard");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`/fansnap/api/admin/event-photographers?eventId=${encodeURIComponent(eventId)}`, { cache: "no-store" });
+      const j = await r.json();
+      setRows(j.assignments ?? []);
+      onCountChange((j.assignments ?? []).length);
+    } catch { /* keep prior */ } finally { setLoading(false); }
+  }, [eventId, onCountChange]);
+  useEffect(() => { void load(); }, [load]);
+
+  const openPicker = async () => {
+    setPicking(true); setMsg(null);
+    try {
+      const r = await fetch("/fansnap/api/admin/photographers", { cache: "no-store" });
+      const j = await r.json();
+      setRoster(j.photographers ?? []);
+    } catch { setRoster([]); }
+  };
+
+  const assign = async () => {
+    if (!pickId) { setMsg("Escolha um fotógrafo."); return; }
+    setMsg(null);
+    try {
+      const r = await fetch("/fansnap/api/admin/event-photographers", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, photographerId: pickId, tier: pickTier }),
+      });
+      const j = await r.json();
+      if (!r.ok) { setMsg(j?.error ?? "Erro"); return; }
+      setPicking(false); setPickId("");
+      void load();
+    } catch { setMsg("Erro de rede"); }
+  };
+
+  const changeTier = async (id: string, tier: string) => {
+    setRows((rs) => rs.map((a) => a.id === id ? { ...a, tier } : a));
+    try {
+      await fetch("/fansnap/api/admin/event-photographers", {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tier }),
+      });
+    } catch { void load(); }
+  };
+
+  const unassign = async (id: string) => {
+    setRows((rs) => rs.filter((a) => a.id !== id));
+    onCountChange(Math.max(0, rows.length - 1));
+    try { await fetch(`/fansnap/api/admin/event-photographers?id=${encodeURIComponent(id)}`, { method: "DELETE" }); }
+    catch { void load(); }
+  };
+
+  const assignedIds = new Set(rows.map((a) => a.photographer_id));
+  const available = roster.filter((p) => !assignedIds.has(p.id));
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <Label>Fotógrafos atribuídos · {rows.length}</Label>
+        {!picking && <button onClick={openPicker} style={{ ...chip(false), borderColor: T.cyan, color: T.cyan }}>+ Atribuir</button>}
+      </div>
+
+      {picking && (
+        <div style={{ border: `2px solid ${T.cyan}`, padding: 12, marginBottom: 12 }}>
+          {available.length === 0 ? (
+            <div style={{ fontFamily: display, fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>
+              Nenhum fotógrafo disponível no roster. Aprove candidaturas em <span style={{ color: T.cyan }}>Solicitudes</span> ou adicione em <span style={{ color: T.cyan }}>Fotógrafos</span>.
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <select value={pickId} onChange={(e) => setPickId(e.target.value)} style={{ ...sel, flex: 2, minWidth: 160 }}>
+                <option value="" style={opt}>Escolher fotógrafo…</option>
+                {available.map((p) => <option key={p.id} value={p.id} style={opt}>{p.name || p.email}{p.city ? ` · ${p.city}` : ""}</option>)}
+              </select>
+              <select value={pickTier} onChange={(e) => setPickTier(e.target.value)} style={{ ...sel, flex: 1, minWidth: 100 }}>
+                {TIERS.map((t) => <option key={t} value={t} style={opt}>{t}</option>)}
+              </select>
+              <button onClick={assign} style={{ background: T.cyan, color: T.bg, border: "none", padding: "8px 14px", fontFamily: mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer" }}>OK</button>
+              <button onClick={() => { setPicking(false); setMsg(null); }} style={chip(false)}>Cancelar</button>
+            </div>
+          )}
+          {msg && <div style={{ fontFamily: mono, fontSize: 12, color: T.pink, marginTop: 8 }}>{msg}</div>}
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ fontFamily: mono, fontSize: 12, color: T.inkMute }}>Carregando…</div>
+      ) : rows.length === 0 ? (
+        <div style={{ border: `2px dashed ${T.border}`, padding: "14px", fontFamily: display, fontSize: 13, color: T.inkSoft }}>
+          Nenhum fotógrafo atribuído ainda.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map((a) => (
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.border}`, padding: "10px 12px", background: T.bg }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: display, fontSize: 14, fontWeight: 600, color: T.ink }}>{a.name || a.email}</div>
+                <div style={{ fontFamily: mono, fontSize: 11, color: T.inkMute }}>{a.email}{a.city ? ` · ${a.city}` : ""}</div>
+              </div>
+              <select value={a.tier} onChange={(e) => changeTier(a.id, e.target.value)} style={pill(T.purple)}>
+                {TIERS.map((t) => <option key={t} value={t} style={opt}>{t}</option>)}
+              </select>
+              <span style={{ fontFamily: mono, fontSize: 11, color: T.inkSoft }}>{Math.round((a.commission_rate || 0) * 100)}%</span>
+              <button onClick={() => unassign(a.id)} aria-label="remover" style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.inkMute, cursor: "pointer", padding: "4px 8px", fontFamily: mono, fontSize: 11 }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Type-DELETE confirmation modal ──────────────────────────────────────────
+
+function ConfirmDeleteModal({ ev, mode, onConfirm, onCancel }: {
+  ev: EventRow; mode: "trash" | "permanent"; onConfirm: () => void; onCancel: () => void;
+}) {
+  const [txt, setTxt] = useState("");
+  const ok = txt.trim().toUpperCase() === "DELETE";
+  const permanent = mode === "permanent";
+  return (
+    <div onClick={onCancel} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(440px, 94vw)", background: T.bgPaper, border: `2px solid ${T.pink}`, padding: 26 }}>
+        <div style={{ fontFamily: display, fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.02em" }}>
+          {permanent ? "Apagar definitivamente?" : "Mover para a lixeira?"}
+        </div>
+        <p style={{ fontFamily: display, fontSize: 14, color: T.inkSoft, lineHeight: 1.5, margin: "10px 0 18px" }}>
+          {permanent
+            ? <>O evento <b style={{ color: T.ink }}>{ev.name}</b> será apagado para sempre. Não tem como desfazer.</>
+            : <>O evento <b style={{ color: T.ink }}>{ev.name}</b> vai para a lixeira. Você pode restaurar depois.</>}
+        </p>
+        <div style={{ fontFamily: mono, fontSize: 11, color: T.inkMute, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+          Digite <b style={{ color: T.pink }}>DELETE</b> para confirmar
+        </div>
+        <input autoFocus value={txt} onChange={(e) => setTxt(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && ok) onConfirm(); }}
+          placeholder="DELETE"
+          style={{ width: "100%", background: T.bg, border: `1.5px solid ${ok ? T.pink : T.border}`, color: T.ink, padding: "12px 14px", fontFamily: mono, fontSize: 14, letterSpacing: "0.1em", outline: "none" }} />
+        <div style={{ display: "flex", gap: 10, marginTop: 18, justifyContent: "flex-end" }}>
+          <button onClick={onCancel} style={chip(false)}>Cancelar</button>
+          <button onClick={onConfirm} disabled={!ok}
+            style={{ background: ok ? T.pink : "transparent", color: ok ? "#fff" : T.inkMute, border: `1.5px solid ${ok ? T.pink : T.border}`, padding: "8px 18px", fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: ok ? "pointer" : "not-allowed" }}>
+            {permanent ? "Apagar de vez" : "Mover p/ lixeira"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── New event form ──────────────────────────────────────────────────────────
+
+function NewEventForm({ onCreated }: { onCreated: () => void }) {
+  const [f, setF] = useState({ code: "", name: "", business_model: "official", category: "music", venue: "", city: "CDMX", country: "MX", start_at: "", status: "upcoming", cover_color: "#9D4EFF" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  const submit = async () => {
+    setErr(null);
+    if (!f.code || !f.name || !f.start_at) { setErr("Código, nome e data são obrigatórios."); return; }
+    setBusy(true);
+    try {
+      const r = await fetch("/fansnap/api/admin/events", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...f, start_at: `${f.start_at}T20:00:00Z` }),
+      });
+      const j = await r.json();
+      if (!r.ok) { setErr(j?.error ?? "Erro"); setBusy(false); return; }
+      onCreated();
+    } catch { setErr("Erro de rede"); setBusy(false); }
+  };
+
+  const inp: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, color: T.ink, padding: "8px 10px", fontFamily: display, fontSize: 13, borderRadius: 4, outline: "none" };
+  return (
+    <div style={{ border: `2px solid ${T.cyan}`, background: T.bgPaper, padding: 18, marginBottom: 18 }}>
+      <div style={{ fontFamily: mono, fontSize: 11, color: T.cyan, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 14 }}>Novo evento</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+        <input style={inp} placeholder="Código (ex: TOUR-01)" value={f.code} onChange={(e) => set("code", e.target.value)} />
+        <input style={{ ...inp, gridColumn: "span 2" }} placeholder="Nome do evento" value={f.name} onChange={(e) => set("name", e.target.value)} />
+        <input style={inp} type="date" value={f.start_at} onChange={(e) => set("start_at", e.target.value)} />
+        <input style={inp} placeholder="Local / venue" value={f.venue} onChange={(e) => set("venue", e.target.value)} />
+        <input style={inp} placeholder="Cidade" value={f.city} onChange={(e) => set("city", e.target.value)} />
+        <select style={inp} value={f.business_model} onChange={(e) => set("business_model", e.target.value)}>{MODELS.map((m) => <option key={m} value={m} style={opt}>{m}</option>)}</select>
+        <select style={inp} value={f.category} onChange={(e) => set("category", e.target.value)}>{CATEGORIES.map((m) => <option key={m} value={m} style={opt}>{m}</option>)}</select>
+        <select style={inp} value={f.status} onChange={(e) => set("status", e.target.value)}>{STATUSES.map((m) => <option key={m} value={m} style={opt}>{m}</option>)}</select>
+      </div>
+      {err && <div style={{ fontFamily: mono, fontSize: 12, color: T.pink, marginTop: 10 }}>{err}</div>}
+      <div style={{ marginTop: 14 }}>
+        <button onClick={submit} disabled={busy} style={{ background: T.cyan, color: T.bg, border: "none", padding: "10px 18px", fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", cursor: busy ? "wait" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          {busy ? "Criando…" : "Criar evento"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Bits ────────────────────────────────────────────────────────────────────
+
+function Empty({ label, color = T.inkMute }: { label: string; color?: string }) {
+  return <div style={{ border: `2px dashed ${T.border}`, padding: "40px 24px", textAlign: "center", fontFamily: mono, fontSize: 13, color, letterSpacing: "0.06em" }}>{label}</div>;
+}
+function Badge({ color, label }: { color: string; label: string }) {
+  return <span style={{ display: "inline-block", fontFamily: mono, fontSize: 10, fontWeight: 700, color, border: `1px solid ${color}`, padding: "3px 7px", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</span>;
+}
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
+      <span style={{ fontFamily: mono, fontSize: 11, color: T.inkMute, letterSpacing: "0.08em", textTransform: "uppercase" }}>{k}</span>
+      <span style={{ fontFamily: display, fontSize: 14, color: T.ink, textAlign: "right" }}>{v}</span>
+    </div>
+  );
+}
+function Label({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontFamily: mono, fontSize: 11, color: T.inkMute, letterSpacing: "0.12em", textTransform: "uppercase" }}>{children}</div>;
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontFamily: mono, fontSize: 10, color: T.inkMute, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+const th: React.CSSProperties = { textAlign: "left", padding: "11px 12px", fontFamily: mono, fontSize: 10, fontWeight: 700, color: T.inkMute, letterSpacing: "0.1em", textTransform: "uppercase", borderBottom: `2px solid ${T.border}`, whiteSpace: "nowrap" };
+const td: React.CSSProperties = { padding: "12px 12px", color: T.ink, verticalAlign: "middle" };
+const opt: React.CSSProperties = { background: "#15151D", color: "#F4F4F2" };
+const sel: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, color: T.ink, padding: "8px 10px", fontFamily: display, fontSize: 13, borderRadius: 4, outline: "none", width: "100%" };
+
+function chip(active: boolean): React.CSSProperties {
+  return { background: active ? T.ink : "transparent", color: active ? T.bg : T.inkSoft, border: `1.5px solid ${active ? T.ink : T.border}`, padding: "6px 12px", fontFamily: mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", borderRadius: 0 };
+}
+function pill(color: string): React.CSSProperties {
+  return { background: T.bg, color, border: `1.5px solid ${color}`, fontFamily: mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "5px 7px", cursor: "pointer", outline: "none" };
 }

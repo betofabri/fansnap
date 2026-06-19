@@ -77,7 +77,7 @@ export const NAV_INFO: Record<string, NavInfo> = {
       "Payouts: Stripe Connect, balance pending, refund holdback",
       "Per-event commission override + activity log audit trail",
     ],
-    accent: "cyan",
+    accent: "purple",
   },
 
   "nav-sales": {

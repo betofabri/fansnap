@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS users (
   name            TEXT,
   country         TEXT,
   language        TEXT DEFAULT 'es',          -- en | pt | es
+  city            TEXT,                       -- photographer roster display
+  portfolio       TEXT,                       -- photographer portfolio / IG / web
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   last_seen_at    TEXT
 );
@@ -57,6 +59,11 @@ CREATE TABLE IF NOT EXISTS events (
   -- pricing override (NULL = use defaults)
   price_override_json TEXT,
   cover_color        TEXT DEFAULT '#9D4EFF',
+  -- denormalized count of indexed photos, for quick admin display (source of
+  -- truth is the photos table; refreshed when photos are ingested)
+  photo_count        INTEGER NOT NULL DEFAULT 0,
+  -- soft delete: NULL = active, ISO timestamp = in the trash (recoverable)
+  deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -177,3 +184,67 @@ CREATE TABLE IF NOT EXISTS order_lines (
 );
 CREATE INDEX IF NOT EXISTS idx_order_lines_order ON order_lines(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_lines_photo ON order_lines(photo_id);
+
+-- ============================================================================
+-- INTAKE — pre-launch lead capture. Powers /aplica (photographer apply),
+-- the referral modal, and /marcas (brand contact). Deliberately standalone
+-- (no FKs into users) so they work before auth exists. The /aplica table is
+-- the launch-critical one: it goes live before the rest of the site.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS photographer_applications (
+  id                    TEXT PRIMARY KEY,
+  code                  TEXT NOT NULL UNIQUE,        -- PA-YYYY-MM-XXXX
+  full_name             TEXT NOT NULL,
+  email                 TEXT NOT NULL,
+  phone                 TEXT,
+  city                  TEXT,
+  portfolio             TEXT,
+  event_types           TEXT,                        -- JSON array string
+  equipment             TEXT,                        -- JSON array string
+  big_event_experience  INTEGER NOT NULL DEFAULT 0,  -- boolean
+  big_event_notes       TEXT,
+  verification          TEXT,                        -- 'email' | 'whatsapp'
+  language              TEXT DEFAULT 'es',
+  status                TEXT NOT NULL DEFAULT 'new'
+                          CHECK (status IN ('new','reviewing','approved','rejected','archived')),
+  user_agent            TEXT,
+  created_at            TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_pa_email   ON photographer_applications(email);
+CREATE INDEX IF NOT EXISTS idx_pa_status  ON photographer_applications(status);
+CREATE INDEX IF NOT EXISTS idx_pa_created ON photographer_applications(created_at);
+
+CREATE TABLE IF NOT EXISTS photographer_referrals (
+  id                  TEXT PRIMARY KEY,
+  code                TEXT NOT NULL UNIQUE,          -- RF-YYYY-MM-XXXX
+  referrer_email      TEXT NOT NULL,
+  referred_name       TEXT NOT NULL,
+  referred_contact    TEXT NOT NULL,
+  referred_portfolio  TEXT,
+  note                TEXT,
+  language            TEXT DEFAULT 'es',
+  status              TEXT NOT NULL DEFAULT 'new'
+                        CHECK (status IN ('new','contacted','converted','archived')),
+  created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_rf_referrer ON photographer_referrals(referrer_email);
+CREATE INDEX IF NOT EXISTS idx_rf_status   ON photographer_referrals(status);
+
+CREATE TABLE IF NOT EXISTS brand_leads (
+  id              TEXT PRIMARY KEY,
+  code            TEXT NOT NULL UNIQUE,              -- BR-YYYY-MM-XXXX
+  company         TEXT NOT NULL,
+  full_name       TEXT NOT NULL,
+  role            TEXT,
+  email           TEXT NOT NULL,
+  phone           TEXT,
+  event_interest  TEXT,
+  budget          TEXT,
+  message         TEXT NOT NULL,
+  language        TEXT DEFAULT 'es',
+  status          TEXT NOT NULL DEFAULT 'new'
+                    CHECK (status IN ('new','contacted','qualified','won','lost','archived')),
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_br_status  ON brand_leads(status);
+CREATE INDEX IF NOT EXISTS idx_br_created ON brand_leads(created_at);

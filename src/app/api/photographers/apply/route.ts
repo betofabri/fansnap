@@ -9,11 +9,16 @@
 // Doc: src/app/aplica/page.tsx is the public landing this endpoint backs.
 
 import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { getDB, newId } from "@/lib/db";
+import { sendEmail, applicationConfirmationEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
 interface ApplyBody {
   fullName?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   city?: string;
@@ -22,6 +27,7 @@ interface ApplyBody {
   equipment?: string[];
   bigEventExperience?: boolean;
   bigEventNotes?: string;
+  verification?: string; // 'email' | 'whatsapp'
   language?: "en" | "pt" | "es";
 }
 
@@ -80,29 +86,71 @@ export async function POST(req: Request): Promise<Response> {
   const language = body.language === "en" || body.language === "pt" || body.language === "es" ? body.language : "es";
 
   const applicationCode = newApplicationCode();
+  const receivedAt = new Date().toISOString();
 
-  // TODO Fatia 3: insert into D1 `photographer_applications` + queue email.
-  // For now we just write to the worker log so we can spot-check incoming
-  // applications in `wrangler tail`.
-  console.log("[photographer-application]", JSON.stringify({
-    applicationCode,
-    fullName,
-    email,
-    phone,
-    city,
-    portfolio,
-    eventTypes,
-    equipment,
-    bigEventExperience,
-    bigEventNotes,
-    language,
-    receivedAt: new Date().toISOString(),
-  }));
+  // Persist to D1. If the binding is somehow absent we still return success
+  // and log, so a fan's application is never silently rejected — but we flag
+  // it loudly so it shows up in `wrangler tail`.
+  const db = await getDB();
+  if (db) {
+    try {
+      await db
+        .prepare(
+          `INSERT INTO photographer_applications
+             (id, code, full_name, first_name, last_name, email, phone, city, portfolio,
+              event_types, equipment, big_event_experience, big_event_notes,
+              verification, language, user_agent, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        )
+        .bind(
+          newId("pa_"),
+          applicationCode,
+          fullName,
+          body.firstName?.trim() ?? null,
+          body.lastName?.trim() ?? null,
+          email,
+          phone,
+          city,
+          portfolio,
+          JSON.stringify(eventTypes),
+          JSON.stringify(equipment),
+          bigEventExperience ? 1 : 0,
+          bigEventNotes,
+          typeof body.verification === "string" ? body.verification : null,
+          language,
+          req.headers.get("user-agent") ?? null,
+          receivedAt,
+        )
+        .run();
+    } catch (err) {
+      // Don't lose the lead: log the full payload so it's recoverable.
+      console.error("[photographer-application] D1 insert failed", err, JSON.stringify({
+        applicationCode, fullName, email, phone, city, portfolio,
+        eventTypes, equipment, bigEventExperience, bigEventNotes, language, receivedAt,
+      }));
+    }
+  } else {
+    console.warn("[photographer-application] no DB binding — logging only", JSON.stringify({
+      applicationCode, fullName, email, phone, city, portfolio,
+      eventTypes, equipment, bigEventExperience, bigEventNotes, language, receivedAt,
+    }));
+  }
+
+  // Fire the confirmation email without blocking the response. sendEmail()
+  // no-ops gracefully until the domain is onboarded to Email Sending.
+  const mail = applicationConfirmationEmail({ name: fullName!, code: applicationCode });
+  const send = sendEmail({ to: email!, subject: mail.subject, html: mail.html, text: mail.text });
+  try {
+    const { ctx } = await getCloudflareContext({ async: true });
+    ctx.waitUntil(send);
+  } catch {
+    void send; // outside CF context (e.g. local) — let it run, errors are swallowed in sendEmail
+  }
 
   const res: ApplyResponse = {
     ok: true,
     applicationCode,
-    receivedAt: new Date().toISOString(),
+    receivedAt,
   };
   return NextResponse.json(res, { status: 200 });
 }

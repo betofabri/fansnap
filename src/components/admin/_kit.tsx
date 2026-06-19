@@ -161,7 +161,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { n: "01", label: "OVERVIEW",       href: "/admin",                tourId: "nav-overview" },
   { n: "02", label: "EVENTS",         href: "/admin/events",         tourId: "nav-events",          badge: "142" },
-  { n: "03", label: "PHOTOGRAPHERS",  href: "/admin/photographers",  tourId: "nav-photographers",  badge: "23",  accent: "cyan" },
+  { n: "03", label: "PHOTOGRAPHERS",  href: "/admin/photographers",  tourId: "nav-photographers",  badge: "23" },
   { n: "04", label: "SALES",          tourId: "nav-sales",           comingSoon: true },
   { n: "05", label: "FANS",           href: "/admin/fans",           tourId: "nav-fans" },
   { n: "06", label: "B2B",            tourId: "nav-b2b",             dim: true, comingSoon: true },
@@ -172,6 +172,7 @@ const NAV: NavItem[] = [
 
 export function Sidebar({ current = "nav-overview" }: { current?: string }) {
   const [hovered, setHovered] = useState<{ id: string; rect: DOMRect } | null>(null);
+  const [profileHover, setProfileHover] = useState(false);
 
   return (
     <>
@@ -180,7 +181,7 @@ export function Sidebar({ current = "nav-overview" }: { current?: string }) {
         borderRight: `2px solid ${T.border}`,
         background: T.bgDeep,
         display: "flex", flexDirection: "column",
-        position: "sticky", top: 0, height: "100vh",
+        height: "100vh",
       }}>
         <div style={{
           borderBottom: `2px solid ${T.border}`,
@@ -190,7 +191,7 @@ export function Sidebar({ current = "nav-overview" }: { current?: string }) {
           <div style={{
             fontFamily: display, fontWeight: 700, fontSize: 26,
             letterSpacing: "-0.035em", color: T.ink,
-          }}>FAN<span style={{ color: T.purple }}>SNAP</span></div>
+          }}>fan<span style={{ color: T.cyan }}>Snap</span></div>
           <span style={{
             fontFamily: mono, fontSize: 10, fontWeight: 700,
             color: T.cyan, border: `1.5px solid ${T.cyan}`,
@@ -203,9 +204,12 @@ export function Sidebar({ current = "nav-overview" }: { current?: string }) {
             const active = item.tourId === current;
             const dim = !!item.dim;
             const isLink = !!item.href && !item.comingSoon;
+            // Color rule: cyan only highlights the selected section. Purple is
+            // the default; muted for "later" sections. Pink reserved for true
+            // alerts (e.g. if OPS ever surfaces a real incident).
             const accent = dim ? T.inkMute
+              : active ? T.cyan
               : item.accent === "pink" ? T.pink
-              : item.accent === "cyan" ? T.cyan
               : T.purple;
 
             // Shared style for both Link and span variants — only difference is
@@ -247,8 +251,10 @@ export function Sidebar({ current = "nav-overview" }: { current?: string }) {
                 {item.badge && !dim && (
                   <span style={{
                     fontFamily: mono, fontSize: 10, fontWeight: 700,
-                    color: item.accent === "pink" ? T.pink : T.inkMute,
-                    border: `1px solid ${item.accent === "pink" ? T.pink : T.border}`,
+                    color: active ? T.cyan
+                      : item.accent === "pink" ? T.pink : T.inkMute,
+                    border: `1px solid ${active ? T.cyan
+                      : item.accent === "pink" ? T.pink : T.border}`,
                     padding: "2px 6px",
                   }}>{item.badge}</span>
                 )}
@@ -276,11 +282,18 @@ export function Sidebar({ current = "nav-overview" }: { current?: string }) {
         </nav>
 
         <div style={{ borderTop: `2px solid ${T.border}`, padding: "18px 16px 22px" }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 12,
-            border: `2px solid ${T.border}`, padding: "10px 12px",
-            background: T.bgAlt, position: "relative",
-          }}>
+          {/* Profile card — reveals a log-out action on hover. */}
+          <div
+            className="fs-profile-card"
+            onMouseEnter={() => setProfileHover(true)}
+            onMouseLeave={() => setProfileHover(false)}
+            style={{
+              display: "flex", alignItems: "center", gap: 12,
+              border: `2px solid ${profileHover ? T.borderStrong : T.border}`, padding: "10px 12px",
+              background: T.bgAlt, position: "relative", cursor: "pointer",
+              transition: "border-color 120ms",
+            }}
+          >
             <div style={{
               width: 36, height: 36, background: T.purple,
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -294,6 +307,21 @@ export function Sidebar({ current = "nav-overview" }: { current?: string }) {
                 letterSpacing: "0.15em", marginTop: 3,
               }}>USR-001 · ADMIN</div>
             </div>
+            {profileHover && (
+              <div style={{
+                position: "absolute", left: -2, right: -2, bottom: "calc(100% + 6px)",
+                background: T.bgPaper, border: `2px solid ${T.borderStrong}`,
+              }}>
+                <a href="/fansnap" style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "12px 14px", textDecoration: "none",
+                  fontFamily: mono, fontSize: 12, fontWeight: 700, color: T.pink,
+                  letterSpacing: "0.08em", textTransform: "uppercase",
+                }}>
+                  <span aria-hidden="true">⏻</span> Cerrar sesión
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -354,17 +382,45 @@ export function AdminShell({
   return (
     <>
       <KitStyles />
-      <div style={{ display: "flex", minHeight: "100vh", background: T.bg, minWidth: 1280 }}>
+      {/* Fixed-viewport shell: the whole frame is exactly 100vh and clips its
+          own overflow, so the sidebar + profile card never move — only the
+          main content column scrolls (its inner content div owns the scroll). */}
+      <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: T.bg, minWidth: 1280 }}>
         <Sidebar current={currentNav} />
         <main style={{
           flex: 1, display: "flex", flexDirection: "column",
-          background: T.bg, position: "relative", minWidth: 0,
+          background: T.bg, position: "relative", minWidth: 0, height: "100vh", overflow: "hidden",
         }}>
           <TopBar breadcrumb={breadcrumb} />
           {children}
         </main>
       </div>
     </>
+  );
+}
+
+// ============================================================
+// Photographers sub-tabs — Roster + Solicitudes live under one section.
+// ============================================================
+export function PhotographersTabs({ active }: { active: "roster" | "applications" }) {
+  const tabs: { key: "roster" | "applications"; label: string; href: string }[] = [
+    { key: "roster", label: "Roster", href: "/admin/photographers" },
+    { key: "applications", label: "Solicitudes", href: "/admin/applications" },
+  ];
+  return (
+    <div style={{ display: "flex", gap: 4, borderBottom: `2px solid ${T.border}` }}>
+      {tabs.map((t) => {
+        const on = t.key === active;
+        return (
+          <Link key={t.key} href={t.href} style={{
+            padding: "10px 16px", marginBottom: -2, textDecoration: "none",
+            borderBottom: `2px solid ${on ? T.cyan : "transparent"}`,
+            fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+            textTransform: "uppercase", color: on ? T.ink : T.inkSoft,
+          }}>{t.label}</Link>
+        );
+      })}
+    </div>
   );
 }
 

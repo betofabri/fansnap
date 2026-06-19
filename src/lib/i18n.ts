@@ -96,6 +96,11 @@ export interface Copy {
   gallery_selected: string;
   gallery_continue: string;
   gallery_tap: string;
+  gallery_showing_all: string;
+  gallery_event: string;
+  gallery_no_match: string;  // uses %p% (photos) + %f% (faces) tokens
+  gallery_no_face: string;
+  no_results: string;
   photo_back: string;
   photo_choose_format: string;
   photo_quality: string;
@@ -142,6 +147,8 @@ export interface Copy {
   checkout_section_payment: string;
   checkout_section_summary: string;
   checkout_name: string;
+  checkout_first_name: string;
+  checkout_last_name: string;
   checkout_email: string;
   checkout_phone: string;
   checkout_address: string;
@@ -247,6 +254,11 @@ export const I18N: Record<Lang, Copy> = {
     gallery_select_all: "SELECT ALL", gallery_clear: "CLEAR", gallery_selected: "SELECTED",
     gallery_continue: "CONTINUE",
     gallery_tap: "Tap to view a photo and choose format",
+    gallery_showing_all: "SHOWING ALL",
+    gallery_event: "EVENT",
+    gallery_no_match: "Scanned %p% photos · %f% faces · 0 matches in this event. Showing the full coverage as a preview.",
+    gallery_no_face: "Couldn't detect a face in the selfie — try one with better lighting / clearer angle. Showing the full coverage so you can still browse the event.",
+    no_results: "NO RESULTS",
     photo_back: "Back to gallery",
     photo_choose_format: "CHOOSE FORMAT",
     photo_quality: "RAW · 6048×4032 · 24MP",
@@ -283,6 +295,8 @@ export const I18N: Record<Lang, Copy> = {
     checkout_section_payment: "03 · PAYMENT",
     checkout_section_summary: "ORDER SUMMARY",
     checkout_name: "Full name",
+    checkout_first_name: "First name",
+    checkout_last_name: "Last name",
     checkout_email: "Email",
     checkout_phone: "Phone",
     checkout_address: "Street + number",
@@ -386,6 +400,11 @@ export const I18N: Record<Lang, Copy> = {
     gallery_select_all: "SELECIONAR TUDO", gallery_clear: "LIMPAR", gallery_selected: "SELECIONADAS",
     gallery_continue: "CONTINUAR",
     gallery_tap: "Toque numa foto para ver e escolher o formato",
+    gallery_showing_all: "MOSTRANDO TUDO",
+    gallery_event: "EVENTO",
+    gallery_no_match: "Buscamos em %p% fotos · %f% rostos · 0 correspondências neste evento. Mostrando a cobertura completa como prévia.",
+    gallery_no_face: "Não detectamos um rosto na selfie — tente uma com melhor luz / ângulo mais claro. Mostrando a cobertura completa para você navegar mesmo assim.",
+    no_results: "SEM RESULTADOS",
     photo_back: "Voltar à galeria",
     photo_choose_format: "ESCOLHA O FORMATO",
     photo_quality: "RAW · 6048×4032 · 24MP",
@@ -422,6 +441,8 @@ export const I18N: Record<Lang, Copy> = {
     checkout_section_payment: "03 · PAGAMENTO",
     checkout_section_summary: "RESUMO DO PEDIDO",
     checkout_name: "Nome completo",
+    checkout_first_name: "Nome",
+    checkout_last_name: "Sobrenome",
     checkout_email: "Email",
     checkout_phone: "Telefone",
     checkout_address: "Rua + número",
@@ -525,6 +546,11 @@ export const I18N: Record<Lang, Copy> = {
     gallery_select_all: "SELECCIONAR TODO", gallery_clear: "LIMPIAR", gallery_selected: "SELECCIONADAS",
     gallery_continue: "CONTINUAR",
     gallery_tap: "Toca una foto para ver y elegir el formato",
+    gallery_showing_all: "MOSTRANDO TODO",
+    gallery_event: "EVENTO",
+    gallery_no_match: "Buscamos en %p% fotos · %f% rostros · 0 coincidencias en este evento. Mostramos la cobertura completa como vista previa.",
+    gallery_no_face: "No detectamos un rostro en la selfie — prueba con mejor luz / ángulo más claro. Mostramos la cobertura completa para que explores el evento.",
+    no_results: "SIN RESULTADOS",
     photo_back: "Volver a la galería",
     photo_choose_format: "ELIGE EL FORMATO",
     photo_quality: "RAW · 6048×4032 · 24MP",
@@ -561,6 +587,8 @@ export const I18N: Record<Lang, Copy> = {
     checkout_section_payment: "03 · PAGO",
     checkout_section_summary: "RESUMEN DEL PEDIDO",
     checkout_name: "Nombre completo",
+    checkout_first_name: "Nombre",
+    checkout_last_name: "Apellido",
     checkout_email: "Email",
     checkout_phone: "Teléfono",
     checkout_address: "Calle + número",

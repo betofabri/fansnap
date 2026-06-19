@@ -20,6 +20,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   ArrowRight, ArrowDown, Check, Mail, Phone, MapPin, Link2, Camera, Loader2, X, ChevronDown,
 } from "lucide-react";
+import SiteHeader from "@/components/SiteHeader";
 
 // ─── Sober palette local to this page ───────────────────────────────────────
 const c = {
@@ -89,59 +90,12 @@ export default function AplicaLanding() {
   return (
     <div style={{ background: c.bg, color: c.ink, fontFamily: FONT_GROTESK, minHeight: "100vh" }}>
       <style>{globalCSS}</style>
-      <Topbar />
+      <SiteHeader lang="es" minimal />
       <Hero />
       <Features />
       <Apply />
       <Footer />
     </div>
-  );
-}
-
-// ─── Topbar ────────────────────────────────────────────────────────────────
-function Topbar() {
-  return (
-    <header style={{
-      position: "sticky", top: 0, zIndex: 50,
-      background: `${c.bg}cc`, backdropFilter: "blur(12px)",
-      borderBottom: `1px solid ${c.border}`,
-    }}>
-      <div style={{
-        maxWidth: 1200, margin: "0 auto",
-        padding: "16px clamp(20px, 4vw, 40px)",
-        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
-      }}>
-        <a href="/fansnap" style={{
-          display: "inline-flex", alignItems: "center", gap: 10,
-          color: c.ink, textDecoration: "none",
-        }}>
-          <span style={{ fontFamily: FONT_GROTESK, fontWeight: 700, fontSize: 19, letterSpacing: "-0.02em" }}>
-            fan<span style={{ color: c.accent }}>Snap</span>
-          </span>
-          <span style={{ width: 1, height: 14, background: c.border }} />
-          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkSoft, letterSpacing: "0.18em", textTransform: "uppercase" }}>
-            Roster Oficial
-          </span>
-        </a>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, letterSpacing: "0.15em", textTransform: "uppercase" }} className="apl-desktop">
-            MX · 2026
-          </span>
-          <a href="#aplicar" style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "8px 14px",
-            background: "transparent", border: `1px solid ${c.borderStrong}`,
-            color: c.ink, fontSize: 12, fontWeight: 600,
-            letterSpacing: "0.08em", textTransform: "uppercase",
-            textDecoration: "none", transition: "all 0.15s",
-          }} className="apl-link">
-            <span>Aplicar</span>
-            <ArrowRight size={12} strokeWidth={2.5} />
-          </a>
-        </div>
-      </div>
-    </header>
   );
 }
 
@@ -250,44 +204,48 @@ function Hero() {
         }}>
           Captura lo que <em style={{
             fontStyle: "italic", fontWeight: 500,
-            color: c.accent, opacity: 0.95,
+            color: c.magenta,
           }}>nadie</em> olvida.
         </h1>
 
-        {/* Body — three lines. The middle line carries the magenta accent
-            on 'audiencia' + 'monetización' so the photographer's value
-            words pop without overwhelming. */}
+        {/* Body — three paragraphs with controlled break points.
+            The .apl-hero-br elements show only on wide screens; on mobile
+            the text reflows naturally so we don't get orphan short lines. */}
         <p style={{
           fontSize: "clamp(17px, 1.4vw, 20px)",
           color: c.inkSoft,
-          lineHeight: 1.55,
-          maxWidth: 680,
+          lineHeight: 1.5,
+          maxWidth: 720,
           margin: "0 auto 14px",
+          textWrap: "balance",
         }}>
-          Cada concierto, convención, obra y fiesta es un momento que merece quedarse.
+          Cada concierto, convención,<br className="apl-hero-br" />
+          {" "}obra y fiesta es un momento que merece quedarse.
         </p>
         <p style={{
           fontSize: "clamp(17px, 1.4vw, 20px)",
           color: c.inkSoft,
-          lineHeight: 1.55,
-          maxWidth: 720,
+          lineHeight: 1.5,
+          maxWidth: 760,
           margin: "0 auto 22px",
+          textWrap: "balance",
         }}>
-          Tú pones <span style={{ color: c.ink, fontWeight: 600 }}>la mirada</span> y nosotros
-          ponemos la <span style={{ color: c.accent, fontWeight: 600 }}>tecnología</span>,
-          la <span style={{ color: c.magenta, fontWeight: 600 }}>audiencia</span> y
-          la <span style={{ color: c.magenta, fontWeight: 600 }}>monetización</span>.
+          Tú pones <span style={{ color: c.ink, fontWeight: 600 }}>la mirada</span> y nosotros<br className="apl-hero-br" />
+          {" "}ponemos la <span style={{ color: c.ink, fontWeight: 600 }}>tecnología</span>,
+          la <span style={{ color: c.ink, fontWeight: 600 }}>audiencia</span> y
+          la <span style={{ color: c.ink, fontWeight: 600 }}>monetización</span>.
         </p>
         <p style={{
           fontSize: "clamp(15px, 1.2vw, 17px)",
           color: c.ink,
-          lineHeight: 1.55,
-          maxWidth: 680,
+          lineHeight: 1.5,
+          maxWidth: 720,
           margin: "0 auto 32px",
           fontWeight: 500,
+          textWrap: "balance",
         }}>
-          Súmate al <span style={{ color: c.accent, fontWeight: 700 }}>closed beta</span> de FanSnap,
-          la plataforma oficial de fotógrafos de Ocesa y Omelete Company.
+          Súmate al <span style={{ color: c.accent, fontWeight: 700 }}>closed beta solo para invitados</span> de FanSnap,<br className="apl-hero-br" />
+          {" "}la plataforma oficial de fotógrafos de Ocesa y Omelete Company.
         </p>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
@@ -1476,6 +1434,24 @@ const globalCSS = `
   .apl-cta-big:hover {
     transform: translateY(-2px);
     box-shadow: 0 14px 36px rgba(0,229,255,0.28);
+  }
+
+  /* Standardized topbar — mirrors FotografosLanding nav behaviour. */
+  .apl-nav-link:hover { color: ${c.ink}; }
+  .apl-nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,229,255,0.28); }
+  .apl-nav-mobile { display: none; }
+  @media (max-width: 760px) {
+    .apl-nav-desktop { display: none !important; }
+    .apl-nav-mobile { display: inline-flex !important; }
+  }
+
+  /* Hide controlled hero line-breaks on narrow viewports — let the text
+     reflow naturally below ~880px so we don't get awkward 2-word orphans.
+     The {" "} string we put right after each <br> keeps a single space
+     between the joined halves when the break is hidden. */
+  br.apl-hero-br { display: none; }
+  @media (min-width: 881px) {
+    br.apl-hero-br { display: inline; }
   }
 
   @media (max-width: 880px) {

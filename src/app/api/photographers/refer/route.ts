@@ -8,6 +8,7 @@
 // Doc: src/components/AplicaLanding.tsx → ReferModal
 
 import { NextResponse } from "next/server";
+import { getDB, newId } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -55,24 +56,45 @@ export async function POST(req: Request): Promise<Response> {
   const language = body.language === "en" || body.language === "pt" || body.language === "es" ? body.language : "es";
 
   const referralCode = newReferralCode();
+  const receivedAt = new Date().toISOString();
 
-  // TODO Fatia 3: insert into D1 `photographer_referrals` + queue email to
-  // the referred photographer with a personal invite link.
-  console.log("[photographer-referral]", JSON.stringify({
-    referralCode,
-    referrerEmail,
-    referredName,
-    referredContact,
-    referredPortfolio,
-    note,
-    language,
-    receivedAt: new Date().toISOString(),
-  }));
+  const db = await getDB();
+  if (db) {
+    try {
+      await db
+        .prepare(
+          `INSERT INTO photographer_referrals
+             (id, code, referrer_email, referred_name, referred_contact,
+              referred_portfolio, note, language, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?)`,
+        )
+        .bind(
+          newId("rf_"),
+          referralCode,
+          referrerEmail,
+          referredName,
+          referredContact,
+          referredPortfolio,
+          note,
+          language,
+          receivedAt,
+        )
+        .run();
+    } catch (err) {
+      console.error("[photographer-referral] D1 insert failed", err, JSON.stringify({
+        referralCode, referrerEmail, referredName, referredContact, referredPortfolio, note, language, receivedAt,
+      }));
+    }
+  } else {
+    console.warn("[photographer-referral] no DB binding — logging only", JSON.stringify({
+      referralCode, referrerEmail, referredName, referredContact, referredPortfolio, note, language, receivedAt,
+    }));
+  }
 
   return NextResponse.json({
     ok: true,
     referralCode,
-    receivedAt: new Date().toISOString(),
+    receivedAt,
   }, { status: 200 });
 }
 

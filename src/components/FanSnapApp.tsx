@@ -15,7 +15,7 @@ import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, 
 import {
   Search, Music, Gamepad2, Trophy, PartyPopper, ChevronLeft, Calendar, MapPin, Camera,
   ArrowRight, Menu, Scan, Grid3x3, X, Upload, Check, Eye, Zap, Sun, Moon, ShoppingBag,
-  Download, Image as ImageIcon, Shirt, Coffee, Frame, Plus, Minus, Sparkles, Loader2,
+  Download, Image as ImageIcon, Shirt, Coffee, Frame, Plus, Minus, Sparkles, Loader2, Bell, ChevronDown,
 } from "lucide-react";
 import { THEMES, type Theme, type ThemeName } from "@/lib/theme";
 import { I18N, LANGS, type Copy, type Lang } from "@/lib/i18n";
@@ -24,10 +24,12 @@ import {
   getPhotosForEvent, PRODUCTS, MXN_RATE, type Event as FsEvent, type Photo,
 } from "@/lib/mock";
 import { scanSelfie, prefetchFaceModels, type ScanResult } from "@/lib/face-recognition";
-import { BUILD_SHA, BUILD_TIME } from "@/lib/build-info";
+import SiteHeader from "@/components/SiteHeader";
+import FanSnapLogo from "@/components/FanSnapLogo";
 import {
   loadCart, saveCart, clearCart, addToCart, updateQty, removeLine,
   makeLineId, computeTotals, formatMXN, newOrderNumber, newOxxoReference,
+  saveOrder,
   type CartItem,
 } from "@/lib/cart";
 
@@ -235,14 +237,24 @@ export default function FanSnapApp() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [mobileNav, setMobileNav] = useState(false);
+  const [cartHydrated, setCartHydrated] = useState(false);
+  const [order, setOrder] = useState<{ number: string; email: string; oxxoReference: string | null; items: CartItem[] } | null>(null);
 
   const c = THEMES[theme];
   const t = I18N[lang];
 
+  // Hydrate the cart from localStorage after mount (avoids SSR mismatch),
+  // then mirror every change back so a refresh / new tab keeps the cart.
+  useEffect(() => {
+    setCart(loadCart());
+    setCartHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (cartHydrated) saveCart(cart);
+  }, [cart, cartHydrated]);
+
   const goTo = (p: Page) => {
     setPage(p);
-    setMobileNav(false);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "instant" });
   };
 
@@ -275,6 +287,28 @@ export default function FanSnapApp() {
     }
   };
 
+  /** Deep-link entry: the SSR event pages (/fansnap/eventos/[code]) send the
+   *  fan here with `?event=CODE`. On mount, resolve that code to an event and
+   *  jump straight into its detail screen, then strip the param so a refresh
+   *  or share of the resulting URL doesn't re-trigger. Runs once. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("event");
+    if (!code) return;
+    const match = EVENTS.find((e) => e.code.toLowerCase() === code.toLowerCase());
+    if (match) {
+      setActiveEvent(match);
+      setPage("event");
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+    // Clean the URL back to /fansnap without a reload.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("event");
+    window.history.replaceState({}, "", url.pathname + url.hash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div style={appStyle(c)}>
       <ThemeStyles c={c} />
@@ -282,12 +316,11 @@ export default function FanSnapApp() {
       <Header
         theme={theme} setTheme={setTheme}
         lang={lang} setLang={setLang}
-        c={c} t={t}
+        c={c}
         onLogo={goHome}
         onNavSection={goToSection}
         onCart={() => goTo("cart")}
         cartCount={cart.reduce((n, it) => n + it.qty, 0)}
-        mobileNav={mobileNav} setMobileNav={setMobileNav}
       />
 
       {page === "home" && (
@@ -323,7 +356,38 @@ export default function FanSnapApp() {
         <PhotoDetail
           c={c} t={t} event={activeEvent} photo={activePhoto}
           onBack={() => goTo("gallery")}
-          onAdd={(item) => setCart([...cart, item])}
+          onAdd={(item) => setCart(addToCart(cart, item))}
+        />
+      )}
+
+      {page === "cart" && (
+        <CartPage
+          c={c} t={t} cart={cart}
+          onUpdateQty={(lineId, qty) => setCart(updateQty(cart, lineId, qty))}
+          onRemove={(lineId) => setCart(removeLine(cart, lineId))}
+          onContinue={() => goTo("checkout")}
+          onKeepShopping={goHome}
+        />
+      )}
+
+      {page === "checkout" && (
+        <CheckoutPage
+          c={c} t={t} cart={cart}
+          onBack={() => goTo("cart")}
+          onPlace={(payload) => {
+            setOrder(payload);
+            saveOrder({ ...payload, placedAt: Date.now() });
+            clearCart();
+            setCart([]);
+            goTo("confirmation");
+          }}
+        />
+      )}
+
+      {page === "confirmation" && order && (
+        <OrderConfirmation
+          c={c} t={t} order={order}
+          onContinue={goHome}
         />
       )}
 
@@ -332,71 +396,6 @@ export default function FanSnapApp() {
   );
 }
 
-// ============================================================
-// LOGO
-// ============================================================
-function FanSnapLogo({ size = "md", theme: _theme = "dark" }: { size?: "xs" | "sm" | "md" | "lg"; theme?: ThemeName }) {
-  void _theme; // gradient handles both themes; no invert trick needed
-  const heights = { xs: 28, sm: 36, md: 44, lg: 72 };
-  const h = heights[size];
-
-  // useId gives each instance a unique gradient id so multiple logos on the
-  // same page (header + footer) don't collide on `url(#...)` references.
-  const reactId = useId().replace(/:/g, "");
-  const gid = `fsg-${reactId}`;
-
-  // viewBox 380×80 → ~4.75:1 aspect ratio. At header md=44px, this is ~209px
-  // wide — comfortable for the wordmark + the two "eye" circles between
-  // "fan" and "Snap" that preserve the skull personality.
-  return (
-    <svg
-      viewBox="0 0 380 80"
-      style={{ height: h, width: "auto", display: "block", flexShrink: 0 }}
-      role="img"
-      aria-label="FanSnap"
-    >
-      <defs>
-        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="80%">
-          <stop offset="0%" stopColor="#C13EFF" />
-          <stop offset="55%" stopColor="#7B4EFF" />
-          <stop offset="100%" stopColor="#00B8FF" />
-        </linearGradient>
-      </defs>
-
-      {/* "fan" */}
-      <text
-        x="0"
-        y="62"
-        fontFamily="var(--font-grotesk), system-ui, sans-serif"
-        fontWeight="700"
-        fontSize="64"
-        fill={`url(#${gid})`}
-        letterSpacing="-3"
-      >
-        fan
-      </text>
-
-      {/* Two eye circles — pulled from the skull motif */}
-      <circle cx="138" cy="36" r="11" stroke={`url(#${gid})`} strokeWidth="3" fill="none" />
-      <circle cx="138" cy="34" r="4.5" fill={`url(#${gid})`} />
-      <circle cx="170" cy="36" r="11" stroke={`url(#${gid})`} strokeWidth="3" fill="none" />
-      <circle cx="170" cy="34" r="4.5" fill={`url(#${gid})`} />
-
-      {/* "Snap" */}
-      <text
-        x="195"
-        y="62"
-        fontFamily="var(--font-grotesk), system-ui, sans-serif"
-        fontWeight="700"
-        fontSize="64"
-        fill={`url(#${gid})`}
-        letterSpacing="-3"
-      >
-        Snap
-      </text>
-    </svg>
-  );
-}
 
 // ============================================================
 // HEADER
@@ -406,111 +405,141 @@ function FanSnapLogo({ size = "md", theme: _theme = "dark" }: { size?: "xs" | "s
  *  too because the home is the only route in Fatia 1.5. The caller passes
  *  `onNavigate` so we can also reset to the home screen first when we're
  *  inside the event → selfie → gallery flow. */
-const NAV_ITEMS: ReadonlyArray<{ id: string; key: "nav_how" | "nav_events" | "nav_photographers" | "nav_brand" }> = [
+// External links (full-page navigation) use `url`; internal anchors use `id`
+// and resolve through `onNavSection` → smooth-scroll to the matching <section>.
+const NAV_ITEMS: ReadonlyArray<{
+  id: string;
+  key: "nav_how" | "nav_events" | "nav_photographers" | "nav_brand";
+  url?: string;
+}> = [
   { id: "how", key: "nav_how" },
   { id: "events", key: "nav_events" },
-  { id: "photographers", key: "nav_photographers" },
-  { id: "brand", key: "nav_brand" },
+  { id: "photographers", key: "nav_photographers", url: "/fansnap/fotografos" },
+  { id: "brand", key: "nav_brand", url: "/fansnap/marcas" },
 ];
 
+// The SPA header is now the shared SiteHeader, fed the SPA's theme + controls.
+// One component across landings + SPA = no visual seam, no drift. The SPA
+// injects its theme/lang/cart on the right and intercepts nav clicks so home
+// anchors smooth-scroll (and the logo soft-resets) instead of hard-navigating.
 function Header({
-  theme, setTheme, lang, setLang, c, t, onLogo, onNavSection, onCart, cartCount, mobileNav, setMobileNav,
+  theme, setTheme, lang, setLang, c, onLogo, onNavSection, onCart, cartCount,
 }: {
   theme: ThemeName; setTheme: (n: ThemeName) => void;
   lang: Lang; setLang: (l: Lang) => void;
-  c: Theme; t: Copy;
+  c: Theme;
   onLogo: () => void;
   onNavSection: (id: string) => void;
   onCart: () => void;
   cartCount: number;
-  mobileNav: boolean; setMobileNav: (v: boolean) => void;
 }) {
+  const onNavClick = (href: string): boolean => {
+    if (href === "/fansnap") { onLogo(); return true; }
+    const hash = href.includes("#") ? href.split("#")[1] : null;
+    if (hash) { onNavSection(hash); return true; }
+    return false; // external (/fansnap/fotografos, /marcas) → let it navigate
+  };
+
+  const rightSlot = (
+    <>
+      <div className="sh-desktop-only"><ThemeHover theme={theme} setTheme={setTheme} c={c} /></div>
+      <div className="sh-desktop-only"><LangHover lang={lang} setLang={setLang} c={c} /></div>
+      {cartCount > 0 && (
+        <button onClick={onCart} style={cartBtnStyle(c)} className="ff-cta-cart" aria-label="Open cart">
+          <ShoppingBag size={14} strokeWidth={2.5} />
+          <span style={{ marginLeft: 6 }}>{cartCount}</span>
+        </button>
+      )}
+    </>
+  );
+
   return (
-    <header style={headerStyle(c)}>
-      <div style={headerInnerStyle()}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onLogo} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <FanSnapLogo size="md" theme={theme} />
-          </button>
-          {/* Build pill — local timestamp so Beto can eyeball whether a
-              deploy actually replaced the previous version. SHA is kept in
-              the title attr for inspection but not in the visible label. */}
-          <div
-            style={buildPillStyle(c)}
-            title={`Build ${BUILD_SHA} — ${BUILD_TIME}`}
-            aria-label={`Built ${BUILD_TIME}`}
-          >
-            <span style={{ color: c.cyan, opacity: 0.7 }}>·</span>
-            <span>{BUILD_TIME}</span>
-          </div>
-          <div className="ff-desktop-only" style={poweredByStyle(c)}>
-            <span style={{ opacity: 0.65 }}>{t.powered_by}</span>{" "}
-            <span style={{ color: c.purple, fontWeight: 700 }}>O&amp;CO</span>
-          </div>
-        </div>
-
-        <nav style={{ display: "flex", gap: 2 }} className="ff-desktop-nav">
-          {NAV_ITEMS.map((it) => (
-            <button
-              key={it.id}
-              onClick={() => onNavSection(it.id)}
-              style={navLinkStyle(c)}
-              className="ff-nav-link"
-            >
-              {t[it.key]}
-            </button>
-          ))}
-        </nav>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            style={themeToggleStyle(c)}
-            aria-label="Toggle theme"
-          >
+    <SiteHeader
+      theme={c}
+      lang={lang}
+      onNavClick={onNavClick}
+      rightSlot={rightSlot}
+      mobileSlot={
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} style={themeToggleStyle(c)} aria-label="Toggle theme">
             {theme === "dark" ? <Sun size={14} strokeWidth={2.5} /> : <Moon size={14} strokeWidth={2.5} />}
           </button>
-          <div className="ff-desktop-only">
-            <LangToggle lang={lang} setLang={setLang} c={c} />
-          </div>
-          {cartCount > 0 && (
-            <button onClick={onCart} style={cartBtnStyle(c)} className="ff-cta-cart" aria-label="Open cart">
-              <ShoppingBag size={14} strokeWidth={2.5} />
-              <span style={{ marginLeft: 6 }}>{cartCount}</span>
-            </button>
-          )}
-          <button
-            onClick={() => setMobileNav(!mobileNav)}
-            style={menuBtnStyle(c)}
-            className="ff-mobile-only"
-            aria-label="Menu"
-          >
-            {mobileNav ? <X size={18} strokeWidth={2.5} /> : <Menu size={18} strokeWidth={2.5} />}
-          </button>
+          <LangToggle lang={lang} setLang={setLang} c={c} />
         </div>
-      </div>
+      }
+    />
+  );
+}
 
-      {mobileNav && (
-        <div style={mobileMenuStyle(c)}>
-          {NAV_ITEMS.map((it) => (
-            <button
-              key={it.id}
-              onClick={() => { onNavSection(it.id); setMobileNav(false); }}
-              style={mobileNavLinkStyle(c)}
-            >
-              {t[it.key]}
-            </button>
-          ))}
-          <div style={{ height: 2, background: c.border, margin: "8px 0" }} />
-          <div style={{ display: "flex", justifyContent: "center", paddingBottom: 8 }}>
-            <LangToggle lang={lang} setLang={setLang} c={c} />
-          </div>
-          <button style={{ ...signinBtnStyle(c), width: "100%", justifyContent: "center", display: "flex" }}>
-            {t.nav_login}
-          </button>
+// Hover dropdowns for theme + language (desktop). Trigger shows the current
+// value; the menu opens on mouse-enter and stays while hovered.
+function HoverMenu({ trigger, children, c, width = 132 }: {
+  trigger: React.ReactNode; children: React.ReactNode; c: Theme; width?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      style={{ position: "relative" }}
+    >
+      {trigger}
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 60,
+          width, background: c.bgPaper, border: `2px solid ${c.border}`,
+          display: "flex", flexDirection: "column",
+        }}>
+          {children}
         </div>
       )}
-    </header>
+    </div>
+  );
+}
+
+function ThemeHover({ theme, setTheme, c }: { theme: ThemeName; setTheme: (n: ThemeName) => void; c: Theme }) {
+  const opts: { key: ThemeName; label: string; icon: React.ReactNode }[] = [
+    { key: "light", label: "Claro", icon: <Sun size={13} strokeWidth={2.5} /> },
+    { key: "dark", label: "Escuro", icon: <Moon size={13} strokeWidth={2.5} /> },
+  ];
+  return (
+    <HoverMenu c={c} width={132} trigger={
+      <button style={themeToggleStyle(c)} aria-label="Tema">
+        {theme === "dark" ? <Moon size={14} strokeWidth={2.5} /> : <Sun size={14} strokeWidth={2.5} />}
+      </button>
+    }>
+      {opts.map((o) => (
+        <button key={o.key} onClick={() => setTheme(o.key)} style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
+          background: theme === o.key ? c.bgAlt : "transparent", border: "none", cursor: "pointer",
+          color: theme === o.key ? c.ink : c.inkSoft, fontFamily: "var(--font-grotesk), sans-serif",
+          fontSize: 13, fontWeight: 600, textAlign: "left",
+        }}>{o.icon}{o.label}</button>
+      ))}
+    </HoverMenu>
+  );
+}
+
+function LangHover({ lang, setLang, c }: { lang: Lang; setLang: (l: Lang) => void; c: Theme }) {
+  const labels: Record<string, string> = { en: "English", pt: "Português", es: "Español" };
+  return (
+    <HoverMenu c={c} width={150} trigger={
+      <button style={{ ...themeToggleStyle(c), width: "auto", padding: "0 10px", gap: 5, fontFamily: "var(--font-mono), monospace", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em" }} aria-label="Idioma">
+        {lang.toUpperCase()} <ChevronDown size={12} strokeWidth={2.5} />
+      </button>
+    }>
+      {LANGS.map((l) => (
+        <button key={l} onClick={() => setLang(l)} style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 12px",
+          background: lang === l ? c.bgAlt : "transparent", border: "none", cursor: "pointer",
+          color: lang === l ? c.ink : c.inkSoft, fontFamily: "var(--font-grotesk), sans-serif",
+          fontSize: 13, fontWeight: 600, textAlign: "left",
+        }}>
+          <span>{labels[l]}</span>
+          <span style={{ fontFamily: "var(--font-mono), monospace", fontSize: 10, color: c.inkMute }}>{l.toUpperCase()}</span>
+        </button>
+      ))}
+    </HoverMenu>
   );
 }
 
@@ -638,11 +667,11 @@ function ForPhotographers({ c, t }: { c: Theme; t: Copy }) {
           </div>
           <h2 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(28px, 4.5vw, 52px)", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.0, margin: "0 0 16px 0", textTransform: "uppercase", color: c.ink }}>{t.photographers_title}</h2>
           <p style={{ fontSize: "clamp(14px, 1.4vw, 16px)", color: c.inkSoft, marginBottom: 28, lineHeight: 1.55, maxWidth: 540 }}>{t.photographers_body}</p>
-          <button style={ctaPrimaryStyle(c)} className="ff-cta-primary">
+          <a href="/fansnap/fotografos" style={{ ...ctaPrimaryStyle(c), textDecoration: "none" }} className="ff-cta-primary">
             <Camera size={16} strokeWidth={2.5} />
             <span>{t.photographers_cta}</span>
             <ArrowRight size={16} strokeWidth={3} />
-          </button>
+          </a>
         </div>
         <div style={{ position: "relative", aspectRatio: "4/3", border: `3px solid ${c.purple}`, overflow: "hidden", boxShadow: `8px 8px 0 0 ${c.purple}` }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url(https://picsum.photos/seed/fansnap-photographer/900/700)", backgroundSize: "cover", backgroundPosition: "center" }} />
@@ -1059,8 +1088,8 @@ function FeedSection({
           </div>
         ) : (
           <div style={{ padding: "60px 32px", textAlign: "center", border: `2px dashed ${c.border}`, background: c.bgPaper }}>
-            <FanSnapLogo size="sm" theme={c.bg === "#0A0A0F" ? "dark" : "light"} />
-            <div style={{ fontSize: 11, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em", marginTop: 14 }}>NO RESULTS</div>
+            <FanSnapLogo size="sm" />
+            <div style={{ fontSize: 11, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em", marginTop: 14 }}>{t.no_results}</div>
           </div>
         )}
       </div>
@@ -1645,7 +1674,6 @@ function Scanning({
   onDone: (result: ScanResult) => void;
 }) {
   const [progress, setProgress] = useState(0);
-  const [count, setCount] = useState(0);
   const [phase, setPhase] = useState(0);
   const minDurationMs = 3000; // keep the radar onscreen long enough to read
 
@@ -1654,14 +1682,15 @@ function Scanning({
   useEffect(() => {
     let cancelled = false;
     const animStart = Date.now();
-    const totalPhotos = event.photoCount > 0 ? event.photoCount : 47283;
 
+    // Drives the loading bar + the rotating phase label only. No fake photo
+    // counter — the scan is one atomic call, so there's no real running tally
+    // to show; better to show honest "loading" than an invented number.
     const tick = setInterval(() => {
       if (cancelled) return;
       const e = Date.now() - animStart;
       const p = Math.min(e / minDurationMs, 1);
       setProgress(p);
-      setCount(Math.floor(totalPhotos * p));
       if (p < 0.4) setPhase(0);
       else if (p < 0.85) setPhase(1);
       else setPhase(2);
@@ -1695,7 +1724,7 @@ function Scanning({
     })();
 
     return () => { cancelled = true; clearInterval(tick); };
-  }, [event.code, event.photoCount, onDone, selfieDataUrl]);
+  }, [event.code, onDone, selfieDataUrl]);
 
   const phases = [t.scan_indexing, t.scan_matching, t.scan_finalizing];
 
@@ -1729,18 +1758,7 @@ function Scanning({
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 20 }}>
-          <div style={{ background: c.bgPaper, border: `2px solid ${c.border}`, padding: 16 }}>
-            <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4, color: c.cyan }}>{count.toLocaleString()}</div>
-            <div style={{ fontSize: 9, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em" }}>{t.scan_photos}</div>
-          </div>
-          <div style={{ background: c.bgPaper, border: `2px solid ${c.border}`, padding: 16 }}>
-            <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4, color: c.purple }}>{Math.round(progress * 100)}%</div>
-            <div style={{ fontSize: 9, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em" }}>PROGRESS</div>
-          </div>
-        </div>
-
-        <div style={{ width: "100%", height: 6, background: c.bgPaper, border: `2px solid ${c.border}`, position: "relative", overflow: "hidden" }}>
+        <div style={{ width: "100%", maxWidth: 360, margin: "0 auto", height: 6, background: c.bgPaper, border: `2px solid ${c.border}`, position: "relative", overflow: "hidden" }}>
           <div style={{ height: "100%", background: `linear-gradient(90deg, ${c.purple}, ${c.cyan})`, transition: "width 0.1s linear", boxShadow: `0 0 12px ${c.purple}`, width: `${progress * 100}%` }} />
         </div>
       </div>
@@ -1807,7 +1825,7 @@ function Gallery({
         </div>
 
         <h1 style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(40px, 8vw, 96px)", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 0.95, margin: "0 0 24px 0", textTransform: "uppercase", color: c.ink }}>
-          {hasRealMatches ? t.gallery_title : "SHOWING ALL"}
+          {hasRealMatches ? t.gallery_title : t.gallery_showing_all}
         </h1>
 
         {/* Demo-mode disclosure: when the real scan didn't return matches we
@@ -1823,8 +1841,8 @@ function Gallery({
             <Sparkles size={16} strokeWidth={2} style={{ color: c.pink, flexShrink: 0 }} />
             <span>
               {scanResult.selfieHasFace
-                ? `Scanned ${scanResult.photosScanned} photos · ${scanResult.facesScanned} faces · 0 matches in this event. Showing the full coverage as a preview.`
-                : `Couldn't detect a face in the selfie — try one with better lighting / clearer angle. Showing the full coverage so you can still browse the event.`}
+                ? t.gallery_no_match.replace("%p%", String(scanResult.photosScanned)).replace("%f%", String(scanResult.facesScanned))
+                : t.gallery_no_face}
             </span>
           </div>
         )}
@@ -1836,13 +1854,15 @@ function Gallery({
           </div>
           <div style={{ padding: 16, borderRight: `2px solid ${c.border}`, background: c.bgPaper }}>
             <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4, color: c.cyan }}>{event.code}</div>
-            <div style={{ fontSize: 9, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em" }}>EVENT</div>
+            <div style={{ fontSize: 9, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em" }}>{t.gallery_event}</div>
           </div>
           <div style={{ padding: 16, background: c.bgPaper }}>
             <div style={{ fontFamily: "var(--font-grotesk), sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4, color: c.ink }}>{formatDate(event.date)}</div>
             <div style={{ fontSize: 9, color: c.inkSoft, fontWeight: 700, letterSpacing: "0.15em" }}>{event.city}</div>
           </div>
         </div>
+
+        <FanNotifyBar c={c} event={event} />
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -1918,6 +1938,58 @@ function Gallery({
         </div>
       </div>
     </section>
+  );
+}
+
+// ============================================================
+// FAN NOTIFY BAR — optional opt-in registration in the gallery.
+// Search stays free + anonymous; this just lets a fan leave their email to be
+// notified when more of their photos appear. Registers them (role='fan').
+// ============================================================
+function FanNotifyBar({ c, event }: { c: Theme; event: FsEvent }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [done, setDone] = useState(false);
+
+  const submit = () => {
+    if (!email.includes("@")) return;
+    void fetch("/fansnap/api/fans/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, city: event.city, source: "gallery" }),
+    }).catch(() => {});
+    setDone(true);
+  };
+
+  if (done) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", marginBottom: 16, background: c.bgPaper, border: `2px solid ${c.cyan}`, fontSize: 13, color: c.ink }}>
+        <Check size={16} strokeWidth={2.5} style={{ color: c.cyan, flexShrink: 0 }} />
+        <span>Listo — te avisamos si aparecen más fotos tuyas.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", marginBottom: 16, background: c.bgPaper, border: `2px solid ${c.border}`, flexWrap: "wrap" }}>
+      <Bell size={16} strokeWidth={2} style={{ color: c.purple, flexShrink: 0 }} />
+      <span style={{ fontSize: 13, color: c.inkSoft, flex: "1 1 220px" }}>
+        ¿Quieres que te avisemos si aparecen más fotos tuyas de este evento?
+      </span>
+      {open ? (
+        <div style={{ display: "flex", gap: 8, flex: "1 1 260px" }}>
+          <input
+            type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+            placeholder="tu@correo.com" autoFocus
+            style={{ flex: 1, background: c.bg, border: `2px solid ${c.border}`, color: c.ink, padding: "8px 10px", fontSize: 13, outline: "none" }}
+          />
+          <button onClick={submit} style={{ ...ctaSmallStyle(c), borderColor: c.cyan, color: c.cyan }} className="ff-cta-sec">Avísame</button>
+        </div>
+      ) : (
+        <button onClick={() => setOpen(true)} style={ctaSmallStyle(c)} className="ff-cta-sec">Avísame</button>
+      )}
+    </div>
   );
 }
 
@@ -2326,7 +2398,9 @@ function CheckoutPage({
   const [processing, setProcessing] = useState(false);
 
   // Form state — all client-side, no validation beyond required for now
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const name = `${firstName.trim()} ${lastName.trim()}`.trim();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -2335,12 +2409,20 @@ function CheckoutPage({
   const [stateField, setStateField] = useState("");
   const [zip, setZip] = useState("");
 
-  const canPlace = name.trim() && email.includes("@") && terms && !processing &&
+  const canPlace = firstName.trim() && lastName.trim() && email.includes("@") && terms && !processing &&
     (!totals.hasPhysical || (address.trim() && city.trim() && zip.trim()));
 
   const placeOrder = () => {
     if (!canPlace) return;
     setProcessing(true);
+    // Register the buyer as a real fan (role='fan' in D1). Fire-and-forget —
+    // never block or fail the purchase on this. Search stays free + anonymous;
+    // this is the point the fan volunteers their identity.
+    void fetch("/fansnap/api/fans/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ firstName, lastName, name, email, phone, city, source: "checkout" }),
+    }).catch(() => {});
     // Simulate processing delay (gives the spinner a moment of theatre)
     setTimeout(() => {
       onPlace({
@@ -2372,8 +2454,9 @@ function CheckoutPage({
             {/* CONTACT */}
             <FormSection c={c} title={t.checkout_section_contact}>
               <FormGrid>
-                <Field c={c} label={t.checkout_name} value={name} onChange={setName} fullWidth />
-                <Field c={c} label={t.checkout_email} value={email} onChange={setEmail} type="email" />
+                <Field c={c} label={t.checkout_first_name} value={firstName} onChange={setFirstName} />
+                <Field c={c} label={t.checkout_last_name} value={lastName} onChange={setLastName} />
+                <Field c={c} label={t.checkout_email} value={email} onChange={setEmail} type="email" fullWidth />
                 <Field c={c} label={t.checkout_phone} value={phone} onChange={setPhone} type="tel" />
               </FormGrid>
             </FormSection>
@@ -2667,11 +2750,17 @@ function OrderConfirmation({
         )}
 
         {/* Continue */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 32 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, marginTop: 32 }}>
           <button onClick={onContinue} style={ctaPrimaryStyle(c)} className="ff-cta-primary">
             <span>{t.confirmation_continue}</span>
             <ArrowRight size={16} strokeWidth={3} />
           </button>
+          <a href="/fansnap/pedidos" style={{
+            fontFamily: "var(--font-mono), monospace", fontSize: 11, color: c.inkSoft,
+            letterSpacing: "0.08em", textDecoration: "none",
+          }}>
+            ¿Cerraste esta página? Recupera tu pedido en <span style={{ color: c.cyan }}>/pedidos →</span>
+          </a>
         </div>
       </div>
     </section>
@@ -2725,24 +2814,37 @@ function Footer({ c }: { c: Theme }) {
     <footer style={{ background: c.bgAlt, borderTop: `2px solid ${c.border}` }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "clamp(40px, 5vw, 60px) clamp(20px, 3vw, 32px) 40px", display: "grid", gridTemplateColumns: "1.4fr 2fr", gap: "clamp(32px, 4vw, 60px)" }} className="ff-footer-grid">
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <FanSnapLogo size="lg" theme={c.bg === "#0A0A0F" ? "dark" : "light"} />
-          <p style={{ fontSize: 14, color: c.inkSoft, margin: 0, maxWidth: 280, lineHeight: 1.5 }}>The memory layer of live entertainment</p>
+          <FanSnapLogo size="lg" />
+          <p style={{ fontSize: 14, color: c.inkSoft, margin: 0, maxWidth: 280, lineHeight: 1.5 }}>La capa de memoria del entretenimiento en vivo</p>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px", background: c.bgPaper, border: `2px solid ${c.border}`, fontSize: 10, fontWeight: 700, color: c.purple, letterSpacing: "0.1em", width: "fit-content" }}>
             <span style={{ width: 6, height: 6, background: c.cyan, boxShadow: `0 0 8px ${c.cyan}`, animation: "pulse 2s infinite" }} />
-            <span>OPERATIONAL · CDMX · LATAM</span>
+            <span>OPERATIVO · CDMX · LATAM</span>
           </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "clamp(20px, 3vw, 32px)" }}>
           {[
-            { title: "PRODUCT", items: ["For fans", "For photographers", "For business", "Developers / SDK"] },
-            { title: "COMPANY", items: ["About", "Press", "Contact"] },
-            { title: "LEGAL", items: ["Privacy", "Terms", "Biometric data"] },
+            { title: "PRODUCTO", items: [
+              { label: "Para fans", href: "/fansnap" },
+              { label: "Para fotógrafos", href: "/fansnap/fotografos" },
+              { label: "Para marcas", href: "/fansnap/marcas" },
+              { label: "Mis pedidos", href: "/fansnap/pedidos" },
+            ] },
+            { title: "EMPRESA", items: [
+              { label: "Nosotros", href: "#" },
+              { label: "Prensa", href: "#" },
+              { label: "Contacto", href: "/fansnap/marcas#contacto" },
+            ] },
+            { title: "LEGAL", items: [
+              { label: "Privacidad", href: "#" },
+              { label: "Términos", href: "#" },
+              { label: "Datos biométricos", href: "#" },
+            ] },
           ].map((col) => (
             <div key={col.title}>
               <div style={{ fontSize: 10, fontWeight: 700, color: c.purple, letterSpacing: "0.18em", marginBottom: 14, paddingBottom: 10, borderBottom: `2px solid ${c.border}` }}>{col.title}</div>
               {col.items.map((item) => (
-                <a key={item} href="#" style={{ display: "block", fontSize: 13, color: c.inkSoft, textDecoration: "none", padding: "5px 0", fontWeight: 500 }}>{item}</a>
+                <a key={item.label} href={item.href} style={{ display: "block", fontSize: 13, color: c.inkSoft, textDecoration: "none", padding: "5px 0", fontWeight: 500 }}>{item.label}</a>
               ))}
             </div>
           ))}

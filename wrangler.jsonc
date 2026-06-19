@@ -35,13 +35,20 @@
 	// "vars": {
 	// 	"NEXT_PUBLIC_APP_ENV": "production"
 	// }
-	// "d1_databases": [
-	// 	{
-	// 		"binding": "DB",
-	// 		"database_name": "fansnap",
-	// 		"database_id": "<FILL_AFTER_wrangler d1 create fansnap>"
-	// 	}
-	// ],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "fansnap",
+			"database_id": "d2c85059-7a8e-4db8-a5b8-3eca10a96cda"
+		}
+	],
+	// Transactional email (env.EMAIL). Sends only work once betofabri.com is
+	// onboarded to Email Sending (`wrangler email sending enable betofabri.com`
+	// + DNS verification). Until then env.EMAIL.send() throws and src/lib/email
+	// swallows it — declaring the binding is safe regardless.
+	"send_email": [
+		{ "name": "EMAIL" }
+	],
 	// "r2_buckets": [
 	// 	{
 	// 		"binding": "PHOTOS",

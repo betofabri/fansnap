@@ -40,14 +40,24 @@ const { Canvas, Image, ImageData } = canvas;
 faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 
 console.log("Loading face-api models from disk…");
-await faceapi.nets.tinyFaceDetector.loadFromDisk(modelDir);
+// SSD MobileNet is build-time only — load it straight from the package so we
+// don't ship its 5.6 MB weights to the browser (the selfie side uses the light
+// TinyFaceDetector that lives in public/models).
+const ssdDir = join(root, "node_modules/@vladmandic/face-api/model");
+await faceapi.nets.ssdMobilenetv1.loadFromDisk(ssdDir);
 await faceapi.nets.faceLandmark68Net.loadFromDisk(modelDir);
 await faceapi.nets.faceRecognitionNet.loadFromDisk(modelDir);
-console.log("✓ models loaded");
+console.log("✓ models loaded (SSD MobileNet v1)");
 
-const detectorOpts = new faceapi.TinyFaceDetectorOptions({
-  inputSize: 416,       // good balance of speed/accuracy
-  scoreThreshold: 0.4,  // accept slightly weaker detections
+// SSD MobileNet v1 detects faces far more accurately than TinyFaceDetector,
+// especially the small / off-angle / poorly-lit faces in party + crowd shots.
+// Better detection boxes → better landmark fit → better-aligned 150×150 crop →
+// a sharper 128-d descriptor that separates the same person across settings
+// from look-alike strangers. This is build-time only, so the heavier model
+// costs nothing in the browser (the selfie side keeps the light TinyDetector).
+const detectorOpts = new faceapi.SsdMobilenetv1Options({
+  minConfidence: 0.45,  // accept slightly weaker faces; we'd rather index than miss
+  maxResults: 100,
 });
 
 const events = readdirSync(eventsDir)
