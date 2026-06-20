@@ -10,12 +10,14 @@ import { notFound } from "next/navigation";
 import { EVENTS } from "@/lib/mock";
 import EventDetail from "@/components/EventDetail";
 import ComingSoon from "@/components/ComingSoon";
-import { SITE_LIVE } from "@/lib/launch";
+import { siteVisible } from "@/lib/gate";
 
-// Pre-render one static page per known event code.
-export function generateStaticParams() {
-  return EVENTS.map((e) => ({ code: e.code.toLowerCase() }));
-}
+// Gated by the preview cookie (siteVisible), same as the rest of the site, so
+// preview holders can open events pre-launch. Reading the cookie makes this
+// dynamic — so no generateStaticParams pre-launch. When SITE_LIVE flips true,
+// siteVisible() returns true for everyone and these render for the public
+// (edge-cached via s-maxage); restore generateStaticParams then if SSG matters.
+export const dynamic = "force-dynamic";
 
 function findEvent(code: string) {
   return EVENTS.find((e) => e.code.toLowerCase() === code.toLowerCase());
@@ -54,6 +56,6 @@ export default async function EventPage({
   const { code } = await params;
   const event = findEvent(code);
   if (!event) notFound();
-  if (!SITE_LIVE) return <ComingSoon />;
+  if (!(await siteVisible())) return <ComingSoon />;
   return <EventDetail event={event} />;
 }
