@@ -54,23 +54,23 @@ funcionando o tempo todo:
 
 ---
 
-## Decisões a bater amanhã (antes de codar)
+## Decisões (BATIDAS — Beto, 21/jun/2026, "vamos na sua decisão")
 
-**1. Onde roda o índice facial server-side?**
-`@vladmandic/face-api` precisa de `canvas` nativo — **não roda no runtime de
-Workers**. Opções:
-- **(A) Cloudflare Queue → Container Node** reusando `build-face-index.mjs`. ✅ Recomendado: reaproveita a lógica já validada, mantém o match client-side grátis, sem dependência externa, biometria não sai da Cloudflare.
-- **(B) AWS Rekognition FaceCollection** — o schema já tem `rekog_image_id`. Resolve match em escala de graça de engenharia, mas: custo por imagem, dependência AWS e **biometria sai pra AWS** (peso a mais na LFPDPPP).
-- **(C) Vectorize + modelo de embedding facial** — nativo Cloudflare, bom em escala, mas troca o motor facial atual (re-tuning do zero).
+**1. Índice facial server-side → (A) Cloudflare Queue → Container Node.** ✅ FECHADO.
+`@vladmandic/face-api` precisa de `canvas` nativo, não roda no runtime de Workers.
+Upload → enfileira → um Container (Node) pega o job e roda **o mesmo código de
+`build-face-index.mjs`** → grava em `photo_faces`. Reusa a lógica validada, mantém
+o match client-side grátis em eventos normais, e biometria **não sai da Cloudflare**.
+Descartadas: (B) AWS Rekognition (custo + biometria sai pra AWS), (C) Vectorize +
+embedding (trocaria o motor facial atual, re-tuning do zero).
 
-**2. Auth de produto**
-- **Magic-link por email** (passwordless, reusa `env.EMAIL` / Cloudflare Email),
-  sessão = JWT assinado em cookie httpOnly. ✅ Recomendado p/ fã e fotógrafo (baixa fricção no MX).
-- Alternativa: Google OAuth só pro fotógrafo.
+**2. Auth de produto → magic-link por email.** ✅ FECHADO. Passwordless, reusa
+`env.EMAIL` / Cloudflare Email; sessão = JWT assinado em cookie httpOnly. Vale p/
+fã e fotógrafo. (Google OAuth pro fotógrafo descartado por ora — magic-link já
+cobre, menos fricção no MX.)
 
-**3. Match em escala**
-- Client-side por evento (grátis) até ~1.500–2.000 fotos; acima disso, match
-  server-side (consequência da decisão #1).
+**3. Match em escala.** Client-side por evento (grátis) até ~1.500–2.000 fotos;
+acima disso, o mesmo Container faz o match server-side (consequência da #1).
 
 ---
 
