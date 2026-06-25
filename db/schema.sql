@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS events (
   -- denormalized count of indexed photos, for quick admin display (source of
   -- truth is the photos table; refreshed when photos are ingested)
   photo_count        INTEGER NOT NULL DEFAULT 0,
+  -- 'mock' = build-time demo photo set (the 10 seed events); 'live' = real R2
+  -- pipeline (upload → process → index). Default 'mock' keeps demo events intact.
+  photo_source       TEXT NOT NULL DEFAULT 'mock',
   -- soft delete: NULL = active, ISO timestamp = in the trash (recoverable)
   deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),
@@ -109,11 +112,27 @@ CREATE TABLE IF NOT EXISTS photos (
   watermarked       INTEGER NOT NULL DEFAULT 0,
   face_indexed      INTEGER NOT NULL DEFAULT 0,
   rekog_image_id    TEXT,                  -- FaceCollection mapping
+  status            TEXT,                  -- uploading | processing | published | rejected
+  reject_reason     TEXT,
+  content_hash      TEXT,                  -- sha256 of original bytes, for dedupe
   created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX IF NOT EXISTS idx_photos_event ON photos(event_id);
-CREATE INDEX IF NOT EXISTS idx_photos_phot  ON photos(photographer_id);
-CREATE INDEX IF NOT EXISTS idx_photos_taken ON photos(taken_at);
+CREATE INDEX IF NOT EXISTS idx_photos_event        ON photos(event_id);
+CREATE INDEX IF NOT EXISTS idx_photos_phot         ON photos(photographer_id);
+CREATE INDEX IF NOT EXISTS idx_photos_taken        ON photos(taken_at);
+CREATE INDEX IF NOT EXISTS idx_photos_event_status ON photos(event_id, status);
+
+-- ============================================================================
+-- PHOTO_FACES — 128-d face-api descriptors, one row per detected face. Lets the
+-- client pull a per-event index (live events) instead of the static global JSON.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS photo_faces (
+  photo_id   TEXT NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+  face_idx   INTEGER NOT NULL,        -- 0-based index of the face within the photo
+  descriptor TEXT NOT NULL,           -- JSON array of 128 floats
+  PRIMARY KEY (photo_id, face_idx)
+);
+CREATE INDEX IF NOT EXISTS idx_photo_faces_photo ON photo_faces(photo_id);
 
 -- ============================================================================
 -- SCANS — each fan selfie session. Biometric consent + audit trail.

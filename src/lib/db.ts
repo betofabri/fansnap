@@ -22,7 +22,7 @@ export interface D1Like {
 export async function getDB(): Promise<D1Like | null> {
   try {
     const { env } = await getCloudflareContext({ async: true });
-    const db = (env as Record<string, unknown>).DB;
+    const db = (env as unknown as Record<string, unknown>).DB;
     return (db as D1Like) ?? null;
   } catch {
     // Outside a Cloudflare request context (build, some dev setups).

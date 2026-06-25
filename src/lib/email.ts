@@ -28,7 +28,7 @@ const FROM = { email: "roster@betofabri.com", name: "FanSnap México" };
 export async function sendEmail(args: { to: string; subject: string; html: string; text: string }): Promise<boolean> {
   try {
     const { env } = await getCloudflareContext({ async: true });
-    const binding = (env as Record<string, unknown>).EMAIL as EmailBinding | undefined;
+    const binding = (env as unknown as Record<string, unknown>).EMAIL as EmailBinding | undefined;
     if (!binding) {
       console.warn("[email] no EMAIL binding yet — skipping send to", args.to);
       return false;

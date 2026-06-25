@@ -49,11 +49,14 @@
 	"send_email": [
 		{ "name": "EMAIL" }
 	],
-	// "r2_buckets": [
-	// 	{
-	// 		"binding": "PHOTOS",
-	// 		"bucket_name": "fansnap-photos"
-	// 	}
-	// ],
+	// Photo storage (env.PHOTOS). Originals under originals/<code>/<id>, public
+	// watermarked previews under previews/<code>/<id>. Wired in Fase 0; consumed
+	// from Fase 1 (upload) onward. Declaring it is safe even before any code uses it.
+	"r2_buckets": [
+		{
+			"binding": "PHOTOS",
+			"bucket_name": "fansnap-photos"
+		}
+	],
 	// "images": { "binding": "IMAGES" }
 }
