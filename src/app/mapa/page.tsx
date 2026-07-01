@@ -6,10 +6,9 @@
 // it must stay internal even after the public site goes live. noindex.
 
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { EVENTS } from "@/lib/mock";
-import { PREVIEW_KEY, PREVIEW_COOKIE } from "@/lib/launch";
+import { hasPreviewCookie } from "@/lib/gate";
 import FanSnapLogo from "@/components/FanSnapLogo";
 
 export const dynamic = "force-dynamic";
@@ -78,8 +77,7 @@ const APIS: Link[] = [
 ];
 
 export default async function MapaPage() {
-  const jar = await cookies();
-  if (jar.get(PREVIEW_COOKIE)?.value !== PREVIEW_KEY) notFound();
+  if (!(await hasPreviewCookie())) notFound();
 
   const eventItems: Link[] = EVENTS.map((e) => ({
     path: `/fansnap/eventos/${e.code.toLowerCase()}`,

@@ -5,7 +5,7 @@
 // mount; status changes PATCH back and update optimistically.
 
 import { useEffect, useState, useCallback } from "react";
-import { T, mono, display, AdminShell, GridBg, PhotographersTabs } from "./_kit";
+import { T, mono, display, AdminShell, GridBg, PhotographersTabs, notify } from "./_kit";
 
 // ─── Row shapes (mirror the D1 columns we read) ─────────────────────────────
 
@@ -78,12 +78,20 @@ export default function ApplicationsQueue() {
       ),
     }));
     try {
-      await fetch("/fansnap/api/admin/applications", {
+      const r = await fetch("/fansnap/api/admin/applications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind, id, status }),
       });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error();
+      if ((j as { promoted?: boolean }).promoted) {
+        notify("Aprovado — fotógrafo no roster, link de alta gerado (válido 7 dias)");
+      } else {
+        notify("Status atualizado");
+      }
     } catch {
+      notify("Erro ao atualizar — recarregando", "error");
       void load(); // resync on failure
     }
   }, [load]);

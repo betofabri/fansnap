@@ -18,9 +18,12 @@ export async function GET(req: Request): Promise<Response> {
   const db = await getDB();
   if (!db) return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
   try {
+    // Expired links 404 exactly like unknown ones (the UI copy already says
+    // "expiró o no existe"). NULL expiry = legacy token, treated as valid.
     const u = await db
       .prepare(`SELECT first_name, last_name, name, email, phone, city, tier, onboarding_status
-                FROM users WHERE onboarding_token = ? AND role = 'photographer'`)
+                FROM users WHERE onboarding_token = ? AND role = 'photographer'
+                  AND (onboarding_token_expires_at IS NULL OR onboarding_token_expires_at > datetime('now'))`)
       .bind(token)
       .first<Record<string, unknown>>();
     if (!u) return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -64,8 +67,17 @@ export async function POST(req: Request): Promise<Response> {
   const db = await getDB();
   if (!db) return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
   try {
-    const u = await db.prepare("SELECT id FROM users WHERE onboarding_token = ? AND role = 'photographer'").bind(token).first<{ id: string }>();
+    // Same expiry rule as GET, plus single-use: a completed alta can't be
+    // re-submitted through the link (data changes go through the admin ficha).
+    const u = await db
+      .prepare(`SELECT id, onboarding_status FROM users WHERE onboarding_token = ? AND role = 'photographer'
+                  AND (onboarding_token_expires_at IS NULL OR onboarding_token_expires_at > datetime('now'))`)
+      .bind(token)
+      .first<{ id: string; onboarding_status: string | null }>();
     if (!u) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (u.onboarding_status === "complete") {
+      return NextResponse.json({ error: "already_complete" }, { status: 409 });
+    }
     await db.prepare(`UPDATE users SET ${sets.join(", ")} WHERE onboarding_token = ?`).bind(...vals, token).run();
     return NextResponse.json({ ok: true });
   } catch (err) {

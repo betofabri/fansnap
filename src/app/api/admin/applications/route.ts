@@ -11,7 +11,7 @@
 // otherwise applicant PII is publicly readable. Tracked as a launch blocker.
 
 import { NextResponse } from "next/server";
-import { getDB } from "@/lib/db";
+import { getDB, secureToken } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,16 +79,12 @@ export async function PATCH(req: Request): Promise<Response> {
   if (!db) return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
 
   try {
-    // Table name comes from a fixed allowlist (def.table) — never user input —
-    // so it's safe to interpolate; id/status stay bound parameters.
-    await db
-      .prepare(`UPDATE ${def.table} SET status = ? WHERE id = ?`)
-      .bind(status, id)
-      .run();
-
     // Approving a photographer application promotes the applicant into the
-    // roster: create a `users` row (role=photographer). Idempotent via the
-    // email UNIQUE constraint (INSERT OR IGNORE) — re-approving is a no-op.
+    // roster. The status flip + user insert + token arm run as ONE atomic
+    // db.batch — a failure mid-way can't leave an approved application with
+    // no roster row (or vice versa). Idempotent via the email UNIQUE
+    // constraint (INSERT OR IGNORE); re-approval keeps the existing token
+    // (COALESCE) but re-arms its 7-day expiry window, reviving expired links.
     let promoted = false;
     let onboardingToken: string | null = null;
     if (kind === "applications" && status === "approved") {
@@ -97,31 +93,41 @@ export async function PATCH(req: Request): Promise<Response> {
         .bind(id)
         .first<{ full_name: string; first_name: string | null; last_name: string | null; email: string; phone: string | null; city: string | null; portfolio: string | null; event_types: string | null; equipment: string | null; language: string | null }>();
       if (app?.email) {
-        onboardingToken = newToken();
-        await db
-          .prepare(
+        const freshToken = secureToken();
+        await db.batch([
+          db.prepare(`UPDATE photographer_applications SET status = ? WHERE id = ?`).bind(status, id),
+          db.prepare(
             `INSERT OR IGNORE INTO users
                (id, role, email, phone, name, first_name, last_name, country, language,
                 city, portfolio, specialties, equipment, tier, status,
-                onboarding_token, onboarding_status, created_at)
-             VALUES (?, 'photographer', ?, ?, ?, ?, ?, 'MX', ?, ?, ?, ?, ?, 'standard', 'active', ?, 'pending', datetime('now'))`,
-          )
-          .bind(
+                onboarding_token, onboarding_status, onboarding_token_expires_at, created_at)
+             VALUES (?, 'photographer', ?, ?, ?, ?, ?, 'MX', ?, ?, ?, ?, ?, 'standard', 'active', ?, 'pending', datetime('now', '+7 days'), datetime('now'))`,
+          ).bind(
             newUserId(), app.email, app.phone, app.full_name,
             app.first_name, app.last_name, app.language ?? "es",
-            app.city, app.portfolio, app.event_types, app.equipment, onboardingToken,
-          )
-          .run();
-        // If the user already existed (re-approval), make sure they have a token.
-        await db
-          .prepare(`UPDATE users SET onboarding_token = COALESCE(onboarding_token, ?), onboarding_status = COALESCE(onboarding_status, 'pending') WHERE email = ? AND role = 'photographer'`)
-          .bind(onboardingToken, app.email)
-          .run();
+            app.city, app.portfolio, app.event_types, app.equipment, freshToken,
+          ),
+          db.prepare(
+            `UPDATE users SET onboarding_token = COALESCE(onboarding_token, ?),
+                              onboarding_status = COALESCE(onboarding_status, 'pending'),
+                              onboarding_token_expires_at = datetime('now', '+7 days')
+             WHERE email = ? AND role = 'photographer'`,
+          ).bind(freshToken, app.email),
+        ]);
         const row = await db.prepare("SELECT onboarding_token FROM users WHERE email = ? AND role = 'photographer'").bind(app.email).first<{ onboarding_token: string }>();
-        onboardingToken = row?.onboarding_token ?? onboardingToken;
+        onboardingToken = row?.onboarding_token ?? freshToken;
         promoted = true;
+        return NextResponse.json({ ok: true, promoted, onboardingToken });
       }
     }
+
+    // Every other transition: plain status update. Table name comes from a
+    // fixed allowlist (def.table) — never user input — so it's safe to
+    // interpolate; id/status stay bound parameters.
+    await db
+      .prepare(`UPDATE ${def.table} SET status = ? WHERE id = ?`)
+      .bind(status, id)
+      .run();
     return NextResponse.json({ ok: true, promoted, onboardingToken });
   } catch (err) {
     console.error("[admin/applications] update failed", err);
@@ -134,11 +140,4 @@ function newUserId(): string {
   let rand = "";
   for (let i = 0; i < 10; i++) rand += Math.floor(Math.random() * 36).toString(36);
   return `usr_${ts}${rand}`;
-}
-
-// Unguessable onboarding token for the email/WhatsApp link.
-function newToken(): string {
-  let t = "";
-  for (let i = 0; i < 28; i++) t += Math.floor(Math.random() * 36).toString(36);
-  return t;
 }

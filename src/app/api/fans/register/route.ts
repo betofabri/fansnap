@@ -41,8 +41,8 @@ export async function POST(req: Request): Promise<Response> {
 
   const db = await getDB();
   if (!db) {
-    // Don't break the buy flow if the DB is unavailable — just log.
-    console.warn("[fans/register] no DB — skipping", email);
+    // Don't break the buy flow if the DB is unavailable — just log (no PII).
+    console.warn("[fans/register] no DB — skipping");
     return NextResponse.json({ ok: true, persisted: false });
   }
   try {

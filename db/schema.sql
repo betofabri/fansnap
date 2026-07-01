@@ -1,9 +1,9 @@
--- FanSnap — Cloudflare D1 schema (Fatia 2)
+-- FanSnap — Cloudflare D1 schema (canonical, kept in sync with migrations)
 --
--- Not wired yet. This is the contract: all three business models, all VIP
--- commission fields, biometric consent log. The point is so that when we
--- enable the D1 binding in wrangler.jsonc, the schema is already correct
--- and we don't have to migrate later.
+-- FRESH database: apply THIS FILE ONLY — it already contains every column the
+-- db/migrate-XXX files add. EXISTING databases: never re-run this; apply only
+-- the migrate-XXX deltas newer than your last applied one (ADD COLUMN is not
+-- idempotent). The live remote/local dbs have 002–005 applied.
 --
 -- Apply locally:  wrangler d1 execute fansnap --local --file=./db/schema.sql
 -- Apply remote:   wrangler d1 execute fansnap --remote --file=./db/schema.sql
@@ -27,7 +27,25 @@ CREATE TABLE IF NOT EXISTS users (
   country         TEXT,
   language        TEXT DEFAULT 'es',          -- en | pt | es
   city            TEXT,                       -- photographer roster display
-  portfolio       TEXT,                       -- photographer portfolio / IG / web
+  portfolio      TEXT,                        -- photographer portfolio / IG / web
+  -- migrate-002: split name + photographer profile/financial + fan activity
+  first_name      TEXT,
+  last_name       TEXT,
+  handle          TEXT,                       -- photographer @
+  bio             TEXT,
+  specialties     TEXT,                       -- JSON array
+  equipment       TEXT,                       -- JSON array
+  tier            TEXT,                       -- standard | pro | vip
+  status          TEXT,                       -- active | paused | archived
+  payout_method   TEXT,                       -- clabe | stripe | paypal
+  payout_account  TEXT,                       -- CLABE / account ref
+  tax_id          TEXT,                       -- RFC (MX)
+  source          TEXT,                       -- fan: checkout | gallery | manual
+  consent_at      TEXT,                       -- fan: biometric consent timestamp
+  -- migrate-003/005: onboarding by tokenized link (capability URL, expiring)
+  onboarding_token            TEXT,
+  onboarding_status           TEXT,           -- pending | complete
+  onboarding_token_expires_at TEXT,           -- NULL = legacy/no expiry
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   last_seen_at    TEXT
 );
@@ -214,6 +232,8 @@ CREATE TABLE IF NOT EXISTS photographer_applications (
   id                    TEXT PRIMARY KEY,
   code                  TEXT NOT NULL UNIQUE,        -- PA-YYYY-MM-XXXX
   full_name             TEXT NOT NULL,
+  first_name            TEXT,                        -- migrate-002
+  last_name             TEXT,                        -- migrate-002
   email                 TEXT NOT NULL,
   phone                 TEXT,
   city                  TEXT,
@@ -254,6 +274,8 @@ CREATE TABLE IF NOT EXISTS brand_leads (
   code            TEXT NOT NULL UNIQUE,              -- BR-YYYY-MM-XXXX
   company         TEXT NOT NULL,
   full_name       TEXT NOT NULL,
+  first_name      TEXT,                              -- migrate-002
+  last_name       TEXT,                              -- migrate-002
   role            TEXT,
   email           TEXT NOT NULL,
   phone           TEXT,

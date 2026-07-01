@@ -6,10 +6,58 @@
 //   import { T, mono, display, AdminShell, CornerBrackets, ... } from "./_kit";
 //   export default () => <AdminShell currentNav="nav-events" breadcrumb="EVENTS">{...}</AdminShell>;
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { THEMES } from "@/lib/theme";
 import NavInspector, { NAV_INFO } from "./TourSystem";
+
+// ============================================================
+// Toast — feedback pós-ação para todo o admin (audit Lote A).
+// Pub/sub de módulo: qualquer handler chama notify("Salvo") /
+// notify("Erro ao salvar", "error") e o ToastHost (montado pelo
+// AdminShell) exibe. Sem contexto, sem prop-drilling.
+// ============================================================
+type ToastKind = "ok" | "error";
+interface ToastMsg { id: number; text: string; kind: ToastKind }
+let toastSeq = 0;
+const toastListeners = new Set<(t: ToastMsg) => void>();
+
+export function notify(text: string, kind: ToastKind = "ok"): void {
+  const t = { id: ++toastSeq, text, kind };
+  toastListeners.forEach((fn) => fn(t));
+  if (kind === "error") console.error("[admin]", text);
+}
+
+function ToastHost() {
+  const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  useEffect(() => {
+    const on = (t: ToastMsg) => {
+      setToasts((prev) => [...prev.slice(-3), t]);
+      setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 2600);
+    };
+    toastListeners.add(on);
+    return () => { toastListeners.delete(on); };
+  }, []);
+  if (toasts.length === 0) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: 20, right: 20, zIndex: 500,
+      display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end",
+    }}>
+      {toasts.map((t) => (
+        <div key={t.id} style={{
+          background: T.bgDeep, border: `1px solid ${t.kind === "error" ? T.pink : T.green}`,
+          color: t.kind === "error" ? T.pink : T.green,
+          fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+          padding: "10px 16px", maxWidth: 360,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+        }}>
+          {t.text}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export const T = {
   ...THEMES.dark,
@@ -395,6 +443,7 @@ export function AdminShell({
           {children}
         </main>
       </div>
+      <ToastHost />
     </>
   );
 }

@@ -3,12 +3,15 @@
 // GET /api/preview?key=...&to=/fotografos → redirect somewhere specific
 //
 // Lets the team browse the full site while SITE_LIVE is false. The cookie is
-// httpOnly and read server-side by src/lib/gate.ts → siteVisible().
+// httpOnly and read server-side by src/lib/gate.ts → siteVisible(). The key
+// comes from the PREVIEW_KEY Worker secret (repo is public — never hardcode).
 
 import { NextResponse } from "next/server";
-import { PREVIEW_KEY, PREVIEW_COOKIE } from "@/lib/launch";
+import { PREVIEW_COOKIE } from "@/lib/launch";
+import { getPreviewKey } from "@/lib/gate";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
@@ -31,8 +34,9 @@ export async function GET(req: Request): Promise<Response> {
     return res;
   }
 
-  if (key === PREVIEW_KEY) {
-    res.cookies.set(PREVIEW_COOKIE, PREVIEW_KEY, {
+  const previewKey = await getPreviewKey();
+  if (previewKey && key === previewKey) {
+    res.cookies.set(PREVIEW_COOKIE, previewKey, {
       path: "/",
       httpOnly: true,
       sameSite: "lax",

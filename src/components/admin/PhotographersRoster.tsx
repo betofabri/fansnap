@@ -7,7 +7,7 @@
 // Event assignments (tier/commission) are managed from each event's drawer.
 
 import { useEffect, useState, useCallback } from "react";
-import { T, mono, display, AdminShell, GridBg, PhotographersTabs } from "./_kit";
+import { T, mono, display, AdminShell, GridBg, PhotographersTabs, notify } from "./_kit";
 
 interface Photographer {
   id: string;
@@ -65,19 +65,24 @@ export default function PhotographersRoster() {
     if (!confirm(`Remover ${p.name || p.email} do roster? As atribuições a eventos também saem.`)) return;
     setRows((rs) => rs.filter((x) => x.id !== p.id));
     setDetail(null);
-    try { await fetch(`/fansnap/api/admin/photographers?id=${encodeURIComponent(p.id)}`, { method: "DELETE" }); }
-    catch { void load(); }
+    try {
+      const r = await fetch(`/fansnap/api/admin/photographers?id=${encodeURIComponent(p.id)}`, { method: "DELETE" });
+      if (!r.ok) throw new Error();
+      notify("Fotógrafo removido do roster");
+    } catch { notify("Erro ao remover — recarregando", "error"); void load(); }
   }, [load]);
 
   const patch = useCallback(async (id: string, fields: Record<string, unknown>) => {
     setRows((rs) => rs.map((p) => p.id === id ? { ...p, ...fields } as Photographer : p));
     setDetail((d) => d && d.id === id ? { ...d, ...fields } as Photographer : d);
     try {
-      await fetch("/fansnap/api/admin/photographers", {
+      const r = await fetch("/fansnap/api/admin/photographers", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...fields }),
       });
-    } catch { void load(); }
+      if (!r.ok) throw new Error();
+      notify("Salvo");
+    } catch { notify("Erro ao salvar — recarregando", "error"); void load(); }
   }, [load]);
 
   const assigned = rows.reduce((n, p) => n + (p.event_count || 0), 0);

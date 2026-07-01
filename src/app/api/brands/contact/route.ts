@@ -95,14 +95,13 @@ export async function POST(req: Request): Promise<Response> {
         )
         .run();
     } catch (err) {
-      console.error("[brand-contact-lead] D1 insert failed", err, JSON.stringify({
-        leadCode, company, fullName, role, email, phone, eventInterest, budget, message, language, receivedAt,
-      }));
+      // No PII in logs; fail loudly instead of silently dropping the lead.
+      console.error("[brand-contact-lead] D1 insert failed", err, leadCode);
+      return NextResponse.json({ error: "No pudimos guardar tu mensaje. Inténtalo de nuevo." }, { status: 503 });
     }
   } else {
-    console.warn("[brand-contact-lead] no DB binding — logging only", JSON.stringify({
-      leadCode, company, fullName, role, email, phone, eventInterest, budget, message, language, receivedAt,
-    }));
+    console.error("[brand-contact-lead] no DB binding", leadCode);
+    return NextResponse.json({ error: "No pudimos guardar tu mensaje. Inténtalo de nuevo." }, { status: 503 });
   }
 
   return NextResponse.json({

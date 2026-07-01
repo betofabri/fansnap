@@ -13,6 +13,8 @@ export const SITE_LIVE = false;
 //   /fansnap/api/preview?key=<PREVIEW_KEY>
 // drops a cookie that lets THIS browser see the full site while everyone else
 // still gets ComingSoon. Turn it off with /fansnap/api/preview?off=1.
-// See src/lib/gate.ts (server-side cookie check).
-export const PREVIEW_KEY = "bf-preview-2026";
+//
+// The key itself is a Worker secret (`wrangler secret put PREVIEW_KEY`; in dev,
+// .dev.vars) — never hardcode it here: this repo is public, so a literal would
+// hand the bypass to anyone. Read it via getPreviewKey() in src/lib/gate.ts.
 export const PREVIEW_COOKIE = "fs_preview";

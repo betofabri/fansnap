@@ -81,14 +81,13 @@ export async function POST(req: Request): Promise<Response> {
         )
         .run();
     } catch (err) {
-      console.error("[photographer-referral] D1 insert failed", err, JSON.stringify({
-        referralCode, referrerEmail, referredName, referredContact, referredPortfolio, note, language, receivedAt,
-      }));
+      // No PII in logs; fail loudly instead of silently dropping the referral.
+      console.error("[photographer-referral] D1 insert failed", err, referralCode);
+      return NextResponse.json({ error: "No pudimos guardar la recomendación. Inténtalo de nuevo." }, { status: 503 });
     }
   } else {
-    console.warn("[photographer-referral] no DB binding — logging only", JSON.stringify({
-      referralCode, referrerEmail, referredName, referredContact, referredPortfolio, note, language, receivedAt,
-    }));
+    console.error("[photographer-referral] no DB binding", referralCode);
+    return NextResponse.json({ error: "No pudimos guardar la recomendación. Inténtalo de nuevo." }, { status: 503 });
   }
 
   return NextResponse.json({

@@ -5,7 +5,7 @@
 // hitting /api/fans/register. Manual add here mirrors the photographers page.
 
 import { useEffect, useState, useCallback } from "react";
-import { T, mono, display, AdminShell, GridBg } from "./_kit";
+import { T, mono, display, AdminShell, GridBg, notify } from "./_kit";
 
 interface Fan {
   id: string;
@@ -54,8 +54,11 @@ export default function FansList() {
     if (!confirm(`Remover ${f.name || f.email}?`)) return;
     setRows((rs) => rs.filter((x) => x.id !== f.id));
     setDetail(null);
-    try { await fetch(`/fansnap/api/admin/fans?id=${encodeURIComponent(f.id)}`, { method: "DELETE" }); }
-    catch { void load(); }
+    try {
+      const r = await fetch(`/fansnap/api/admin/fans?id=${encodeURIComponent(f.id)}`, { method: "DELETE" });
+      if (!r.ok) throw new Error();
+      notify("Fan removido");
+    } catch { notify("Erro ao remover — recarregando", "error"); void load(); }
   }, [load]);
 
   const filtered = q.trim()

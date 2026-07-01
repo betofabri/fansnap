@@ -6,7 +6,7 @@
 // API: /api/admin/events (GET/POST/PATCH/DELETE, ?trash=1, ?permanent=1).
 
 import { useEffect, useState, useCallback } from "react";
-import { T, mono, display, AdminShell, GridBg } from "./_kit";
+import { T, mono, display, AdminShell, GridBg, notify } from "./_kit";
 
 interface EventRow {
   id: string;
@@ -72,29 +72,35 @@ export default function EventsList() {
     setEvents((evs) => evs.map((e) => e.id === id ? { ...e, ...fields } as EventRow : e));
     setDetail((d) => d && d.id === id ? { ...d, ...fields } as EventRow : d);
     try {
-      await fetch("/fansnap/api/admin/events", {
+      const r = await fetch("/fansnap/api/admin/events", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...fields }),
       });
-    } catch { void load(view); }
+      if (!r.ok) throw new Error();
+      notify("Salvo");
+    } catch { notify("Erro ao salvar — recarregando", "error"); void load(view); }
   }, [load, view]);
 
   const restore = useCallback(async (id: string) => {
     setEvents((evs) => evs.filter((e) => e.id !== id));
     try {
-      await fetch("/fansnap/api/admin/events", {
+      const r = await fetch("/fansnap/api/admin/events", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, restore: true }),
       });
-    } catch { void load(view); }
+      if (!r.ok) throw new Error();
+      notify("Evento restaurado");
+    } catch { notify("Erro ao restaurar — recarregando", "error"); void load(view); }
   }, [load, view]);
 
   const doDelete = useCallback(async (ev: EventRow, mode: "trash" | "permanent") => {
     setEvents((evs) => evs.filter((e) => e.id !== ev.id));
     setDetail(null);
     try {
-      await fetch(`/fansnap/api/admin/events?id=${encodeURIComponent(ev.id)}${mode === "permanent" ? "&permanent=1" : ""}`, { method: "DELETE" });
-    } catch { void load(view); }
+      const r = await fetch(`/fansnap/api/admin/events?id=${encodeURIComponent(ev.id)}${mode === "permanent" ? "&permanent=1" : ""}`, { method: "DELETE" });
+      if (!r.ok) throw new Error();
+      notify(mode === "permanent" ? "Excluído permanentemente" : "Movido para a lixeira");
+    } catch { notify("Erro ao excluir — recarregando", "error"); void load(view); }
   }, [load, view]);
 
   const kpis = {
@@ -363,17 +369,23 @@ function EventPhotographers({ eventId, onCountChange }: { eventId: string; onCou
   const changeTier = async (id: string, tier: string) => {
     setRows((rs) => rs.map((a) => a.id === id ? { ...a, tier } : a));
     try {
-      await fetch("/fansnap/api/admin/event-photographers", {
+      const r = await fetch("/fansnap/api/admin/event-photographers", {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tier }),
       });
-    } catch { void load(); }
+      if (!r.ok) throw new Error();
+      notify("Tier atualizado");
+    } catch { notify("Erro ao atualizar tier — recarregando", "error"); void load(); }
   };
 
   const unassign = async (id: string) => {
-    setRows((rs) => rs.filter((a) => a.id !== id));
-    onCountChange(Math.max(0, rows.length - 1));
-    try { await fetch(`/fansnap/api/admin/event-photographers?id=${encodeURIComponent(id)}`, { method: "DELETE" }); }
-    catch { void load(); }
+    const next = rows.filter((a) => a.id !== id);
+    setRows(next);
+    onCountChange(next.length);
+    try {
+      const r = await fetch(`/fansnap/api/admin/event-photographers?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!r.ok) throw new Error();
+      notify("Fotógrafo desatribuído");
+    } catch { notify("Erro ao desatribuir — recarregando", "error"); void load(); }
   };
 
   const assignedIds = new Set(rows.map((a) => a.photographer_id));

@@ -123,17 +123,14 @@ export async function POST(req: Request): Promise<Response> {
         )
         .run();
     } catch (err) {
-      // Don't lose the lead: log the full payload so it's recoverable.
-      console.error("[photographer-application] D1 insert failed", err, JSON.stringify({
-        applicationCode, fullName, email, phone, city, portfolio,
-        eventTypes, equipment, bigEventExperience, bigEventNotes, language, receivedAt,
-      }));
+      // No PII in logs (name/email/phone would land in Cloudflare logs) — and
+      // fail LOUDLY: pretending success here would silently drop the lead.
+      console.error("[photographer-application] D1 insert failed", err, applicationCode);
+      return NextResponse.json({ error: "No pudimos guardar tu solicitud. Inténtalo de nuevo." }, { status: 503 });
     }
   } else {
-    console.warn("[photographer-application] no DB binding — logging only", JSON.stringify({
-      applicationCode, fullName, email, phone, city, portfolio,
-      eventTypes, equipment, bigEventExperience, bigEventNotes, language, receivedAt,
-    }));
+    console.error("[photographer-application] no DB binding", applicationCode);
+    return NextResponse.json({ error: "No pudimos guardar tu solicitud. Inténtalo de nuevo." }, { status: 503 });
   }
 
   // Fire the confirmation email without blocking the response. sendEmail()
