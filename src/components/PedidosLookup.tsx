@@ -20,24 +20,45 @@ import { DARK, FONT_GROTESK, FONT_MONO } from "@/lib/theme";
 // Shared flat-black tokens (audit Lote B) — palette lives in src/lib/theme.ts.
 const c = DARK;
 
+interface ServerOrder {
+  order: { code: string; status: string; totalCents: number; createdAt: string };
+  lines: { lineId: string; sku: string; qty: number; unitCents: number; totalCents: number; thumb: string; download: string }[];
+}
+
 type State =
   | { kind: "idle" }
   | { kind: "notfound" }
-  | { kind: "found"; order: PlacedOrder };
+  | { kind: "found"; order: PlacedOrder }
+  | { kind: "server"; data: ServerOrder };
 
 export default function PedidosLookup() {
   const [orderNumber, setOrderNumber] = useState("");
   const [email, setEmail] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!orderNumber.trim() || !email.trim()) {
       setError("Ingresa tu número de orden y tu email.");
       return;
     }
+    setBusy(true);
+    // Server lookup first (Fase 4: orders live in D1 — works from ANY device);
+    // localStorage stays as fallback for old local-only demo orders.
+    try {
+      const r = await fetch(
+        `/fansnap/api/orders?code=${encodeURIComponent(orderNumber.trim())}&email=${encodeURIComponent(email.trim())}`,
+        { cache: "no-store" },
+      );
+      if (r.ok) {
+        const j = await r.json();
+        if (j.ok) { setBusy(false); setState({ kind: "server", data: j }); return; }
+      }
+    } catch { /* fall back below */ }
+    setBusy(false);
     const order = findOrder(orderNumber, email);
     setState(order ? { kind: "found", order } : { kind: "notfound" });
   }
@@ -82,7 +103,7 @@ export default function PedidosLookup() {
           Ingresa tu número de orden y el email de la compra para ver el estado y volver a descargar tus fotos.
         </p>
 
-        {state.kind !== "found" && (
+        {state.kind !== "found" && state.kind !== "server" && (
           <form onSubmit={onSubmit} style={{
             marginTop: 44,
             display: "flex", flexDirection: "column", gap: 18,
@@ -124,9 +145,9 @@ export default function PedidosLookup() {
             <button type="submit" style={{
               ...primaryCTA, padding: "20px 32px", fontSize: 15,
               justifyContent: "center", marginTop: 4,
-            }} className="pe-cta">
+            }} className="pe-cta" disabled={busy}>
               <Search size={18} strokeWidth={2.2} />
-              <span>Buscar pedido</span>
+              <span>{busy ? "Buscando…" : "Buscar pedido"}</span>
               <ArrowRight size={18} strokeWidth={2.5} />
             </button>
 
@@ -143,7 +164,70 @@ export default function PedidosLookup() {
         {state.kind === "found" && (
           <OrderView order={state.order} onReset={reset} />
         )}
+
+        {state.kind === "server" && (
+          <ServerOrderView data={state.data} onReset={reset} />
+        )}
       </section>
+    </div>
+  );
+}
+
+// ─── Server order (D1, Fase 4) — gallery of purchased photos + downloads ────
+
+function ServerOrderView({ data, onReset }: { data: ServerOrder; onReset: () => void }) {
+  const total = (data.order.totalCents / 100).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+  return (
+    <div style={{ marginTop: 40 }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+        gap: 16, flexWrap: "wrap", marginBottom: 22,
+      }}>
+        <div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>Pedido</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 700, color: c.premium, letterSpacing: "0.04em" }}>{data.order.code}</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: c.inkSoft, marginTop: 6 }}>
+            {data.lines.length} foto{data.lines.length === 1 ? "" : "s"} · {total} ·{" "}
+            <span style={{ color: c.ok, textTransform: "uppercase", fontWeight: 700 }}>{data.order.status === "paid" ? "pagado" : data.order.status}</span>
+          </div>
+        </div>
+        <button onClick={onReset} style={{
+          background: "transparent", border: `1.5px solid ${c.borderStrong}`, color: c.inkSoft,
+          padding: "10px 16px", fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700,
+          letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer",
+        }}>
+          Buscar otro
+        </button>
+      </div>
+
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+        gap: 14,
+      }}>
+        {data.lines.map((l) => (
+          <div key={l.lineId} style={{ border: `1px solid ${c.border}`, background: c.surface }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={l.thumb} alt="" style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block", background: c.surfaceHi }} />
+            <div style={{ padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                {l.sku}{l.qty > 1 ? ` ×${l.qty}` : ""}
+              </span>
+              <a href={l.download} style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                border: `1.5px solid ${c.accent}`, color: c.accent, padding: "7px 12px",
+                fontFamily: FONT_MONO, fontSize: 10.5, fontWeight: 700,
+                letterSpacing: "0.08em", textTransform: "uppercase", textDecoration: "none",
+              }}>
+                <Download size={12} strokeWidth={2.5} /> Descargar
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, marginTop: 18, lineHeight: 1.6 }}>
+        Tus fotos quedan disponibles aquí — vuelve cuando quieras con tu código y email.
+      </p>
     </div>
   );
 }

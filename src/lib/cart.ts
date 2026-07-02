@@ -146,6 +146,10 @@ export interface PlacedOrder {
   oxxoReference: string | null;
   items: CartItem[];
   placedAt: number; // epoch ms
+  // Server-side order (Fase 4): set when POST /api/orders succeeded. `number`
+  // then carries the server code (FS-XXXXXX) and the links deliver downloads.
+  orderId?: string;
+  downloads?: { title: string; url: string }[];
 }
 
 const ORDERS_KEY = "fs:orders:v1";

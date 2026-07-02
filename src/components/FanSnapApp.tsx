@@ -240,7 +240,7 @@ export default function FanSnapApp() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartHydrated, setCartHydrated] = useState(false);
-  const [order, setOrder] = useState<{ number: string; email: string; oxxoReference: string | null; items: CartItem[] } | null>(null);
+  const [order, setOrder] = useState<{ number: string; email: string; oxxoReference: string | null; items: CartItem[]; orderId?: string; downloads?: { title: string; url: string }[] } | null>(null);
 
   const c = THEMES[theme];
   const t = I18N[lang];
@@ -2392,7 +2392,7 @@ function CheckoutPage({
   c: Theme; t: Copy;
   cart: CartItem[];
   onBack: () => void;
-  onPlace: (payload: { number: string; email: string; oxxoReference: string | null; items: CartItem[] }) => void;
+  onPlace: (payload: { number: string; email: string; oxxoReference: string | null; items: CartItem[]; orderId?: string; downloads?: { title: string; url: string }[] }) => void;
 }) {
   const totals = computeTotals(cart);
   const [pay, setPay] = useState<PayMethod>("stripe");
@@ -2414,7 +2414,7 @@ function CheckoutPage({
   const canPlace = firstName.trim() && lastName.trim() && email.includes("@") && terms && !processing &&
     (!totals.hasPhysical || (address.trim() && city.trim() && zip.trim()));
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (!canPlace) return;
     setProcessing(true);
     // Register the buyer as a real fan (role='fan' in D1). Fire-and-forget —
@@ -2425,15 +2425,43 @@ function CheckoutPage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ firstName, lastName, name, email, phone, city, source: "checkout" }),
     }).catch(() => {});
-    // Simulate processing delay (gives the spinner a moment of theatre)
+
+    // Real order in D1 (Fase 4) — free_sponsored rail, fake payment. The
+    // server returns the display code + tokenized download links and fires the
+    // receipt email. If it fails we fall back to the local-only order so the
+    // demo flow never breaks.
+    let server: { code?: string; orderId?: string; downloads?: { title: string; url: string }[] } = {};
+    try {
+      const r = await fetch("/fansnap/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email, firstName, lastName,
+          items: cart.map((it) => ({
+            photoRef: `mock:${it.eventCode}:${it.photoId}`,
+            image: it.photoImage,
+            title: `${it.eventName} · ${it.photoTimestamp}`,
+            eventCode: it.eventCode,
+            sku: it.productSku,
+            qty: it.qty,
+            unitPriceUSD: it.unitPriceUSD,
+          })),
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) server = j;
+    } catch { /* local fallback below */ }
+
     setTimeout(() => {
       onPlace({
-        number: newOrderNumber(),
+        number: server.code ?? newOrderNumber(),
         email,
         oxxoReference: pay === "oxxo" ? newOxxoReference() : null,
         items: cart,
+        orderId: server.orderId,
+        downloads: server.downloads,
       });
-    }, 900);
+    }, 400);
   };
 
   return (
@@ -2673,7 +2701,7 @@ function OrderConfirmation({
   c, t, order, onContinue,
 }: {
   c: Theme; t: Copy;
-  order: { number: string; email: string; oxxoReference: string | null; items: CartItem[] };
+  order: { number: string; email: string; oxxoReference: string | null; items: CartItem[]; orderId?: string; downloads?: { title: string; url: string }[] };
   onContinue: () => void;
 }) {
   const digitals = order.items.filter((it) => it.fulfillment === "instant");
@@ -2706,6 +2734,23 @@ function OrderConfirmation({
           <div style={{ fontSize: 12, color: c.inkSoft }}>
             {t.confirmation_email_to} <span style={{ color: c.cyan, fontWeight: 700 }}>{order.email}</span>
           </div>
+
+          {/* Real download links (Fase 4) — present when the server order was
+              created; each link streams the clean original / mock asset. */}
+          {order.downloads && order.downloads.length > 0 && (
+            <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8, maxWidth: 440, marginLeft: "auto", marginRight: "auto" }}>
+              {order.downloads.map((d, i) => (
+                <a key={i} href={d.url} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                  padding: "12px 16px", border: `2px solid ${c.cyan}`, color: c.cyan,
+                  textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "left",
+                }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.title}</span>
+                  <Download size={14} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* OXXO reference (if applicable) */}

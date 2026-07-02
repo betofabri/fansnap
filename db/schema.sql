@@ -200,10 +200,15 @@ CREATE TABLE IF NOT EXISTS orders (
   oxxo_reference      TEXT,
   paid_at             TEXT,
   fulfilled_at        TEXT,
+  -- migrate-006: short display code (FS-XXXXXX) + denormalized buyer email
+  -- for the /pedidos code+email lookup. The order *id* is the capability.
+  code                TEXT,
+  email               TEXT,
   created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_orders_user  ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_event ON orders(event_id);
+CREATE INDEX IF NOT EXISTS idx_orders_code  ON orders(code);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 
 CREATE TABLE IF NOT EXISTS order_lines (
