@@ -12,7 +12,7 @@
 
 import { PhotonImage, SamplingFilter, resize, watermark } from "@cf-wasm/photon";
 import pillPng from "./assets/wm-pill.png";
-import stampPng from "./assets/wm-stamp.png";
+import tilePng from "./assets/wm-tile.png";
 
 interface Env {
   DB: D1Database;
@@ -38,7 +38,10 @@ export default {
   },
 } satisfies ExportedHandler<Env, Job>;
 
+const PIPELINE_VERSION = "wm-v2-tile";
+
 async function processPhoto(env: Env, photoId: string): Promise<void> {
+  console.log(`[processor] ${PIPELINE_VERSION}`, photoId);
   const row = await env.DB
     .prepare(
       `SELECT p.id, p.r2_key, p.status, p.event_id, e.code
@@ -68,7 +71,35 @@ async function processPhoto(env: Env, photoId: string): Promise<void> {
   const pw = img.get_width();
   const ph = img.get_height();
 
-  // 2. Pill no canto inferior direito (~28% da largura, alpha pré-cozido no PNG).
+  // 2. Trama diagonal proprietária cobrindo o quadro inteiro (estilo agência):
+  //    wordmarks rotacionados, alpha visível, com fantasma escuro pra ler em
+  //    áreas claras. Grade escalonada — recortar um pedaço da foto ainda leva
+  //    marca. O tile tem o alpha pré-cozido no PNG.
+  const tileSrc = PhotonImage.new_from_byteslice(new Uint8Array(tilePng));
+  const tileW = Math.max(160, Math.round(pw / 3.1));
+  const tileH = Math.max(110, Math.round(tileSrc.get_height() * (tileW / tileSrc.get_width())));
+  const tile = resize(tileSrc, tileW, tileH, SamplingFilter.Lanczos3);
+  tileSrc.free();
+  if (tile.get_width() <= pw && tile.get_height() <= ph) {
+    const tw = tile.get_width();
+    const th = tile.get_height();
+    let rowIdx = 0;
+    for (let y = 0; ; y += th) {
+      const yy = Math.min(y, ph - th); // última linha ancora rente à borda
+      // Meio-tile de deslocamento em linhas alternadas quebra o alinhamento.
+      const startX = rowIdx % 2 === 0 ? 0 : -Math.round(tw / 2);
+      for (let x = startX; ; x += tw) {
+        const xx = Math.min(Math.max(0, x), pw - tw);
+        watermark(img, tile, BigInt(xx), BigInt(yy));
+        if (xx >= pw - tw) break; // coluna de borda desenhada — linha completa
+      }
+      if (yy >= ph - th) break;   // linha de borda desenhada — quadro coberto
+      rowIdx += 1;
+    }
+  }
+  tile.free();
+
+  // 3. Pill no canto inferior direito (~28% da largura, alpha pré-cozido no PNG).
   const pillSrc = PhotonImage.new_from_byteslice(new Uint8Array(pillPng));
   const pillW = Math.max(120, Math.round(pw * 0.28));
   const pillH = Math.max(22, Math.round(pillSrc.get_height() * (pillW / pillSrc.get_width())));
@@ -80,23 +111,14 @@ async function processPhoto(env: Env, photoId: string): Promise<void> {
   }
   pill.free();
 
-  // 3. Carimbo central ultra-sutil (~60% da largura) — evidência de marca
-  //    mesmo se o pill for cortado.
-  const stampSrc = PhotonImage.new_from_byteslice(new Uint8Array(stampPng));
-  const stampW = Math.max(60, Math.round(pw * 0.6));
-  const stampH = Math.max(17, Math.round(stampSrc.get_height() * (stampW / stampSrc.get_width())));
-  const stamp = resize(stampSrc, stampW, stampH, SamplingFilter.Lanczos3);
-  stampSrc.free();
-  if (stamp.get_width() < pw && stamp.get_height() < ph) {
-    watermark(img, stamp, BigInt(Math.round((pw - stamp.get_width()) / 2)), BigInt(Math.round((ph - stamp.get_height()) / 2)));
-  }
-  stamp.free();
-
   const jpeg = img.get_bytes_jpeg(82);
   img.free();
 
-  const previewKey = `previews/${row.code}/${row.id}.jpg`;
+  // Versioned key: re-watermarking a photo writes a NEW object (and D1 points
+  // at it), so stale CDN/browser caches of the old preview can't linger.
+  const previewKey = `previews/${row.code}/${row.id}.${PIPELINE_VERSION}.jpg`;
   await env.PHOTOS.put(previewKey, jpeg, { httpMetadata: { contentType: "image/jpeg" } });
+  console.log(`[processor] wrote ${previewKey} (${jpeg.length} bytes)`);
 
   // Publica só se ainda estiver 'processing' (guarda contra corrida de
   // redelivery); o photo_count denormalizado só incrementa quando o flip
