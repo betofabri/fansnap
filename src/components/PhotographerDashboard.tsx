@@ -533,12 +533,21 @@ function loadSession(storageKey: string): UpFile[] {
   } catch { return []; }
 }
 
+interface ServerPhoto {
+  id: string; status: string | null; reject_reason: string | null;
+  width: number | null; height: number | null; size_bytes: number | null; created_at: string;
+}
+
 function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eventName: string; onClose: () => void }) {
   const storageKey = `fs_uploads_${eventCode}`;
   // Lazy init reads the saved session synchronously — no load effect, so the
   // save effect below can never race ahead of it and clobber storage with [].
   const [files, setFiles] = useState<UpFile[]>(() => loadSession(storageKey));
   const [dragOver, setDragOver] = useState(false);
+  // 'live' = the event has photo_source='live' in D1 → real upload to R2.
+  // 'sim' = demo/mock event → the original timer simulation. null = resolving
+  // (drop zone disabled so files can't race the mode check).
+  const [mode, setMode] = useState<"sim" | "live" | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -547,6 +556,47 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
     const t = timers.current;
     return () => { Object.values(t).forEach(clearTimeout); };
   }, []);
+
+  // Resolve the event's mode; for live events the server rows are the truth
+  // (statuses survive across devices), local entries only supply display names.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(`/fansnap/api/photographer/uploads?event=${encodeURIComponent(eventCode)}`, { cache: "no-store" });
+        const j = await r.json();
+        if (!alive) return;
+        if (r.ok && j.mode === "live") {
+          setMode("live");
+          const server = (j.photos ?? []) as ServerPhoto[];
+          setFiles((prev) => {
+            const names = new Map(prev.map((f) => [f.id, f.name]));
+            const rows: UpFile[] = server.map((p) => ({
+              id: p.id,
+              name: names.get(p.id) ?? `foto_${p.id.slice(-6)}`,
+              size: p.size_bytes ?? 0,
+              w: p.width ?? undefined,
+              h: p.height ?? undefined,
+              status: p.status === "published" ? "published"
+                : p.status === "processing" ? "processing"
+                : p.status === "rejected" ? "rejected"
+                : "rejected", // stuck 'uploading' = interrupted — re-drop it
+              progress: 100,
+              reason: p.status === "uploading" ? "Subida interrumpida — vuelve a soltarla"
+                : p.reject_reason ?? undefined,
+            }));
+            const serverIds = new Set(rows.map((s) => s.id));
+            // Keep purely-local rejects (files the client refused pre-upload).
+            const localOnly = prev.filter((f) => !serverIds.has(f.id) && f.status === "rejected");
+            return [...rows, ...localOnly];
+          });
+        } else {
+          setMode("sim");
+        }
+      } catch { if (alive) setMode("sim"); }
+    })();
+    return () => { alive = false; };
+  }, [eventCode]);
 
   // Persist whenever the list changes (mount write just rewrites the restored data).
   useEffect(() => {
@@ -574,7 +624,39 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
     timers.current[id] = setTimeout(step, 220);
   }, [patch]);
 
+  // Real path (live events): register on the server, then stream the bytes to
+  // R2. Status ends at 'processing' — Fase 2's pipeline (watermark + face
+  // index) is what flips it to 'published'.
+  const uploadLive = useCallback(async (tempId: string, file: File, dims: { w: number; h: number } | null) => {
+    patch(tempId, { status: "uploading", progress: 0 });
+    let sid = tempId;
+    try {
+      const init = await fetch("/fansnap/api/photographer/uploads", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventCode, name: file.name, size: file.size, type: file.type, width: dims?.w, height: dims?.h }),
+      });
+      const j = await init.json().catch(() => ({}));
+      if (!init.ok || !j.id) throw new Error();
+      sid = j.id as string;
+      // Adopt the server id so reopening reconciles by id against GET.
+      setFiles((prev) => prev.map((f) => (f.id === tempId ? { ...f, id: sid } : f)));
+      const put = await fetch(`/fansnap/api/photographer/uploads?id=${encodeURIComponent(sid)}`, {
+        method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file,
+      });
+      if (!put.ok) throw new Error();
+      patch(sid, { status: "processing", progress: 100 });
+    } catch {
+      patch(sid, { status: "rejected", reason: "Error al subir — inténtalo de nuevo" });
+    }
+  }, [eventCode, patch]);
+
   const ingest = useCallback(async (list: FileList | File[]) => {
+    // The drop zone stays disabled until `mode` resolves, so this only runs
+    // with a settled mode.
+    const send = (id: string, file: File, dims: { w: number; h: number } | null) => {
+      if (mode === "live") void uploadLive(id, file, dims);
+      else simulate(id);
+    };
     const arr = Array.from(list);
     for (let i = 0; i < arr.length; i++) {
       const file = arr[i];
@@ -594,7 +676,7 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
       if (!dims) {
         if (HEIC_EXT.includes(ext)) {
           patch(id, { note: "Resolución no verificable en el navegador", w: undefined, h: undefined });
-          simulate(id);
+          void send(id, file, null);
         } else {
           patch(id, { status: "rejected", reason: "No se pudo leer la imagen" });
         }
@@ -605,13 +687,14 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
         continue;
       }
       patch(id, { w: dims.w, h: dims.h });
-      simulate(id);
+      void send(id, file, dims);
     }
-  }, [patch, simulate]);
+  }, [patch, simulate, uploadLive, mode]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    if (!mode) return; // still resolving live/sim — don't accept drops yet
     if (e.dataTransfer.files?.length) ingest(e.dataTransfer.files);
   };
 
@@ -671,20 +754,21 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
         <div style={{ padding: "22px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 18 }}>
           {/* Drop zone */}
           <div
-            onClick={() => inputRef.current?.click()}
+            onClick={() => { if (mode) inputRef.current?.click(); }}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
             style={{
               border: `1.5px dashed ${dragOver ? c.accent : c.borderStrong}`,
               background: dragOver ? c.accentSoft : c.surfaceHi,
-              padding: "38px 24px", textAlign: "center", cursor: "pointer",
-              transition: "border-color .15s, background .15s",
+              padding: "38px 24px", textAlign: "center", cursor: mode ? "pointer" : "wait",
+              opacity: mode ? 1 : 0.6,
+              transition: "border-color .15s, background .15s, opacity .15s",
             }}
           >
             <CloudUpload size={34} color={dragOver ? c.accent : c.inkSoft} strokeWidth={1.6} style={{ marginBottom: 12 }} />
             <div style={{ fontFamily: FONT_GROTESK, fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>
-              {dragOver ? "Suelta para subir" : "Arrastra tus fotos aquí"}
+              {mode === null ? "Verificando evento…" : dragOver ? "Suelta para subir" : "Arrastra tus fotos aquí"}
             </div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: c.inkSoft, marginTop: 6 }}>
               o haz clic para buscar en tu equipo
@@ -709,6 +793,10 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
             <span>mín. {MIN_EDGE.toLocaleString("es-MX")} px lado largo</span>
             <span style={{ color: c.border }}>·</span>
             <span>máx. 50 MB</span>
+            <span style={{ color: c.border }}>·</span>
+            <span style={{ color: mode === "live" ? c.ok : c.warn, fontWeight: 700 }}>
+              {mode === "live" ? "subida real" : mode === "sim" ? "simulación" : "…"}
+            </span>
           </div>
 
           {/* File list */}
@@ -765,7 +853,7 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
                       letterSpacing: "0.1em", textTransform: "uppercase", color: m.color,
                       border: `1px solid ${m.color}`, padding: "3px 8px",
                     }}>
-                      {f.status === "uploading" ? `${f.progress}%` : m.label}
+                      {f.status === "uploading" && f.progress > 0 ? `${f.progress}%` : m.label}
                     </span>
                   </div>
                 );
