@@ -58,5 +58,13 @@
 			"bucket_name": "fansnap-photos"
 		}
 	],
+	// Processing pipeline (Fase 2a): each finished upload enqueues {photoId};
+	// the fansnap-processor Worker (processor/) consumes, watermarks into
+	// previews/ and flips the photo to 'published'.
+	"queues": {
+		"producers": [
+			{ "binding": "PROCESS_QUEUE", "queue": "fansnap-process" }
+		]
+	},
 	// "images": { "binding": "IMAGES" }
 }

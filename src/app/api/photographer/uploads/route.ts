@@ -33,11 +33,21 @@ const MIN_EDGE = 2000;
 interface R2BucketLike {
   put(key: string, value: ReadableStream | ArrayBuffer | null, options?: { httpMetadata?: { contentType?: string } }): Promise<{ etag: string; size: number } | null>;
 }
+interface QueueLike {
+  send(body: unknown): Promise<void>;
+}
 
 async function getBucket(): Promise<R2BucketLike | null> {
   try {
     const { env } = await getCloudflareContext({ async: true });
     return ((env as unknown as Record<string, unknown>).PHOTOS as R2BucketLike) ?? null;
+  } catch { return null; }
+}
+
+async function getQueue(): Promise<QueueLike | null> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    return ((env as unknown as Record<string, unknown>).PROCESS_QUEUE as QueueLike) ?? null;
   } catch { return null; }
 }
 
@@ -76,6 +86,24 @@ export async function GET(req: Request): Promise<Response> {
 // ─── POST: register an upload (creates the photos row) ─────────────────────
 export async function POST(req: Request): Promise<Response> {
   if (!(await hasPreviewCookie())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // Operational retry: POST ?reprocess=<photoId> re-enqueues a photo stuck in
+  // 'processing' (lost message / consumer failure past max_retries).
+  const reprocess = new URL(req.url).searchParams.get("reprocess")?.trim();
+  if (reprocess) {
+    const db = await getDB();
+    if (!db) return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+    const photo = await db.prepare(`SELECT status FROM photos WHERE id = ?`).bind(reprocess).first<{ status: string | null }>();
+    if (!photo) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (photo.status !== "processing") {
+      return NextResponse.json({ error: "not_processing", status: photo.status }, { status: 409 });
+    }
+    const queue = await getQueue();
+    if (!queue) return NextResponse.json({ error: "Queue unavailable" }, { status: 503 });
+    await queue.send({ photoId: reprocess });
+    return NextResponse.json({ ok: true, requeued: reprocess });
+  }
+
   let body: { eventCode?: string; name?: string; size?: number; type?: string; width?: number; height?: number };
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -168,6 +196,16 @@ export async function PUT(req: Request): Promise<Response> {
       .prepare(`UPDATE photos SET status = 'processing', size_bytes = ?, content_hash = ? WHERE id = ?`)
       .bind(buf.byteLength, hash, id)
       .run();
+
+    // Hand off to the processor (watermark + publish). If the enqueue fails
+    // the photo stays 'processing' and can be re-sent via POST ?reprocess=<id>.
+    try {
+      const queue = await getQueue();
+      if (queue) await queue.send({ photoId: id });
+      else console.error("[uploads] PROCESS_QUEUE missing — photo stuck processing", id);
+    } catch (err) {
+      console.error("[uploads] enqueue failed", err, id);
+    }
     return NextResponse.json({ ok: true, id, status: "processing" });
   } catch (err) {
     console.error("[uploads] put failed", err, id);

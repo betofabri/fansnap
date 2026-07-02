@@ -1,0 +1,43 @@
+// FanSnap processor — Fase 2a do pipeline real.
+// Separate Worker (não OpenNext): consome a fila fansnap-process e transforma
+// cada original recém-subido em preview com marca d'água (Photon WASM),
+// virando photos.status 'processing' → 'published'. A indexação facial
+// (descriptors → photo_faces) é a Fase 2b: Queue → Container Node com o motor
+// do build-face-index.mjs — exige Docker pra build da imagem; até lá,
+// face_indexed permanece 0.
+//
+// Deploy: npx wrangler deploy -c processor/wrangler.jsonc
+{
+	"$schema": "../node_modules/wrangler/config-schema.json",
+	"name": "fansnap-processor",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-05-28",
+	"queues": {
+		"consumers": [
+			{
+				"queue": "fansnap-process",
+				"max_batch_size": 5,
+				"max_batch_timeout": 5,
+				"max_retries": 5
+			}
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "fansnap",
+			"database_id": "d2c85059-7a8e-4db8-a5b8-3eca10a96cda"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "PHOTOS",
+			"bucket_name": "fansnap-photos"
+		}
+	],
+	// Watermark PNGs importados como ArrayBuffer (Data modules).
+	"rules": [
+		{ "type": "Data", "globs": ["**/*.png"], "fallthrough": true }
+	],
+	"observability": { "enabled": true }
+}

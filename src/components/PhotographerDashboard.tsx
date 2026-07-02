@@ -557,6 +557,30 @@ function UploadPanel({ eventCode, eventName, onClose }: { eventCode: string; eve
     return () => { Object.values(t).forEach(clearTimeout); };
   }, []);
 
+  // While live photos are processing, poll the server so the photographer sees
+  // Procesando → Publicado without reopening (the processor Worker flips the
+  // status asynchronously via the queue).
+  useEffect(() => {
+    if (mode !== "live") return;
+    if (!files.some((f) => f.status === "processing")) return;
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch(`/fansnap/api/photographer/uploads?event=${encodeURIComponent(eventCode)}`, { cache: "no-store" });
+        const j = await r.json();
+        if (!r.ok || j.mode !== "live") return;
+        const byId = new Map((j.photos as ServerPhoto[]).map((p) => [p.id, p]));
+        setFiles((prev) => prev.map((f) => {
+          const s = byId.get(f.id);
+          if (!s) return f;
+          if (s.status === "published" && f.status !== "published") return { ...f, status: "published", progress: 100 };
+          if (s.status === "rejected" && f.status !== "rejected") return { ...f, status: "rejected", reason: s.reject_reason ?? undefined };
+          return f;
+        }));
+      } catch { /* next tick */ }
+    }, 5000);
+    return () => clearInterval(t);
+  }, [mode, files, eventCode]);
+
   // Resolve the event's mode; for live events the server rows are the truth
   // (statuses survive across devices), local entries only supply display names.
   useEffect(() => {
