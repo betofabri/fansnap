@@ -12,7 +12,18 @@
 
 import { PhotonImage, SamplingFilter, resize, watermark } from "@cf-wasm/photon";
 import pillPng from "./assets/wm-pill.png";
-import tilePng from "./assets/wm-tile.png";
+import tileSuave from "./assets/wm-tile-suave.png";
+import tileMedia from "./assets/wm-tile-media.png";
+import tileForte from "./assets/wm-tile-forte.png";
+
+// Nível por evento (events.watermark_level, editável na ficha do admin):
+// tile pré-rendido em 3 intensidades + densidade da grade (divisor menor =
+// tiles maiores e mais próximos = mais marcada).
+const WM_LEVELS: Record<string, { tile: ArrayBuffer; divisor: number }> = {
+  suave: { tile: tileSuave, divisor: 3.4 },
+  media: { tile: tileMedia, divisor: 2.9 },
+  forte: { tile: tileForte, divisor: 2.35 },
+};
 
 interface Env {
   DB: D1Database;
@@ -38,18 +49,18 @@ export default {
   },
 } satisfies ExportedHandler<Env, Job>;
 
-const PIPELINE_VERSION = "wm-v2-tile";
+const PIPELINE_VERSION = "wm-v3";
 
 async function processPhoto(env: Env, photoId: string): Promise<void> {
   console.log(`[processor] ${PIPELINE_VERSION}`, photoId);
   const row = await env.DB
     .prepare(
-      `SELECT p.id, p.r2_key, p.status, p.event_id, e.code
+      `SELECT p.id, p.r2_key, p.status, p.event_id, e.code, e.watermark_level
        FROM photos p JOIN events e ON e.id = p.event_id
        WHERE p.id = ?`,
     )
     .bind(photoId)
-    .first<{ id: string; r2_key: string; status: string | null; event_id: string; code: string }>();
+    .first<{ id: string; r2_key: string; status: string | null; event_id: string; code: string; watermark_level: string | null }>();
   if (!row) return;                       // foto apagada — ack e segue
   if (row.status !== "processing") return; // já publicada/rejeitada — idempotente
 
@@ -74,9 +85,10 @@ async function processPhoto(env: Env, photoId: string): Promise<void> {
   // 2. Trama diagonal proprietária cobrindo o quadro inteiro (estilo agência):
   //    wordmarks rotacionados, alpha visível, com fantasma escuro pra ler em
   //    áreas claras. Grade escalonada — recortar um pedaço da foto ainda leva
-  //    marca. O tile tem o alpha pré-cozido no PNG.
-  const tileSrc = PhotonImage.new_from_byteslice(new Uint8Array(tilePng));
-  const tileW = Math.max(160, Math.round(pw / 3.1));
+  //    marca. Intensidade + densidade vêm do nível do evento.
+  const level = WM_LEVELS[row.watermark_level ?? "forte"] ?? WM_LEVELS.forte;
+  const tileSrc = PhotonImage.new_from_byteslice(new Uint8Array(level.tile));
+  const tileW = Math.max(160, Math.round(pw / level.divisor));
   const tileH = Math.max(110, Math.round(tileSrc.get_height() * (tileW / tileSrc.get_width())));
   const tile = resize(tileSrc, tileW, tileH, SamplingFilter.Lanczos3);
   tileSrc.free();

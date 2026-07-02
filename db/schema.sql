@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS events (
   -- 'mock' = build-time demo photo set (the 10 seed events); 'live' = real R2
   -- pipeline (upload → process → index). Default 'mock' keeps demo events intact.
   photo_source       TEXT NOT NULL DEFAULT 'mock',
+  -- migrate-007: nível da marca d'água dos previews (suave | media | forte)
+  watermark_level    TEXT NOT NULL DEFAULT 'forte',
   -- soft delete: NULL = active, ISO timestamp = in the trash (recoverable)
   deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),

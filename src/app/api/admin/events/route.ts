@@ -31,6 +31,9 @@ const FIELDS: Record<string, (v: unknown) => boolean> = {
   featured: (v) => v === 0 || v === 1 || typeof v === "boolean",
   cover_color: (v) => typeof v === "string",
   photo_count: (v) => typeof v === "number" && v >= 0,
+  // Nível da marca d'água dos previews (aplicado pelo fansnap-processor no
+  // próximo processamento; fotos já publicadas exigem reprocesso).
+  watermark_level: (v) => typeof v === "string" && ["suave", "media", "forte"].includes(v),
 };
 
 function norm(field: string, v: unknown): unknown {

@@ -24,8 +24,11 @@ interface EventRow {
   photo_count: number;
   photographer_count: number;
   sponsor_fee_cents: number | null;
+  watermark_level: string | null;
   deleted_at: string | null;
 }
+
+const WM_LEVELS = ["suave", "media", "forte"];
 
 const STATUSES = ["draft", "upcoming", "live", "recent", "archived"];
 const MODELS = ["official", "marketplace", "sponsored"];
@@ -271,6 +274,14 @@ function EventDrawer({ ev, onClose, onPatch, onCountChange, onTrash }: {
                   {MODELS.map((m) => <option key={m} value={m} style={opt}>{m}</option>)}
                 </select>
               </Field>
+              <Field label="Marca d'água (previews)">
+                <select value={ev.watermark_level || "forte"} onChange={(e) => onPatch(ev.id, { watermark_level: e.target.value })} style={sel}>
+                  {WM_LEVELS.map((w) => <option key={w} value={w} style={opt}>{w}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: T.inkMute, letterSpacing: "0.04em", marginTop: 8, lineHeight: 1.5 }}>
+              O nível vale para os próximos uploads; fotos já publicadas mantêm o preview antigo até reprocessar.
             </div>
             <button onClick={() => onPatch(ev.id, { featured: ev.featured ? 0 : 1 })}
               style={{ ...chip(false), marginTop: 12, borderColor: ev.featured ? "#FFD166" : T.border, color: ev.featured ? "#FFD166" : T.inkSoft }}>
