@@ -11,15 +11,16 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ArrowLeft, Check, Loader2, ShieldCheck } from "lucide-react";
 import FanSnapLogo from "@/components/FanSnapLogo";
 
-const FONT_GROTESK = `"Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-const FONT_MONO = `"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace`;
+import { DARK, FONT_GROTESK, FONT_MONO } from "@/lib/theme";
 
+// Shared flat-black tokens (audit Lote B); the alta keeps its slightly softer
+// borders / brighter panels — intentional local overrides, not drift.
 const c = {
-  bg: "#000000", surface: "#0A0A0A", surfaceHi: "#141414",
-  ink: "#F4F4F2", inkSoft: "#A8A8A4", inkMute: "#5C5C58",
-  border: "rgba(244,244,242,0.12)", borderStrong: "rgba(244,244,242,0.28)",
-  accent: "#00E5FF", accentSoft: "rgba(0,229,255,0.10)",
-  magenta: "#FF2D87", premium: "#9D4EFF", ok: "#4ADE80", warn: "#FFD166",
+  ...DARK,
+  surfaceHi: "#141414",
+  border: "rgba(244,244,242,0.12)",
+  borderStrong: "rgba(244,244,242,0.28)",
+  accentSoft: "rgba(0,229,255,0.10)",
 };
 
 const PAYOUT_METHODS = [

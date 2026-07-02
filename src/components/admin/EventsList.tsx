@@ -6,7 +6,7 @@
 // API: /api/admin/events (GET/POST/PATCH/DELETE, ?trash=1, ?permanent=1).
 
 import { useEffect, useState, useCallback } from "react";
-import { T, mono, display, AdminShell, GridBg, notify } from "./_kit";
+import { T, mono, display, AdminShell, GridBg, notify, Badge, Empty } from "./_kit";
 
 interface EventRow {
   id: string;
@@ -63,7 +63,7 @@ export default function EventsList() {
       if (!r.ok) throw new Error(j?.error ?? "Error");
       setEvents(j.events ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al cargar");
+      setError(e instanceof Error ? e.message : "Erro ao carregar");
     } finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(view); }, [load, view]);
@@ -535,12 +535,8 @@ function NewEventForm({ onCreated }: { onCreated: () => void }) {
 
 // ─── Bits ────────────────────────────────────────────────────────────────────
 
-function Empty({ label, color = T.inkMute }: { label: string; color?: string }) {
-  return <div style={{ border: `2px dashed ${T.border}`, padding: "40px 24px", textAlign: "center", fontFamily: mono, fontSize: 13, color, letterSpacing: "0.06em" }}>{label}</div>;
-}
-function Badge({ color, label }: { color: string; label: string }) {
-  return <span style={{ display: "inline-block", fontFamily: mono, fontSize: 10, fontWeight: 700, color, border: `1px solid ${color}`, padding: "3px 7px", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</span>;
-}
+// Badge/Empty come from ./_kit (audit Lote B dedup). This file keeps its own
+// Row (divider style) and fmtDate (UTC-pinned for date-only event strings).
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>

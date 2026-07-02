@@ -61,7 +61,7 @@ export default function ApplicationsQueue() {
       if (!r.ok) throw new Error(j?.error ?? "Error");
       setData({ applications: j.applications ?? [], referrals: j.referrals ?? [], leads: j.leads ?? [] });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al cargar");
+      setError(e instanceof Error ? e.message : "Erro ao carregar");
     } finally {
       setLoading(false);
     }
@@ -156,14 +156,14 @@ export default function ApplicationsQueue() {
             }}>↻ Atualizar</button>
           </div>
 
-          {loading && <Empty label="Cargando…" />}
-          {error && !loading && <Empty label={`Error: ${error}`} color={T.pink} />}
+          {loading && <Empty label="Carregando…" />}
+          {error && !loading && <Empty label={`Erro: ${error}`} color={T.pink} />}
 
           {!loading && !error && (
             <>
               {tab === "applications" && (
                 <Table
-                  cols={["Código", "Nombre", "Contacto", "Ciudad", "Portafolio", "Equipo", "Recibido", "Estado"]}
+                  cols={["Código", "Nome", "Contato", "Cidade", "Portfólio", "Equipamento", "Recebido", "Status"]}
                   rows={data.applications}
                   empty="Sin solicitudes todavía."
                   render={(a: ApplicationRow) => [
@@ -180,7 +180,7 @@ export default function ApplicationsQueue() {
               )}
               {tab === "referrals" && (
                 <Table
-                  cols={["Código", "Indicado", "Contacto", "Indicado por", "Nota", "Recibido", "Estado"]}
+                  cols={["Código", "Indicado", "Contato", "Indicado por", "Nota", "Recebido", "Status"]}
                   rows={data.referrals}
                   empty="Sin indicações todavía."
                   render={(r: ReferralRow) => [
@@ -196,7 +196,7 @@ export default function ApplicationsQueue() {
               )}
               {tab === "leads" && (
                 <Table
-                  cols={["Código", "Empresa", "Contacto", "Evento", "Presupuesto", "Mensaje", "Recibido", "Estado"]}
+                  cols={["Código", "Empresa", "Contato", "Evento", "Orçamento", "Mensagem", "Recebido", "Status"]}
                   rows={data.leads}
                   empty="Sin leads de marcas todavía."
                   render={(l: LeadRow) => [

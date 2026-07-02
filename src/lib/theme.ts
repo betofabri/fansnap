@@ -48,3 +48,36 @@ export const THEMES: Record<ThemeName, Theme> = {
     gridLineStrong: "rgba(10,10,15,0.08)",
   },
 };
+
+// ─── Shared brand fonts ──────────────────────────────────────────────────────
+// One definition for every page component (SPA, landings, dashboard, alta).
+// The admin kit keeps its CSS-variable variants (mono/display in _kit.tsx).
+export const FONT_GROTESK = `"Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+export const FONT_MONO = `"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace`;
+
+// ─── Flat-black palette (landings / dashboard / alta / event pages) ──────────
+// The canonical superset of the per-file `const c = {…}` palettes that used to
+// be copy-pasted across 7 components (audit Lote B). Components alias it as
+// `const c = DARK` — or spread it with a local override where a surface tone
+// intentionally differs. Change a color HERE, not in the components.
+export const DARK = {
+  bg: "#000000",
+  surface: "#0A0A0A",
+  surfaceAlt: "#111111",
+  surfaceHi: "#121212",
+  ink: "#F4F4F2",
+  inkSoft: "#A8A8A4",
+  inkMute: "#5C5C58",
+  border: "rgba(244,244,242,0.10)",
+  borderStrong: "rgba(244,244,242,0.25)",
+  borderFocus: "rgba(0,229,255,0.55)",
+  accent: "#00E5FF",
+  accentSoft: "rgba(0,229,255,0.12)",
+  magenta: "#FF2D87",
+  magentaSoft: "rgba(255,45,135,0.12)",
+  premium: "#9D4EFF",
+  premiumSoft: "rgba(157,78,255,0.14)",
+  warn: "#FFD166",
+  ok: "#4ADE80",
+  live: "#FF3B6E",
+} as const;

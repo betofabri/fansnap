@@ -212,9 +212,11 @@ function usePersistedLang(): [Lang, (l: Lang) => void] {
     subscribeStorage,
     () => {
       const l = localStorage.getItem("fs:lang");
-      return l === "en" || l === "pt" || l === "es" ? (l as Lang) : "en";
+      // Default ES: the product launches in Mexico — English was burying the
+      // primary market behind a toggle (audit Lote B).
+      return l === "en" || l === "pt" || l === "es" ? (l as Lang) : "es";
     },
-    () => "en",
+    () => "es",
   );
   const setter = useCallback((l: Lang) => {
     localStorage.setItem("fs:lang", l);

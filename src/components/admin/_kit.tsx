@@ -449,6 +449,59 @@ export function AdminShell({
 }
 
 // ============================================================
+// Shared list/ficha helpers (audit Lote B) — used to be copy-pasted
+// across EventsList/FansList/PhotographersRoster with drift. Variants
+// that intentionally differ stay local to their file (EventsList's
+// divider Row + UTC fmtDate; ApplicationsQueue's roomier Empty and
+// datetime formatter).
+// ============================================================
+
+/** es-MX short date (— for null). EventsList keeps a UTC-pinned local variant
+ *  for date-only event strings. */
+export function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  try { return new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso)); }
+  catch { return iso; }
+}
+
+export function Badge({ color, label }: { color: string; label: string }) {
+  return <span style={{ display: "inline-block", fontFamily: mono, fontSize: 10, fontWeight: 700, color, border: `1px solid ${color}`, padding: "3px 7px", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</span>;
+}
+
+export function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
+      <div style={{ fontFamily: mono, fontSize: 11, color: T.inkMute, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+export function Row({ k, v, link }: { k: string; v: string; link?: string | null }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0" }}>
+      <span style={{ fontFamily: mono, fontSize: 11, color: T.inkMute, letterSpacing: "0.06em", textTransform: "uppercase" }}>{k}</span>
+      {link
+        ? <a href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: display, fontSize: 13, color: T.cyan, textAlign: "right", textDecoration: "none", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v} ↗</a>
+        : <span style={{ fontFamily: display, fontSize: 13, color: T.ink, textAlign: "right" }}>{v}</span>}
+    </div>
+  );
+}
+
+export function Kpi({ k, v, c }: { k: string; v: number | string; c: string }) {
+  return (
+    <div style={{ background: T.bgPaper, border: `2px solid ${T.border}`, padding: "14px 16px" }}>
+      <div style={{ fontFamily: display, fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: c }}>{v}</div>
+      <div style={{ fontFamily: mono, fontSize: 10, color: T.inkMute, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 4 }}>{k}</div>
+    </div>
+  );
+}
+
+export function Empty({ label, color = T.inkMute }: { label: string; color?: string }) {
+  return <div style={{ border: `2px dashed ${T.border}`, padding: "40px 24px", textAlign: "center", fontFamily: mono, fontSize: 13, color, letterSpacing: "0.06em" }}>{label}</div>;
+}
+
+// ============================================================
 // Photographers sub-tabs — Roster + Solicitudes live under one section.
 // ============================================================
 export function PhotographersTabs({ active }: { active: "roster" | "applications" }) {

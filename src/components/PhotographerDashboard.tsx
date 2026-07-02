@@ -16,25 +16,10 @@ import {
 } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 
-const FONT_GROTESK = `"Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-const FONT_MONO = `"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace`;
+import { DARK, FONT_GROTESK, FONT_MONO } from "@/lib/theme";
 
-const c = {
-  bg: "#000000",
-  surface: "#0A0A0A",
-  surfaceHi: "#121212",
-  ink: "#F4F4F2",
-  inkSoft: "#A8A8A4",
-  inkMute: "#5C5C58",
-  border: "rgba(244,244,242,0.10)",
-  borderStrong: "rgba(244,244,242,0.25)",
-  accent: "#00E5FF",
-  accentSoft: "rgba(0,229,255,0.12)",
-  magenta: "#FF2D87",
-  premium: "#9D4EFF",
-  warn: "#FFD166",
-  ok: "#4ADE80",
-};
+// Shared flat-black tokens (audit Lote B) — palette lives in src/lib/theme.ts.
+const c = DARK;
 
 // ─── Mock photographer (would load by session in real) ──────────────────────
 

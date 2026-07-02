@@ -30,28 +30,10 @@ import FanSnapLogo from "@/components/FanSnapLogo";
 
 // ─── Fonts & palette ───────────────────────────────────────────────────────
 
-const FONT_GROTESK = `"Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-const FONT_MONO = `"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace`;
+import { DARK, FONT_GROTESK, FONT_MONO } from "@/lib/theme";
 
-const c = {
-  bg: "#000000",
-  surface: "#0A0A0A",
-  surfaceAlt: "#111111",
-  surfaceHi: "#161616",
-  ink: "#F4F4F2",
-  inkSoft: "#A8A8A4",
-  inkMute: "#5C5C58",
-  border: "rgba(244,244,242,0.10)",
-  borderStrong: "rgba(244,244,242,0.25)",
-  borderFocus: "rgba(0,229,255,0.55)",
-  accent: "#00E5FF",
-  accentSoft: "rgba(0,229,255,0.12)",
-  magenta: "#FF2D87",
-  magentaSoft: "rgba(255,45,135,0.12)",
-  premium: "#9D4EFF",
-  premiumSoft: "rgba(157,78,255,0.14)",
-  warn: "#FFD166",
-};
+// Shared flat-black tokens (audit Lote B); landing keeps its lighter card tone.
+const c = { ...DARK, surfaceHi: "#161616" };
 
 // ─── Data ──────────────────────────────────────────────────────────────────
 
