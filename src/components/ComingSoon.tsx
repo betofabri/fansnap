@@ -20,6 +20,10 @@ export default function ComingSoon() {
       <style>{`
         @keyframes cs-pulse { 0%,100% { opacity:1; transform:scale(1);} 50% { opacity:0.35; transform:scale(0.75);} }
         .cs-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,229,255,0.28); }
+        .cs-bypass summary { list-style: none; }
+        .cs-bypass summary::-webkit-details-marker { display: none; }
+        .cs-bypass summary:hover { color: ${c.inkSoft} !important; }
+        .cs-bypass input:focus { border-color: ${c.accent} !important; outline: none; }
       `}</style>
 
       {/* Grid backdrop */}
@@ -68,6 +72,42 @@ export default function ComingSoon() {
         <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 8 }}>
           México 2026 · OCESA × Omelete Company
         </div>
+
+        {/* Team bypass — temporary while SITE_LIVE is false. Plain HTML
+            <details> + GET form (no client JS): submits ?key= to /api/preview,
+            which only sets the cookie when the key matches the Worker secret.
+            A wrong key just lands back here, silently. Remove at launch. */}
+        <details className="cs-bypass" style={{ marginTop: 20 }}>
+          <summary style={{
+            fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute,
+            letterSpacing: "0.16em", textTransform: "uppercase",
+            cursor: "pointer", transition: "color 0.15s",
+          }}>
+            · bypass this page ·
+          </summary>
+          <form action="/fansnap/api/preview" method="get" style={{
+            display: "flex", gap: 8, marginTop: 14, justifyContent: "center", flexWrap: "wrap",
+          }}>
+            <input
+              name="key"
+              type="password"
+              placeholder="clave de acceso"
+              autoComplete="off"
+              style={{
+                background: "rgba(0,229,255,0.04)", border: `1.5px solid ${c.borderStrong}`,
+                padding: "10px 14px", fontFamily: FONT_MONO, fontSize: 13, color: c.ink,
+                width: 220, transition: "border-color 0.15s",
+              }}
+            />
+            <button type="submit" style={{
+              background: "transparent", border: `1.5px solid ${c.accent}`, color: c.accent,
+              padding: "10px 18px", fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700,
+              letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer",
+            }}>
+              Entrar
+            </button>
+          </form>
+        </details>
       </div>
     </div>
   );
