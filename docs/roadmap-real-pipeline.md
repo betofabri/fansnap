@@ -99,13 +99,19 @@ acima disso, o mesmo Container faz o match server-side (consequência da #1).
 - **Verif:** subir foto real → original no R2 + `photos` row `status=processing`.
 
 ### Fase 2 — Processamento: marca d'água + índice [decisão #1]
-- No `complete`, enfileira job (Cloudflare Queue).
-- Consumer: resize + marca d'água (**Photon WASM** roda no Worker) → `previews/`
-  no R2; depois descriptors (opção da decisão #1) → grava em `photo_faces`;
-  `UPDATE photos SET watermarked=1, face_indexed=1, status='published'`.
-- Reusar a lógica de detecção/descriptor de `build-face-index.mjs`.
-- **Verif:** original continua privado, preview com marca, `photo_faces`
-  populado, `status=published`.
+**2a ✅ (jul/2026):** fila `fansnap-process` + Worker `fansnap-processor`
+(`processor/`, deploy separado: `npx wrangler deploy -c processor/wrangler.jsonc`).
+Consumer: resize 1600px + marca d'água (pill + carimbo central, PNGs pré-rendidos
+compostos via Photon WASM) → `previews/<CODE>/<id>.jpg` → `status='published'`
+(+ `photo_count`). PUT do upload enfileira; `POST ?reprocess=<id>` re-enfileira
+travadas; painel faz polling 5s (Procesando → Publicado ao vivo). Verificado em
+prod com inspeção visual do preview.
+**2b ⏳ (bloqueada por ambiente):** descriptors → `photo_faces` via Queue →
+**Container Node** reusando `build-face-index.mjs`. Exige **Docker Desktop**
+instalado pra build da imagem (não tem na máquina hoje) e plano com Containers.
+Até lá `face_indexed=0` e o match (Fase 3) só funciona pros eventos mock.
+- **Verif. 2b:** `photo_faces` populado, `face_indexed=1`, rosto encontrado no
+  scan de um evento live.
 
 ### Fase 3 — Match por evento (cliente)
 - `GET /api/events/<code>/face-index` → `{photos:[{id, previewUrl, descriptors}]}`
