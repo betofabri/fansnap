@@ -413,24 +413,21 @@ function CartBar({ c, t, cart, onCheckout }: {
   const totals = computeTotals(cart);
   const count = totals.totalItems;
   return (
-    <div style={{
+    <div className="ff-cartbar" style={{
       position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90,
-      display: "flex", justifyContent: "center",
-      padding: "0 16px calc(14px + env(safe-area-inset-bottom, 0px))",
-      pointerEvents: "none",
+      background: c.bgPaper,
+      borderTop: `3px solid ${c.cyan}`,
+      boxShadow: "0 -10px 30px rgba(0,0,0,0.45)",
+      padding: "12px clamp(16px, 4vw, 40px) calc(12px + env(safe-area-inset-bottom, 0px))",
     }}>
       <style>{`
-        @keyframes ff-cartbar-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
-        .ff-cartbar { animation: ff-cartbar-in 0.28s cubic-bezier(.2,.7,.3,1); }
+        @keyframes ff-cartbar-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+        .ff-cartbar { animation: ff-cartbar-in 0.3s cubic-bezier(.2,.7,.3,1); }
         .ff-cartbar-cta:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 ${c.ink}; }
       `}</style>
-      <div className="ff-cartbar" style={{
-        pointerEvents: "auto",
+      <div style={{
         display: "flex", alignItems: "center", gap: 16,
-        width: "100%", maxWidth: 560,
-        background: c.bgPaper, border: `2px solid ${c.ink}`,
-        boxShadow: `6px 6px 0 ${c.cyan}`,
-        padding: "10px 10px 10px 18px",
+        width: "100%", maxWidth: 1100, margin: "0 auto",
       }}>
         <div style={{ position: "relative", flexShrink: 0, color: c.ink }}>
           <ShoppingBag size={20} strokeWidth={2.2} />
@@ -1571,6 +1568,12 @@ function WebcamCapture({
   const [captured, setCaptured] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  // 3-2-1 countdown before the shot (null = idle). Cleared on unmount.
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => () => {
+    if (countdownTimer.current) clearInterval(countdownTimer.current);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1621,6 +1624,24 @@ function WebcamCapture({
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     setCaptured(canvas.toDataURL("image/jpeg", 0.92));
+  };
+
+  // Capture button → translucent 3-2-1 over the live preview, then the shot.
+  const startCountdown = () => {
+    if (!ready || countdown !== null) return;
+    let n = 3;
+    setCountdown(3);
+    countdownTimer.current = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        if (countdownTimer.current) clearInterval(countdownTimer.current);
+        countdownTimer.current = null;
+        setCountdown(null);
+        capture();
+      } else {
+        setCountdown(n);
+      }
+    }, 1000);
   };
 
   return (
@@ -1689,6 +1710,29 @@ function WebcamCapture({
                 border: `2px dashed ${c.cyan}`, borderRadius: "45% 45% 40% 40%",
                 pointerEvents: "none",
               }} />
+              {/* 3-2-1 countdown — translucent giant digit over the preview */}
+              {countdown !== null && (
+                <div style={{
+                  position: "absolute", inset: 0, display: "grid", placeItems: "center",
+                  background: "rgba(10,10,15,0.18)", pointerEvents: "none",
+                }}>
+                  <style>{`
+                    @keyframes ff-count-pop {
+                      0% { opacity: 0; transform: scale(1.6); }
+                      25% { opacity: 0.85; transform: scale(1); }
+                      80% { opacity: 0.75; transform: scale(0.96); }
+                      100% { opacity: 0; transform: scale(0.9); }
+                    }
+                  `}</style>
+                  <span key={countdown} style={{
+                    fontFamily: "var(--font-grotesk), sans-serif",
+                    fontSize: "clamp(110px, 34vw, 200px)", fontWeight: 800, lineHeight: 1,
+                    color: "rgba(255,255,255,0.82)",
+                    textShadow: "0 0 40px rgba(0,229,255,0.55), 0 4px 24px rgba(0,0,0,0.6)",
+                    animation: "ff-count-pop 0.95s ease-out both",
+                  }}>{countdown}</span>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -1719,17 +1763,17 @@ function WebcamCapture({
                 <span>{t.camera_cancel}</span>
               </button>
               <button
-                onClick={capture}
-                disabled={!ready}
+                onClick={startCountdown}
+                disabled={!ready || countdown !== null}
                 style={{
                   ...ctaPrimaryStyle(c), flex: 1, justifyContent: "center",
-                  opacity: ready ? 1 : 0.4,
-                  cursor: ready ? "pointer" : "not-allowed",
+                  opacity: ready && countdown === null ? 1 : 0.4,
+                  cursor: ready && countdown === null ? "pointer" : "not-allowed",
                 }}
-                className={ready ? "ff-cta-primary" : ""}
+                className={ready && countdown === null ? "ff-cta-primary" : ""}
               >
                 <Camera size={16} strokeWidth={2.5} />
-                <span>{t.camera_capture}</span>
+                <span>{countdown !== null ? String(countdown) : t.camera_capture}</span>
               </button>
             </>
           )}
