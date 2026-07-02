@@ -393,7 +393,81 @@ export default function FanSnapApp() {
         />
       )}
 
+      {/* Floating checkout bar — appears the moment the cart has items, on
+          every browsing page (hidden on cart/checkout/confirmation where it
+          would be redundant). One tap to finish the purchase. */}
+      {cart.length > 0 && page !== "cart" && page !== "checkout" && page !== "confirmation" && (
+        <CartBar c={c} t={t} cart={cart} onCheckout={() => goTo("cart")} />
+      )}
+
       <Footer c={c} />
+    </div>
+  );
+}
+
+// ─── Floating cart bar ───────────────────────────────────────────────────────
+
+function CartBar({ c, t, cart, onCheckout }: {
+  c: Theme; t: Copy; cart: CartItem[]; onCheckout: () => void;
+}) {
+  const totals = computeTotals(cart);
+  const count = totals.totalItems;
+  return (
+    <div style={{
+      position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90,
+      display: "flex", justifyContent: "center",
+      padding: "0 16px calc(14px + env(safe-area-inset-bottom, 0px))",
+      pointerEvents: "none",
+    }}>
+      <style>{`
+        @keyframes ff-cartbar-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+        .ff-cartbar { animation: ff-cartbar-in 0.28s cubic-bezier(.2,.7,.3,1); }
+        .ff-cartbar-cta:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 ${c.ink}; }
+      `}</style>
+      <div className="ff-cartbar" style={{
+        pointerEvents: "auto",
+        display: "flex", alignItems: "center", gap: 16,
+        width: "100%", maxWidth: 560,
+        background: c.bgPaper, border: `2px solid ${c.ink}`,
+        boxShadow: `6px 6px 0 ${c.cyan}`,
+        padding: "10px 10px 10px 18px",
+      }}>
+        <div style={{ position: "relative", flexShrink: 0, color: c.ink }}>
+          <ShoppingBag size={20} strokeWidth={2.2} />
+          <span style={{
+            position: "absolute", top: -7, right: -9,
+            minWidth: 16, height: 16, borderRadius: 999, padding: "0 4px",
+            background: c.pink, color: "#fff", fontSize: 9.5, fontWeight: 800,
+            display: "grid", placeItems: "center", lineHeight: 1,
+          }}>{count}</span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: "var(--font-mono), monospace", fontSize: 10, fontWeight: 700,
+            color: c.inkSoft, letterSpacing: "0.12em", textTransform: "uppercase",
+          }}>
+            {count} {count === 1 ? t.cartbar_photo : t.cartbar_photos}
+          </div>
+          <div style={{
+            fontFamily: "var(--font-grotesk), sans-serif", fontSize: 17, fontWeight: 800,
+            color: c.ink, letterSpacing: "-0.01em", whiteSpace: "nowrap",
+            overflow: "hidden", textOverflow: "ellipsis",
+          }}>
+            {formatMXN(totals.totalMXN)}
+          </div>
+        </div>
+        <button onClick={onCheckout} className="ff-cartbar-cta" style={{
+          display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0,
+          background: c.cyan, color: "#000", border: "none", cursor: "pointer",
+          padding: "13px 18px",
+          fontFamily: "var(--font-mono), monospace", fontSize: 12, fontWeight: 700,
+          letterSpacing: "0.06em", textTransform: "uppercase",
+          transition: "transform 0.15s ease, box-shadow 0.15s ease",
+        }}>
+          <span>{t.cartbar_checkout}</span>
+          <ArrowRight size={15} strokeWidth={2.6} />
+        </button>
+      </div>
     </div>
   );
 }
