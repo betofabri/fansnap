@@ -152,6 +152,40 @@ export interface PlacedOrder {
   downloads?: { title: string; url: string }[];
 }
 
+// ── Remembered fan (pre-auth "session") ────────────────────────────────────
+// After the first checkout we remember the buyer on this device so the next
+// purchase skips the identity form (only shipping + payment left). Magic-link
+// auth (Fase 5) replaces this with a real account.
+
+export interface FanProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+}
+
+const FAN_KEY = "fs:fan:v1";
+
+export function loadFanProfile(): FanProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(FAN_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as FanProfile;
+    return p && p.email && p.firstName ? p : null;
+  } catch { return null; }
+}
+
+export function saveFanProfile(p: FanProfile): void {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(FAN_KEY, JSON.stringify(p)); } catch { /* quota */ }
+}
+
+export function clearFanProfile(): void {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.removeItem(FAN_KEY); } catch { /* noop */ }
+}
+
 const ORDERS_KEY = "fs:orders:v1";
 
 export function loadOrders(): PlacedOrder[] {

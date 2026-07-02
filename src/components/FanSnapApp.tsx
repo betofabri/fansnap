@@ -29,7 +29,7 @@ import FanSnapLogo from "@/components/FanSnapLogo";
 import {
   loadCart, saveCart, clearCart, addToCart, updateQty, removeLine,
   makeLineId, computeTotals, formatMXN, newOrderNumber, newOxxoReference,
-  saveOrder,
+  saveOrder, loadFanProfile, saveFanProfile,
   type CartItem,
 } from "@/lib/cart";
 
@@ -2517,17 +2517,33 @@ function CheckoutPage({
   const [terms, setTerms] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  // Form state — all client-side, no validation beyond required for now
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  // Remembered buyer (pre-auth "session", saved after the first purchase on
+  // this device). When present, the identity form collapses into a compact
+  // "Comprando como" card — only shipping (if physical) + payment remain.
+  const savedFan = useRef(loadFanProfile()).current;
+  const [asFan, setAsFan] = useState(savedFan !== null);
+
+  // Form state — prefilled from the remembered profile when available.
+  const [firstName, setFirstName] = useState(savedFan?.firstName ?? "");
+  const [lastName, setLastName] = useState(savedFan?.lastName ?? "");
   const name = `${firstName.trim()} ${lastName.trim()}`.trim();
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(savedFan?.email ?? "");
+  const [phone, setPhone] = useState(savedFan?.phone ?? "");
   const [address, setAddress] = useState("");
   const [address2, setAddress2] = useState("");
   const [city, setCity] = useState("");
   const [stateField, setStateField] = useState("");
   const [zip, setZip] = useState("");
+
+  // DEV helper (pre-launch only): fill everything with fake data to run the
+  // whole flow in seconds. Remove when SITE_LIVE flips.
+  const fillTestData = () => {
+    setFirstName("Beto"); setLastName("Fabri");
+    setEmail("roberto.fabri@gmail.com"); setPhone("+52 55 1234 5678");
+    setAddress("Av. Paseo de la Reforma 123"); setAddress2("Piso 4");
+    setCity("Ciudad de México"); setStateField("CDMX"); setZip("06600");
+    setTerms(true); setAsFan(false);
+  };
 
   const canPlace = firstName.trim() && lastName.trim() && email.includes("@") && terms && !processing &&
     (!totals.hasPhysical || (address.trim() && city.trim() && zip.trim()));
@@ -2570,6 +2586,9 @@ function CheckoutPage({
       if (r.ok && j.ok) server = j;
     } catch { /* local fallback below */ }
 
+    // Remember the buyer on this device — next checkout skips the identity form.
+    saveFanProfile({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() || undefined });
+
     setTimeout(() => {
       onPlace({
         number: server.code ?? newOrderNumber(),
@@ -2599,15 +2618,54 @@ function CheckoutPage({
         <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "clamp(20px, 3vw, 40px)" }} className="ff-cart-grid">
           {/* Form */}
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {/* CONTACT */}
-            <FormSection c={c} title={t.checkout_section_contact}>
-              <FormGrid>
-                <Field c={c} label={t.checkout_first_name} value={firstName} onChange={setFirstName} />
-                <Field c={c} label={t.checkout_last_name} value={lastName} onChange={setLastName} />
-                <Field c={c} label={t.checkout_email} value={email} onChange={setEmail} type="email" fullWidth />
-                <Field c={c} label={t.checkout_phone} value={phone} onChange={setPhone} type="tel" />
-              </FormGrid>
-            </FormSection>
+            {/* DEV: quick test-data fill — pre-launch helper, remove at launch */}
+            <button onClick={fillTestData} style={{
+              alignSelf: "flex-end", display: "inline-flex", alignItems: "center", gap: 6,
+              background: "transparent", border: `1.5px dashed ${c.inkMute}`, color: c.inkMute,
+              padding: "6px 12px", cursor: "pointer",
+              fontFamily: "var(--font-mono), monospace", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.1em", textTransform: "uppercase",
+            }}>
+              <Zap size={11} strokeWidth={2.5} />
+              <span>{t.checkout_test_fill}</span>
+            </button>
+
+            {/* CONTACT — collapses to a card when the buyer is remembered */}
+            {asFan && savedFan ? (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                background: c.bgPaper, border: `2px solid ${c.cyan}`, padding: "14px 16px",
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 9, color: c.cyan, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>
+                    {t.checkout_logged_as}
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: c.ink, letterSpacing: "-0.01em" }}>
+                    {savedFan.firstName} {savedFan.lastName}
+                  </div>
+                  <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: 11, color: c.inkSoft, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {savedFan.email}{savedFan.phone ? ` · ${savedFan.phone}` : ""}
+                  </div>
+                </div>
+                <button onClick={() => setAsFan(false)} style={{
+                  flexShrink: 0, background: "transparent", border: `2px solid ${c.border}`,
+                  color: c.inkSoft, padding: "8px 14px", cursor: "pointer",
+                  fontFamily: "var(--font-mono), monospace", fontSize: 10, fontWeight: 700,
+                  letterSpacing: "0.1em", textTransform: "uppercase",
+                }}>
+                  {t.checkout_change}
+                </button>
+              </div>
+            ) : (
+              <FormSection c={c} title={t.checkout_section_contact}>
+                <FormGrid>
+                  <Field c={c} label={t.checkout_first_name} value={firstName} onChange={setFirstName} />
+                  <Field c={c} label={t.checkout_last_name} value={lastName} onChange={setLastName} />
+                  <Field c={c} label={t.checkout_email} value={email} onChange={setEmail} type="email" fullWidth />
+                  <Field c={c} label={t.checkout_phone} value={phone} onChange={setPhone} type="tel" />
+                </FormGrid>
+              </FormSection>
+            )}
 
             {/* SHIPPING (only when physical items present) */}
             {totals.hasPhysical ? (

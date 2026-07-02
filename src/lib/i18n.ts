@@ -142,6 +142,9 @@ export interface Copy {
   cartbar_photo: string;
   cartbar_photos: string;
   cartbar_checkout: string;
+  checkout_logged_as: string;
+  checkout_change: string;
+  checkout_test_fill: string;
 
   checkout_title: string;
   checkout_kicker: string;
@@ -293,6 +296,9 @@ export const I18N: Record<Lang, Copy> = {
     cartbar_photo: "photo",
     cartbar_photos: "photos",
     cartbar_checkout: "Checkout",
+    checkout_logged_as: "Buying as",
+    checkout_change: "Change",
+    checkout_test_fill: "Test data",
 
     checkout_title: "CHECKOUT",
     checkout_kicker: "ALMOST THERE",
@@ -442,6 +448,9 @@ export const I18N: Record<Lang, Copy> = {
     cartbar_photo: "foto",
     cartbar_photos: "fotos",
     cartbar_checkout: "Finalizar compra",
+    checkout_logged_as: "Comprando como",
+    checkout_change: "Trocar",
+    checkout_test_fill: "Dados de teste",
 
     checkout_title: "CHECKOUT",
     checkout_kicker: "QUASE LÁ",
@@ -591,6 +600,9 @@ export const I18N: Record<Lang, Copy> = {
     cartbar_photo: "foto",
     cartbar_photos: "fotos",
     cartbar_checkout: "Finalizar compra",
+    checkout_logged_as: "Comprando como",
+    checkout_change: "Cambiar",
+    checkout_test_fill: "Datos de prueba",
 
     checkout_title: "CHECKOUT",
     checkout_kicker: "CASI LISTO",
