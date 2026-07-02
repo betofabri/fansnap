@@ -94,13 +94,18 @@ export function orderReceiptEmail(opts: {
   name: string;
   code: string;
   totalMXN: number;
-  downloads: { title: string; url: string }[];
+  downloads: { title: string; url: string; thumb?: string }[];
 }): { subject: string; html: string; text: string } {
   const firstName = opts.name.trim().split(/\s+/)[0] || opts.name;
   const subject = `Tus fotos están listas · ${opts.code}`;
   const total = opts.totalMXN.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+  // Thumb = the public watermarked preview (safe if the email is forwarded);
+  // the link streams the clean original and dies in 24h — /pedidos re-issues.
   const linksHtml = opts.downloads
-    .map((d) => `<a href="${d.url}" style="display:block;padding:14px 18px;margin:0 0 10px;border:1px solid #00E5FF;color:#00E5FF;text-decoration:none;font-weight:700;font-size:14px;">↓ ${d.title}</a>`)
+    .map((d) => `<a href="${d.url}" style="display:flex;align-items:center;gap:14px;padding:10px;margin:0 0 10px;border:1px solid #00E5FF;color:#00E5FF;text-decoration:none;font-weight:700;font-size:14px;">
+      ${d.thumb ? `<img src="${d.thumb}" width="72" height="48" style="display:block;width:72px;height:48px;object-fit:cover;border:1px solid rgba(255,255,255,0.15);" alt=""/>` : ""}
+      <span>↓ ${d.title}</span>
+    </a>`)
     .join("");
   const html = SHELL(`
     <h1 style="font-size:28px;font-weight:800;letter-spacing:-0.03em;line-height:1.1;margin:0 0 16px;">
@@ -114,18 +119,19 @@ export function orderReceiptEmail(opts: {
     </p>
     ${linksHtml}
     <p style="font-size:13px;line-height:1.55;color:#5C5C58;margin:24px 0 0;">
-      También puedes recuperarlas cuando quieras en betofabri.com/fansnap/pedidos
-      con el código ${opts.code} y este correo.
+      Por seguridad, estos enlaces vencen en 24 horas. Después recupera tus
+      fotos cuando quieras en betofabri.com/fansnap/pedidos con el código
+      ${opts.code} y este correo — ahí siempre hay enlaces nuevos.
     </p>
   `);
   const text = `¡Gracias, ${firstName}!
 
 Tu pedido ${opts.code} está confirmado — total ${total}.
 
-Descarga tus fotos:
+Descarga tus fotos (enlaces válidos por 24 horas):
 ${opts.downloads.map((d) => `- ${d.title}: ${d.url}`).join("\n")}
 
-Recupéralas cuando quieras en betofabri.com/fansnap/pedidos con el código ${opts.code} y este correo.
+Después recupéralas cuando quieras en betofabri.com/fansnap/pedidos con el código ${opts.code} y este correo.
 
 — FanSnap México · OCESA × Omelete Company`;
   return { subject, html, text };

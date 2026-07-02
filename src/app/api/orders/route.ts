@@ -22,6 +22,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDB, newId, secureToken, type D1Like } from "@/lib/db";
 import { sendEmail, orderReceiptEmail } from "@/lib/email";
 import { MXN_RATE } from "@/lib/mock";
+import { getDownloadKey, makeDownloadUrl } from "@/lib/sign";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -90,7 +91,7 @@ export async function POST(req: Request): Promise<Response> {
     const code = `FS-${secureToken(6).toUpperCase()}`;
 
     const stmts = [];
-    const lines: { lineId: string; title: string }[] = [];
+    const lines: { lineId: string; title: string; thumb: string }[] = [];
     let subtotal = 0;
 
     for (const it of items) {
@@ -102,10 +103,12 @@ export async function POST(req: Request): Promise<Response> {
 
       let photoId = it.photoRef?.trim() ?? "";
       const title = (it.title ?? "Foto").slice(0, 120);
+      let thumb = "";
 
       if (photoId.startsWith("ph_")) {
         const exists = await db.prepare(`SELECT id FROM photos WHERE id = ?`).bind(photoId).first<{ id: string }>();
         if (!exists) return NextResponse.json({ error: `photo_not_found:${photoId}` }, { status: 422 });
+        thumb = `/fansnap/api/photos/preview?id=${encodeURIComponent(photoId)}`;
       } else {
         // Shadow row for a mock-catalog item: deterministic id so repeat
         // purchases reuse it; r2_key carries the public asset path.
@@ -115,6 +118,7 @@ export async function POST(req: Request): Promise<Response> {
           ? ev
           : await db.prepare(`SELECT id FROM events WHERE UPPER(code) = UPPER(?) AND deleted_at IS NULL`).bind(it.eventCode?.trim() ?? "").first<{ id: string }>();
         if (!itemEv) return NextResponse.json({ error: "event_not_found" }, { status: 422 });
+        thumb = image;
         photoId = `phm_${(it.eventCode ?? "x")}_${photoId.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 60);
         stmts.push(
           db.prepare(
@@ -125,7 +129,7 @@ export async function POST(req: Request): Promise<Response> {
       }
 
       const lineId = newId("ol_");
-      lines.push({ lineId, title });
+      lines.push({ lineId, title, thumb });
       stmts.push(
         db.prepare(
           `INSERT INTO order_lines (id, order_id, photo_id, product_sku, qty, unit_cents, total_cents, photographer_commission_cents, platform_net_cents)
@@ -150,10 +154,17 @@ export async function POST(req: Request): Promise<Response> {
     );
     await db.batch(stmts);
 
-    const downloads = lines.map((l) => ({
-      title: l.title,
-      url: `/fansnap/api/download?order=${orderId}&line=${l.lineId}`,
-    }));
+    // Signed 24h links (lib/sign.ts) — the permanent home is /pedidos, which
+    // mints fresh links after code+email.
+    const signKey = await getDownloadKey();
+    const downloads = signKey
+      ? await Promise.all(lines.map(async (l) => ({
+          title: l.title,
+          thumb: l.thumb,
+          url: await makeDownloadUrl(signKey, orderId, l.lineId),
+        })))
+      : [];
+    if (!signKey) console.error("[orders] DOWNLOAD_KEY missing — no download links issued", orderId);
 
     // Receipt email — fire-and-forget; sendEmail degrades gracefully until the
     // domain is onboarded to Email Sending.
@@ -161,7 +172,11 @@ export async function POST(req: Request): Promise<Response> {
       name: body.firstName || "fan",
       code,
       totalMXN: total / 100,
-      downloads: downloads.map((d) => ({ title: d.title, url: `https://betofabri.com${d.url}` })),
+      downloads: downloads.map((d) => ({
+        title: d.title,
+        url: `https://betofabri.com${d.url}`,
+        thumb: `https://betofabri.com${d.thumb}`,
+      })),
     });
     const send = sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
     try {
@@ -201,17 +216,23 @@ export async function GET(req: Request): Promise<Response> {
       .bind(order.id)
       .all();
 
-    const lines = (results as Array<{ line_id: string; product_sku: string; qty: number; unit_cents: number; total_cents: number; photo_id: string; r2_thumb_key: string | null }>).map((l) => ({
-      lineId: l.line_id,
-      sku: l.product_sku,
-      qty: l.qty,
-      unitCents: l.unit_cents,
-      totalCents: l.total_cents,
-      thumb: l.r2_thumb_key?.startsWith("mock:")
-        ? l.r2_thumb_key.slice(5)
-        : `/fansnap/api/photos/preview?id=${encodeURIComponent(l.photo_id)}`,
-      download: `/fansnap/api/download?order=${order.id}&line=${l.line_id}`,
-    }));
+    // Fresh signed links on every lookup — this is the permanent recovery path,
+    // so the 24h expiry of any previously emailed link never locks the fan out.
+    const signKey = await getDownloadKey();
+    if (!signKey) return NextResponse.json({ error: "Downloads unavailable" }, { status: 503 });
+    const lines = await Promise.all(
+      (results as Array<{ line_id: string; product_sku: string; qty: number; unit_cents: number; total_cents: number; photo_id: string; r2_thumb_key: string | null }>).map(async (l) => ({
+        lineId: l.line_id,
+        sku: l.product_sku,
+        qty: l.qty,
+        unitCents: l.unit_cents,
+        totalCents: l.total_cents,
+        thumb: l.r2_thumb_key?.startsWith("mock:")
+          ? l.r2_thumb_key.slice(5)
+          : `/fansnap/api/photos/preview?id=${encodeURIComponent(l.photo_id)}`,
+        download: await makeDownloadUrl(signKey, order.id, l.line_id),
+      })),
+    );
 
     return NextResponse.json({ ok: true, order: { code: order.code, status: order.status, totalCents: order.total_cents, createdAt: order.created_at }, lines });
   } catch (err) {

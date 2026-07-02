@@ -6,13 +6,16 @@
 //   - item mock (phm_…):  redirect pro asset público de demo (o catálogo demo
 //                          não tem original limpo no servidor — limitação
 //                          honesta até os eventos reais).
-// Sem gate de preview: o order id criptográfico É a credencial (links do email
-// precisam funcionar em qualquer dispositivo). Não expira por ora — re-download
-// é um recurso do produto; auth de fã (Fase 5) endurece isso.
+// Sem gate de preview: o link assinado É a credencial (funciona em qualquer
+// dispositivo). Cada link expira em 24h (LINK_TTL em lib/sign.ts) e carrega um
+// HMAC — alterar pedido/linha/validade invalida a assinatura, e força-bruta é
+// inviável (order id criptográfico de ~124 bits). Link vencido/inválido →
+// redirect pra /pedidos, que emite links frescos após code+email.
 
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDB } from "@/lib/db";
+import { getDownloadKey, verifyDownload } from "@/lib/sign";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +30,15 @@ export async function GET(req: Request): Promise<Response> {
   const lineId = url.searchParams.get("line")?.trim();
   if (!orderId?.startsWith("ord_") || !lineId) {
     return NextResponse.json({ error: "order and line required" }, { status: 400 });
+  }
+
+  // Signature + 24h expiry gate. A human clicking a dead emailed link lands on
+  // /pedidos (with a notice) where code+email mints fresh links.
+  const key = await getDownloadKey();
+  if (!key) return NextResponse.json({ error: "Downloads unavailable" }, { status: 503 });
+  const verdict = await verifyDownload(key, orderId, lineId, url.searchParams.get("exp"), url.searchParams.get("sig"));
+  if (verdict !== "ok") {
+    return NextResponse.redirect(new URL(`/fansnap/pedidos?expired=1`, url.origin), 302);
   }
 
   const db = await getDB();

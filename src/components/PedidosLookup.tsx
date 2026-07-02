@@ -8,7 +8,7 @@
 // device-local until accounts + D1 land. When no match is found we say so
 // plainly and explain the device limitation.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, Search, Download, Package, CheckCircle2, AlertCircle, Clock,
 } from "lucide-react";
@@ -37,6 +37,12 @@ export default function PedidosLookup() {
   const [state, setState] = useState<State>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Landed here from an expired emailed download link (?expired=1) — explain
+  // that looking the order up re-issues fresh links.
+  const [expiredNotice, setExpiredNotice] = useState(false);
+  useEffect(() => {
+    try { setExpiredNotice(new URLSearchParams(window.location.search).get("expired") === "1"); } catch { /* ssr */ }
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,6 +108,16 @@ export default function PedidosLookup() {
         }}>
           Ingresa tu número de orden y el email de la compra para ver el estado y volver a descargar tus fotos.
         </p>
+
+        {expiredNotice && state.kind !== "server" && (
+          <div style={{ ...alertBox(c.warn), marginTop: 28 }}>
+            <AlertCircle size={16} strokeWidth={2.2} />
+            <span>
+              Ese enlace de descarga venció (por seguridad duran 24 horas).
+              Busca tu pedido aquí abajo y te generamos enlaces nuevos al instante.
+            </span>
+          </div>
+        )}
 
         {state.kind !== "found" && state.kind !== "server" && (
           <form onSubmit={onSubmit} style={{
