@@ -1,68 +1,113 @@
 # FanSnap
 
 > _You were there. We have the proof._
-> The memory layer of live entertainment — facial-recognition photo platform for concerts, conventions, festivals and sports.
+> The memory layer of live entertainment: facial-recognition photo platform for concerts, conventions, festivals and sports.
 
-**Status:** Fatia 1 — public site navigable end-to-end with mock data, deployed to Cloudflare Workers.
+**Status (Oct 2026):** pre-launch. Public site deployed behind a launch gate (`SITE_LIVE = false`), real photo pipeline running in production (upload, watermark, purchase, delivery). Face matching works on demo events only; live-event indexing is the main open item.
 **Owner:** Beto Fabri (VP Content, CCXP / Omelete Company).
 **Launch market:** Mexico (CDMX first), multi-country LATAM later.
+**Prod URL:** `https://betofabri.com/fansnap` (custom route on a personal domain; `workers.dev` kept as fallback).
+
+Execution plan and open phases: `docs/roadmap-real-pipeline.md`.
 
 ---
 
-## What's in here right now
+## What is in here right now
 
 | Surface | State |
 |---|---|
-| Homepage (hero + featured event pass card + recent/upcoming feeds + categories + search) | ✅ |
-| Event page (hero, stats strip, highlights grid, scan CTA) | ✅ |
-| Selfie step (upload + biometric consent + face-detection reticle) | ✅ |
-| Scanning (radar animation + counter + phase labels) | ✅ (cosmetic timer — Rekognition lands in Fatia 3) |
-| Gallery (12 mock photos, multi-select, timestamps, watermark) | ✅ |
-| Photo detail + 5 product cards with size/color/qty | ✅ |
-| EN/PT/ES + dark/light toggle + mobile responsive | ✅ |
-| `/api/scan` stub returning mock matches | ✅ |
-| D1 schema for the 3 business models + commission tiers (`db/schema.sql`) | ✅ drafted, not wired |
-| Cart + checkout (Stripe + Conekta/OXXO) | ⏳ Fatia 3 |
-| Photographer & admin dashboards | ⏳ Fatia 4 |
+| Launch gate: everyone sees ComingSoon except `/aplica` and `/admin`; preview cookie unlocks the full site per browser | Done |
+| Homepage, event page, selfie + scan, gallery, photo detail, cart, checkout, order confirmation | Done |
+| EN/PT/ES, dark/light, mobile responsive | Done |
+| `/aplica`: photographer pre-registration landing (Spanish) + referral | Done |
+| `/fotografos` and `/marcas` landings, `/mapa` internal navigation hub | Done |
+| Admin on real D1: events, photographer roster, applications queue, fans, onboarding links with expiry, per-event watermark level | Done |
+| Photographer dashboard with in-dashboard upload (assigned events still mock) | Done (upload real, data mock) |
+| Real upload to R2 for events with `photo_source = 'live'` | Done |
+| Processing pipeline: Queue + separate `fansnap-processor` Worker (resize 1600px + watermark v3, three intensities) | Done |
+| Purchase loop without a gateway: D1 orders on the `free_sponsored` rail, status `paid` stub | Done |
+| Delivery: signed 24h download links (HMAC), clean original streamed from R2, recovery at `/pedidos` by code + email | Done |
+| Receipt email with watermarked thumbs (Cloudflare Email binding) | Done, pending domain onboarding to actually send |
+| Face recognition: face-api.js in the browser against a static `face-index.json` built at deploy time | Done for mock events only |
+| Face indexing for live events (`photo_faces`) | Pending (Fase 2b, blocked by Docker + Containers plan) |
+| Per-event face index endpoint + `scans` / `scan_matches` logging | Pending (Fase 3) |
+| Magic-link auth for fans and photographers | Pending (Fase 5) |
+| Biometric consent step + legal pages (MX) | Pending (Fase 6) |
+| Payment gateway (Stripe / MercadoPago / OXXO) + photographer payouts | Out of scope for now |
+| Cloudflare Access on `/admin` | Pending (#43) |
 
-See the project brief (`fansnap-context.md`, kept separately) for the full product context — business models, pricing, design system, financials.
+## Real vs simulated
+
+| Piece | Today |
+|---|---|
+| Photographer upload | Real: stream to R2 `originals/<code>/<id>` (only when the event is `live`; mock events keep the simulated UI) |
+| Storage | R2 bucket `fansnap-photos`: originals private, previews served through the Worker |
+| Watermark / resize | Real, server-side per upload, versioned preview keys (`wm-v3`) |
+| Face index | Static JSON for the 10 demo events; nothing for live events yet |
+| Match | Client-side, browser, mock events only |
+| Order | Real rows in `orders` / `order_lines`, `localStorage` kept as demo fallback |
+| Original delivery | Real: signed link, 24h TTL, byte-identical original |
+| Auth | None (order id is the download capability; admin unprotected except by obscurity) |
+| Biometric consent | Checkbox at checkout only |
+| `/api/scan` | Still the Fatia 1 stub (returns mock matches); the browser does the real matching |
 
 ---
 
 ## Stack
 
-- **Next.js 16.2.6** (App Router, Turbopack, React 19.2) — no Tailwind, inline styles preserve the brutalist design system 1:1 with the validated prototype.
-- **Cloudflare Workers** via **`@opennextjs/cloudflare`** with Workers Static Assets. (Cloudflare Pages is being aged out for Next.js — Workers is the supported path.)
-- **D1** (Cloudflare SQLite) for the database — schema drafted at `db/schema.sql`, binding stubbed in `wrangler.jsonc`.
-- **R2** for photo storage (Fatia 2 — requires adding R2 scope to the deploy token; currently not in scope).
-- **AWS Rekognition** planned for face matching (Fatia 3, per brief §6).
-- **Stripe Connect + Conekta/OXXO** for the dual-rail payment architecture (Fatia 3).
+- **Next.js 16.2.6** (App Router, Turbopack, React 19.2), inline styles, no Tailwind. Read `node_modules/next/dist/docs/` before touching Next APIs (see `AGENTS.md`).
+- **Cloudflare Workers** via `@opennextjs/cloudflare` with Workers Static Assets. `basePath: "/fansnap"`.
+- **D1** `fansnap` (schema in `db/schema.sql`, incremental migrations `db/migrate-00N-*.sql`).
+- **R2** `fansnap-photos` (binding `PHOTOS`).
+- **Queues** `fansnap-process` (producer in the site Worker, consumer in `processor/`).
+- **Email Sending** binding `EMAIL` (sender `roster@betofabri.com`; domain onboarding still to confirm).
+- **Photon WASM** (`@cf-wasm/photon`) for resize + watermark compositing in the processor.
+- **face-api.js** (`@vladmandic/face-api`) in the browser for matching; `tfjs-node` + `canvas` only for the build-time index script.
 - **Space Grotesk + JetBrains Mono** via `next/font/google`. Lucide icons.
+
+### Worker secrets
+
+| Secret | Used by |
+|---|---|
+| `PREVIEW_KEY` | Launch-gate bypass cookie (`/fansnap/api/preview?key=...`, `?off=1` to drop it) |
+| `DOWNLOAD_KEY` | HMAC for signed download links |
+
+Set with `wrangler secret put <NAME>`; mirror in `.dev.vars` for `next dev`.
 
 ---
 
 ## Local development
 
 ```bash
-# Standard Next dev server (port 3000, hot reload, no Worker runtime)
-npm run dev
-
-# Worker-runtime preview — builds with OpenNext + runs in wrangler (closer to prod)
-npm run preview
+npm run dev       # next dev on :3000 (writes build info, syncs mock photos)
+npm run preview   # OpenNext build + wrangler preview (closer to prod, bindings live)
 ```
-
-`npm run dev` is the fast path for UI iteration. Use `npm run preview` before pushing if you've touched anything that depends on the Cloudflare runtime (bindings, env vars, the `/api/scan` route).
 
 ## Deploy
 
 ```bash
-# Production deploy to Cloudflare Workers
-npm run deploy
+npm run deploy                                    # site Worker (fansnap)
+npx wrangler deploy -c processor/wrangler.jsonc   # processor Worker (fansnap-processor)
 ```
 
-This runs the OpenNext build, then `wrangler deploy`. The worker is reachable at `https://fansnap.<your-cf-subdomain>.workers.dev` (and any custom domain bound to it).
+`npm run deploy` runs `prebuild-mocks` first: build info, mock photo processing, mock sync and the static face index. The processor is a separate Worker and must be deployed on its own whenever `processor/` changes.
 
-The Cloudflare token currently used has scopes for D1, Pages, Workers, KV, Workers AI, Queues, Email, and Browser. **R2 scope must be added** before Fatia 2 (photo uploads).
+### Migrations
+
+Migrations use `ALTER TABLE ADD COLUMN` and are **not idempotent**. Run each one once, remote and local:
+
+```bash
+npx wrangler d1 execute fansnap --remote --file db/migrate-00N-xxx.sql
+npx wrangler d1 execute fansnap --local  --file db/migrate-00N-xxx.sql
+```
+
+Applied so far: 002 profiles, 003 onboarding, 004 pipeline, 005 onboarding expiry, 006 orders, 007 watermark.
+
+### Opening the site to the public
+
+Flip `SITE_LIVE` to `true` in `src/lib/launch.ts` and deploy. It is a build-time constant; there is no runtime toggle.
+
+---
 
 ## Project layout
 
@@ -70,45 +115,48 @@ The Cloudflare token currently used has scopes for D1, Pages, Workers, KV, Worke
 fansnap/
 ├─ src/
 │  ├─ app/
-│  │  ├─ layout.tsx           # html shell + Space Grotesk / JetBrains Mono fonts
-│  │  ├─ page.tsx             # mounts FanSnapApp (Fatia 1: single client component)
-│  │  ├─ globals.css          # reset + keyframes (pulse, fadeUp, rotate-line)
+│  │  ├─ page.tsx                      # home (FanSnapApp SPA)
+│  │  ├─ eventos/[code]/               # event page
+│  │  ├─ aplica/ fotografos/ marcas/   # landings
+│  │  ├─ fotografos/dashboard/         # photographer dashboard + upload
+│  │  ├─ onboarding/[token]/           # photographer onboarding
+│  │  ├─ pedidos/                      # order lookup + re-download
+│  │  ├─ mapa/                         # internal nav hub (preview cookie only)
+│  │  ├─ admin/                        # events, photographers, applications, fans
 │  │  └─ api/
-│  │     └─ scan/route.ts     # POST /api/scan stub (Fatia 3: real Rekognition)
-│  ├─ components/
-│  │  └─ FanSnapApp.tsx       # ported prototype — 6 screens, theme + lang state
-│  └─ lib/
-│     ├─ theme.ts             # design tokens (dark + light)
-│     ├─ i18n.ts              # EN / PT / ES copy dictionary
-│     └─ mock.ts              # mock events + photos + product catalog (Fatia 1 only)
-├─ db/
-│  └─ schema.sql              # D1 schema — 3 business_models + commission tiers
-├─ public/
-│  └─ _headers                # long-cache for /_next/static/*
-├─ wrangler.jsonc             # Worker config (bindings stubbed, ready for Fatia 2)
-├─ open-next.config.ts        # OpenNext adapter config (no R2 cache yet)
-├─ next.config.ts             # initOpenNextCloudflareForDev() bootstraps bindings in dev
-└─ package.json               # scripts: dev / build / lint / preview / deploy / cf-typegen
+│  │     ├─ admin/*                    # D1 CRUD for the admin
+│  │     ├─ photographer/uploads       # init / PUT stream / complete (enqueue)
+│  │     ├─ orders                     # create order (free_sponsored rail)
+│  │     ├─ download                   # signed link -> clean original
+│  │     ├─ photos/preview             # watermarked preview from R2
+│  │     ├─ photographers/apply|refer  # /aplica form + referral
+│  │     ├─ fans/register  brands/contact  onboarding  preview
+│  │     └─ scan                       # Fatia 1 stub (unused by the real flow)
+│  ├─ components/                      # FanSnapApp, landings, dashboard, admin/*
+│  └─ lib/                             # theme, i18n, mock, cart, db, email, sign,
+│                                      # gate + launch, face-recognition, photo-manifest
+├─ processor/                          # fansnap-processor Worker (queue consumer)
+│  ├─ src/index.ts                     # resize + watermark + publish
+│  └─ src/assets/wm-tile-{suave,media,forte}.png
+├─ db/                                 # schema.sql + migrate-00N + seed-events.sql
+├─ scripts/                            # process-photos, sync-mock-photos, build-face-index,
+│                                      # diagnose-match, write-build-info
+├─ docs/
+│  ├─ roadmap-real-pipeline.md         # execution plan, phase status, decisions
+│  └─ photographers-landing-brief.md   # original brief for /aplica (built)
+├─ public/                             # mock photos, face-index.json, face-api models
+├─ wrangler.jsonc                      # site Worker (D1, R2, Queue producer, Email)
+├─ open-next.config.ts  next.config.ts
+└─ package.json
 ```
 
-## What's intentionally not done yet (and why)
+## Next steps
 
-- **Real per-event URLs** (`/event/[code]`, `/gallery/[photoId]`). The prototype was SPA-state; deep-linking lands once the data is real (Fatia 2).
-- **Auth.** Adds friction; Fatia 1 is for showing the flow to promoters, not for actual purchases.
-- **Cart / checkout.** Locked to Fatia 3 alongside Stripe + Conekta integration.
-- **Rekognition.** Stubbed in `/api/scan`. Plugging it in needs the AWS account + the per-event FaceCollection lifecycle, which is a chunk of work that belongs in its own slice.
-- **R2 photo storage.** Token scope needs to be added by the workspace admin.
+In order of leverage (details in the roadmap):
 
-## Roadmap
-
-| Slice | What ships |
-|---|---|
-| **Fatia 1** (now) | Demo-quality public site, mock data, deployed |
-| Fatia 2 | D1 wired, real event admin, R2 photo uploads, photographer dashboard |
-| Fatia 3 | AWS Rekognition matching, Stripe + Conekta/OXXO checkout, sponsored-event variant |
-| Fatia 4 | Photographer commissions UI + payouts, admin metrics, B2B lead pipeline |
-| Fatia 5+ | Multi-country, marathon vertical, SDK for embed-in-promoter-app |
-
----
-
-🤖 _Initial scaffold + prototype port built with Claude Code._
+1. **Fase 2b**: face indexing for live events (needs Docker Desktop for the container image and a Cloudflare plan with Containers).
+2. **Fase 3**: per-event face index endpoint from D1 + `scans` / `scan_matches` logging.
+3. **Fase 6**: biometric consent step before the selfie + legal pages (required before opening in MX).
+4. **Fase 5**: magic-link auth; photographer dashboard on real data.
+5. **#43**: Cloudflare Access on `/admin`.
+6. Confirm Email Sending onboarding for `betofabri.com` so receipts actually go out.

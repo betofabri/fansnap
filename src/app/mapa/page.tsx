@@ -68,6 +68,11 @@ const GROUPS: Group[] = [
 ];
 
 // GET endpoints that return JSON — handy to poke at during dev.
+const INTERNAL: Link[] = [
+  { path: "/fansnap/roadmap", label: "Roadmap", desc: "Fases, real x simulado, decisões, próximos passos" },
+  { path: "/fansnap/mapa", label: "Mapa", desc: "Esta página" },
+];
+
 const APIS: Link[] = [
   { path: "/fansnap/api/admin/photographers", label: "GET photographers", desc: "Roster (JSON)" },
   { path: "/fansnap/api/admin/fans", label: "GET fans", desc: "Fans (JSON)" },
@@ -115,6 +120,7 @@ export default async function MapaPage() {
             items={g.title === "Site público" ? [...g.items, ...eventItems] : g.items} />
         ))}
 
+        <Section title="Interno" accent={c.warn} items={INTERNAL} />
         <Section title="APIs (GET · JSON)" accent={c.ok} items={APIS} muted />
       </main>
     </div>
