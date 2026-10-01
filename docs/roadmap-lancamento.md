@@ -3,23 +3,23 @@
 > Escrito 01/out/2026. Anda em paralelo ao roadmap técnico
 > (`docs/roadmap-real-pipeline.md`). Versão navegável em
 > `betofabri.com/fansnap/roadmap` (cookie de preview).
-> Alvo: **piloto num evento OCESA no 1º trimestre de 2027**, escala na
+> Alvo: **piloto num evento OCESA em janeiro de 2027**, escala na
 > **CCXP MX em abril de 2027**.
 
 Status: só a campanha de fotógrafos está em andamento (landing `/aplica` no ar).
 Todo o resto pendente.
 
-## Agora (out a nov 2026)
+## Agora (out 2026)
 
 | Marco | Status | Depende do produto |
 |---|---|---|
 | Negociação com a OCESA: % sobre vendas, exclusividade por evento, quem fatura no MX, formato do evento patrocinado | Pendente | Sistema já suporta os três modelos; só falta o número |
 | Registro da marca FanSnap: IMPI (MX) + INPI (BR), domínios fansnap.com.mx e fansnap.mx | Pendente | |
 | Perfis da plataforma nas redes: reservar @fansnap (IG, TikTok, X, LinkedIn), bio, identidade, primeiros posts | Pendente | |
-| Campanha de recrutamento de fotógrafos: divulgar /aplica em redes, grupos de fotógrafos da CDMX, indicação. Meta sugerida: 50 cadastros até dezembro | Em andamento | Landing e fila de candidaturas no admin prontas |
+| Campanha de recrutamento de fotógrafos: divulgar /aplica em redes, grupos de fotógrafos da CDMX, indicação. Meta sugerida: 50 cadastros até novembro | Em andamento | Landing e fila de candidaturas no admin prontas |
 | Jurídico MX: escritório pra aviso de privacidade biométrico (LFPDPPP), termos de uso e contrato do fotógrafo | Pendente | Textos entram na Fase 6 |
 
-## Pré-piloto (dez 2026 a jan 2027)
+## Pré-piloto (nov a dez 2026)
 
 | Marco | Status | Depende do produto |
 |---|---|---|
@@ -29,7 +29,7 @@ Todo o resto pendente.
 | Material no evento: sinalização, QR code, roteiro de ativação, canal de atendimento (WhatsApp/email) | Pendente | |
 | Abrir o site ao público (flip `SITE_LIVE`) | Pendente | Fases 2b, 3, 6 e #43 |
 
-## Piloto OCESA (1º trimestre 2027)
+## Piloto OCESA (jan 2027)
 
 | Marco | Status | Depende do produto |
 |---|---|---|
@@ -79,13 +79,27 @@ Validar com RH e com os números da OCESA antes de usar fora deste doc.
 
 Comercial e marketing podem ser absorvidos pelo time atual no começo. TI é o único integral desde já.
 
-## Linha do tempo até o MVP (01/out/2026)
+## Timeline geral (01/out/2026)
 
-MVP = piloto num evento OCESA, março de 2027. Percentual que falta por frente,
-contando marcos até o MVP (feito = 1, em andamento = 0,5).
+MVP = piloto em evento OCESA, janeiro de 2027. Uma etapa por linha, com o
+percentual que falta. Percentual da frente = média das etapas até o MVP.
 
-| Frente | Até o MVP | Pós-MVP | Falta |
+| Frente | Etapa | Quando | Falta |
 |---|---|---|---|
-| Técnico | Armazenamento, upload, marca d'água e compra (feitos, jul 26); leitura de rostos (nov, bloqueada); busca por selfie + consentimento (dez); login, admin, emails (jan 27); abrir o site (fev) | Pagamento real e escala CCXP MX (abr 27); busca em escala e SDK (2027+) | 59% |
-| Negócio | OCESA (out); budget, marca, jurídico (nov); evento piloto (dez); preço e empresa (jan); fotógrafos credenciados (fev) | Go/no-go e patrocínios CCXP MX (abr 27); plano LATAM | 100% |
-| Marketing | Landing /aplica (feita); campanha de recrutamento (em andamento); redes (nov); conteúdo (dez); material no venue e anúncio (fev) | Comunicação pós-evento e campanha CCXP MX (abr 27); LATAM | 75% |
+| Técnico (falta 77%) | Upload, marca d'água, compra e entrega | jul 26 | 0% |
+| | Leitura de rostos + busca por selfie | out a nov 26 | 100% |
+| | Consentimento biométrico + legal | nov a dez 26 | 100% |
+| | Login, trava do admin, emails | dez 26 | 85% |
+| | Abrir o site + piloto | jan 27 | 100% |
+| | Pós-MVP: pagamento real (fev a mar), escala CCXP MX (abr), busca em escala + SDK (mai a jun) | | |
+| Negócio (falta 100%) | Negociação com a OCESA | out a nov 26 | 100% |
+| | Budget, time, marca, jurídico | out a dez 26 | 100% |
+| | Evento piloto, preço, empresa que fatura | nov a dez 26 | 100% |
+| | Fotógrafos credenciados | dez 26 a jan 27 | 100% |
+| | Piloto OCESA | jan 27 | 100% |
+| | Pós-MVP: go/no-go + patrocínios CCXP MX (fev a abr), plano LATAM (mai a jun) | | |
+| Marketing (falta 90%) | Landing + recrutamento de fotógrafos | jul a dez 26 | 60% |
+| | Redes + conteúdo pré-lançamento | nov a dez 26 | 100% |
+| | Material no venue + anúncio do piloto | dez 26 a jan 27 | 100% |
+| | Piloto OCESA | jan 27 | 100% |
+| | Pós-MVP: pós-evento + campanha CCXP MX (fev a abr), lançamento LATAM (mai a jun) | | |

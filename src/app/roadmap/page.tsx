@@ -41,82 +41,63 @@ const STATUS: Record<Status, { label: string; color: string }> = {
 };
 
 // ─── 00 Timeline ────────────────────────────────────────────────────────────
-// Three lanes, one column per month. MVP = piloto OCESA (mar 2027). Columns
-// after it are "pós-MVP". The % per lane counts milestones up to the MVP:
-// done = 1, em andamento = 0.5, resto = 0.
+// Gantt: one column per month, one bar per stage (start..end, inclusive).
+// pct = how much of the stage is done. MVP = piloto OCESA, jan 2027.
 
-const MONTHS = ["jul", "ago", "set", "out", "nov", "dez", "jan", "fev", "mar", "abr", "mai", "jun", "2027+"];
-const YEAR_BREAK = 6;   // index of jan 2027
+const MONTHS = ["jul", "ago", "set", "out", "nov", "dez", "jan", "fev", "mar", "abr", "mai", "jun"];
+const YEAR_BREAK = 6;   // jan 2027
 const TODAY = 3;        // out 2026
-const MVP = 8;          // mar 2027
+const MVP = 6;          // jan 2027
 
-type TMilestone = { m: number; label: string; status: Status };
-type Lane = { title: string; accent: string; items: TMilestone[] };
+type Stage = { label: string; start: number; end: number; pct: number };
+type Lane = { title: string; accent: string; stages: Stage[] };
 
 const TIMELINE: Lane[] = [
   {
     title: "Técnico",
     accent: c.accent,
-    items: [
-      { m: 0, label: "Armazenamento das fotos", status: "done" },
-      { m: 0, label: "Upload real do fotógrafo", status: "done" },
-      { m: 0, label: "Marca d'água automática", status: "done" },
-      { m: 0, label: "Compra e entrega do original", status: "done" },
-      { m: 4, label: "Leitura de rostos (2b)", status: "blocked" },
-      { m: 5, label: "Busca por selfie em evento real", status: "pending" },
-      { m: 5, label: "Consentimento biométrico + legal", status: "pending" },
-      { m: 6, label: "Login sem senha", status: "pending" },
-      { m: 6, label: "Trancar o admin", status: "pending" },
-      { m: 6, label: "Emails automáticos", status: "partial" },
-      { m: 7, label: "Abrir o site ao público", status: "pending" },
-      { m: 8, label: "Piloto OCESA", status: "pending" },
-      { m: 9, label: "Pagamento real (cartão + OXXO)", status: "pending" },
-      { m: 9, label: "Escala CCXP MX", status: "pending" },
-      { m: 12, label: "Busca em escala (server) e SDK", status: "pending" },
+    stages: [
+      { label: "Upload, marca d'água, compra e entrega", start: 0, end: 0, pct: 100 },
+      { label: "Leitura de rostos + busca por selfie", start: 3, end: 4, pct: 0 },
+      { label: "Consentimento biométrico + legal", start: 4, end: 5, pct: 0 },
+      { label: "Login, trava do admin, emails", start: 5, end: 5, pct: 15 },
+      { label: "Abrir o site + piloto", start: 6, end: 6, pct: 0 },
+      { label: "Pagamento real", start: 7, end: 8, pct: 0 },
+      { label: "Escala CCXP MX", start: 9, end: 9, pct: 0 },
+      { label: "Busca em escala + SDK", start: 10, end: 11, pct: 0 },
     ],
   },
   {
     title: "Negócio",
     accent: c.premium,
-    items: [
-      { m: 3, label: "Negociação com a OCESA", status: "pending" },
-      { m: 4, label: "Budget e time inicial", status: "pending" },
-      { m: 4, label: "Marca e domínios", status: "pending" },
-      { m: 4, label: "Jurídico MX", status: "pending" },
-      { m: 5, label: "Evento piloto definido", status: "pending" },
-      { m: 6, label: "Preço, IVA e empresa que fatura", status: "pending" },
-      { m: 7, label: "Fotógrafos credenciados", status: "pending" },
-      { m: 8, label: "Piloto OCESA", status: "pending" },
-      { m: 9, label: "Go/no-go CCXP MX", status: "pending" },
-      { m: 9, label: "Patrocínios CCXP MX", status: "pending" },
-      { m: 12, label: "Plano LATAM", status: "pending" },
+    stages: [
+      { label: "Negociação com a OCESA", start: 3, end: 4, pct: 0 },
+      { label: "Budget, time, marca, jurídico", start: 3, end: 5, pct: 0 },
+      { label: "Evento piloto, preço, empresa que fatura", start: 4, end: 5, pct: 0 },
+      { label: "Fotógrafos credenciados", start: 5, end: 6, pct: 0 },
+      { label: "Piloto OCESA", start: 6, end: 6, pct: 0 },
+      { label: "Go/no-go + patrocínios CCXP MX", start: 7, end: 9, pct: 0 },
+      { label: "Plano LATAM", start: 10, end: 11, pct: 0 },
     ],
   },
   {
     title: "Marketing",
     accent: c.magenta,
-    items: [
-      { m: 0, label: "Landing /aplica no ar", status: "done" },
-      { m: 3, label: "Campanha de recrutamento", status: "progress" },
-      { m: 4, label: "Perfis @fansnap nas redes", status: "pending" },
-      { m: 5, label: "Conteúdo pré-lançamento", status: "pending" },
-      { m: 7, label: "Material no venue", status: "pending" },
-      { m: 7, label: "Anúncio do piloto", status: "pending" },
-      { m: 8, label: "Piloto OCESA", status: "pending" },
-      { m: 9, label: "Comunicação pós-evento ao fã", status: "pending" },
-      { m: 9, label: "Campanha CCXP MX", status: "pending" },
-      { m: 12, label: "Lançamento LATAM", status: "pending" },
+    stages: [
+      { label: "Landing + recrutamento de fotógrafos", start: 0, end: 5, pct: 40 },
+      { label: "Redes + conteúdo pré-lançamento", start: 4, end: 5, pct: 0 },
+      { label: "Material no venue + anúncio do piloto", start: 5, end: 6, pct: 0 },
+      { label: "Piloto OCESA", start: 6, end: 6, pct: 0 },
+      { label: "Pós-evento + campanha CCXP MX", start: 7, end: 9, pct: 0 },
+      { label: "Lançamento LATAM", start: 10, end: 11, pct: 0 },
     ],
   },
 ];
 
-const WEIGHT: Record<Status, number> = { done: 1, progress: 0.5, partial: 0.5, blocked: 0, pending: 0, scope: 0 };
-
 function remaining(lane: Lane): number {
-  const upToMvp = lane.items.filter((i) => i.m < MVP);
+  const upToMvp = lane.stages.filter((st) => st.start <= MVP);
   if (!upToMvp.length) return 100;
-  const done = upToMvp.reduce((n, i) => n + WEIGHT[i.status], 0);
-  return Math.round(100 - (done / upToMvp.length) * 100);
+  return Math.round(upToMvp.reduce((n, st) => n + (100 - st.pct), 0) / upToMvp.length);
 }
 
 // ─── 01 Produto ─────────────────────────────────────────────────────────────
@@ -138,7 +119,7 @@ const PHASES: Phase[] = [
     title: "Preparar onde as fotos vão morar",
     status: "done",
     when: "jul 2026",
-    plain: "Criamos o armazenamento das fotos na nuvem e a marcação que separa os eventos de demonstração dos eventos reais. Nada mudou pra quem vê o site.",
+    plain: "Criamos o armazenamento das fotos na nuvem e a marcação que separa os eventos de demonstração dos eventos reais.",
     techTitle: "Provisão + flag",
     items: [
       "Bucket R2 fansnap-photos + binding PHOTOS",
@@ -279,7 +260,7 @@ const PHASES: Phase[] = [
     id: "$",
     title: "Pagamento de verdade e repasse ao fotógrafo",
     status: "scope",
-    plain: "Fica pra depois, de propósito. Cartão, OXXO e repasse ao fotógrafo entram quando o modelo comercial estiver fechado. O sistema já está preparado pra receber.",
+    plain: "Fora desta rodada. Cartão, OXXO e repasse ao fotógrafo entram quando o modelo comercial estiver fechado. O sistema já está preparado pra receber.",
     techTitle: "Gateway de pagamento + payout",
     items: ["Stripe / MercadoPago / OXXO: quando entrar, só muda como orders.status flipa pra paid"],
   },
@@ -299,29 +280,29 @@ type Horizon = { title: string; when: string; accent: string; items: Milestone[]
 const LAUNCH: Horizon[] = [
   {
     title: "Agora",
-    when: "out a nov 2026",
+    when: "out 2026",
     accent: c.accent,
     items: [
       {
         title: "Negociação com a OCESA",
         status: "pending",
-        body: "Fechar a porcentagem sobre as vendas, exclusividade por evento, quem fatura no México e como funciona o evento patrocinado. Isso define o preço final da foto.",
+        body: "Fechar a porcentagem sobre as vendas, exclusividade por evento, quem fatura no México e como funciona o evento patrocinado. Define o preço final da foto.",
         dep: "O sistema já suporta os três modelos de negócio; só precisa do número.",
       },
       {
         title: "Registro da marca FanSnap",
         status: "pending",
-        body: "Pedido no IMPI (México) e INPI (Brasil), mais os domínios fansnap.com.mx e fansnap.mx. Começar agora porque leva meses.",
+        body: "Pedido no IMPI (México) e INPI (Brasil), mais os domínios fansnap.com.mx e fansnap.mx. Leva meses.",
       },
       {
         title: "Perfis da plataforma nas redes",
         status: "pending",
-        body: "Reservar o @fansnap no Instagram, TikTok, X e LinkedIn, montar bio, identidade e os primeiros posts. Serve de prova social pros fotógrafos e pra OCESA.",
+        body: "Reservar o @fansnap no Instagram, TikTok, X e LinkedIn, montar bio, identidade e os primeiros posts. ",
       },
       {
         title: "Campanha de recrutamento de fotógrafos",
         status: "progress",
-        body: "A landing de pré-cadastro em /aplica está no ar. Falta divulgar: redes, grupos de fotógrafos de eventos na CDMX, indicação entre pares. Meta sugerida: 50 cadastros até dezembro.",
+        body: "A landing de pré-cadastro em /aplica está no ar. Falta divulgar: redes, grupos de fotógrafos de eventos na CDMX, indicação entre pares. Meta sugerida: 50 cadastros até novembro.",
         dep: "Landing e fila de candidaturas no admin já prontas.",
       },
       {
@@ -334,7 +315,7 @@ const LAUNCH: Horizon[] = [
   },
   {
     title: "Pré-piloto",
-    when: "dez 2026 a jan 2027",
+    when: "nov a dez 2026",
     accent: c.premium,
     items: [
       {
@@ -368,7 +349,7 @@ const LAUNCH: Horizon[] = [
   },
   {
     title: "Piloto OCESA",
-    when: "1º trimestre 2027",
+    when: "jan 2027",
     accent: c.magenta,
     items: [
       {
@@ -452,7 +433,7 @@ const NEXT_STEPS: Column[] = [
     items: [
       { text: "Fechar a porcentagem e o modelo com a OCESA (quem fatura, exclusividade, evento patrocinado)" },
       { text: "Definir budget e time inicial mínimo", href: "#time" },
-      { text: "Escolher o evento piloto da OCESA e a data" },
+      { text: "Escolher o evento piloto da OCESA (janeiro de 2027)" },
       { text: "Registrar a marca FanSnap (IMPI + INPI) e os domínios" },
       { text: "Contratar jurídico no México: privacidade biométrica, termos, contrato do fotógrafo" },
       { text: "Definir preço por foto e pacote, IVA e a empresa que fatura" },
@@ -522,13 +503,13 @@ export default async function RoadmapPage() {
         </div>
 
         {/* 00 Timeline */}
-        <SectionTitle id="timeline" n="00" title="Até o MVP e depois" accent={c.magenta}
-          sub="MVP = piloto num evento OCESA, março de 2027. Três frentes, mês a mês. A barra de cada frente mostra quanto falta até o MVP." />
+        <SectionTitle id="timeline" n="00" title="Timeline Geral" accent={c.magenta}
+          sub="MVP: piloto em evento OCESA, janeiro de 2027. Uma barra por etapa, preenchida pelo que já está feito." />
         <Timeline />
 
         {/* 01 Próximos passos */}
         <SectionTitle id="proximos" n="01" title="Próximos passos" accent={c.ok}
-          sub="O que anda agora, em cada frente. Técnico vem do produto; negócio e marketing vêm da trilha de lançamento." />
+          sub="Prioridades por frente." />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 1, background: c.border, border: `1px solid ${c.border}`, marginBottom: 72 }}>
           {NEXT_STEPS.map((col) => (
             <div key={col.title} style={{ background: c.surface, padding: "18px 20px 20px" }}>
@@ -553,14 +534,14 @@ export default async function RoadmapPage() {
 
         {/* 02 Produto */}
         <SectionTitle id="produto" n="02" title="Produto" accent={c.accent}
-          sub="O que o sistema já faz e o que falta. Explicado sem jargão; o detalhe técnico abre em cada fase." />
+          sub="Fases do produto. Texto simples na frente, detalhe técnico em cada card." />
         <div style={{ display: "flex", flexDirection: "column", gap: 1, background: c.border, border: `1px solid ${c.border}`, marginBottom: 72 }}>
           {PHASES.map((p) => <PhaseCard key={p.id} p={p} />)}
         </div>
 
         {/* 02 Lançamento */}
         <SectionTitle id="lancamento" n="03" title="Lançamento" accent={c.premium}
-          sub="O que precisa andar em paralelo ao desenvolvimento pra chegar no piloto da OCESA e escalar na CCXP MX. Onde um marco depende do produto, está indicado." />
+          sub="Marcos de negócio e marketing em paralelo ao produto. Dependência do produto indicada no card." />
         <div style={{ display: "flex", flexDirection: "column", gap: 28, marginBottom: 72 }}>
           {LAUNCH.map((h) => (
             <div key={h.title}>
@@ -579,7 +560,7 @@ export default async function RoadmapPage() {
 
         {/* 04 Time e budget */}
         <SectionTitle id="time" n="04" title="Time inicial mínimo e budget" accent={c.warn}
-          sub="Estrutura enxuta pra operar o piloto. Custos são estimativas de referência em USD por mês, pra validar com RH e com os números da OCESA." />
+          sub="Time para operar o piloto. Custos em USD por mês, estimativa a validar." />
         <div style={{ border: `1px solid ${c.border}`, marginBottom: 20, overflowX: "auto" }}>
           <table className="rm-table">
             <thead>
@@ -630,11 +611,11 @@ export default async function RoadmapPage() {
           </table>
         </div>
         <p style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, lineHeight: 1.7, margin: "0 0 64px" }}>
-          Comercial e marketing podem ser absorvidos pelo time atual no começo. TI é o único integral desde já. Suporte sobe pra integral só nos dias de evento.
+          Comercial e marketing podem ser absorvidos pelo time atual no início. TI integral. Suporte integral só nos dias de evento.
         </p>
 
         {/* 05 Real vs simulated */}
-        <SectionTitle id="real" n="05" title="Real x simulado" accent={c.warn} sub="Apêndice técnico: o que já roda de verdade e o que ainda é demonstração." />
+        <SectionTitle id="real" n="05" title="Real x simulado" accent={c.warn} sub="O que roda de verdade e o que ainda é demonstração." />
         <div style={{ border: `1px solid ${c.border}`, marginBottom: 64, overflowX: "auto" }}>
           <table className="rm-table">
             <thead>
@@ -682,70 +663,82 @@ export default async function RoadmapPage() {
 }
 
 function Timeline() {
-  const cols = `150px repeat(${MONTHS.length}, minmax(96px, 1fr))`;
-  const colStyle = (i: number): React.CSSProperties => ({
-    borderLeft: `1px solid ${i === MVP ? c.magenta : i === YEAR_BREAK ? c.borderStrong : c.border}`,
-    background: i > MVP ? "rgba(244,244,242,0.025)" : i === TODAY ? "rgba(0,229,255,0.05)" : "transparent",
-  });
+  const N = MONTHS.length;
+  const pctLeft = (i: number) => `${(i / N) * 100}%`;
+  const markers = (
+    <>
+      <span style={{ position: "absolute", top: 0, bottom: 0, left: pctLeft(TODAY), width: 1, background: c.accent, opacity: 0.5 }} />
+      <span style={{ position: "absolute", top: 0, bottom: 0, left: pctLeft(YEAR_BREAK), width: 1, background: c.borderStrong }} />
+      <span style={{ position: "absolute", top: 0, bottom: 0, left: pctLeft(MVP + 1), width: 2, background: c.magenta }} />
+    </>
+  );
   return (
     <div style={{ border: `1px solid ${c.border}`, marginBottom: 72, overflowX: "auto" }}>
-      <div style={{ minWidth: 150 + MONTHS.length * 96 }}>
+      <div style={{ minWidth: 820 }}>
         {/* month header */}
-        <div style={{ display: "grid", gridTemplateColumns: cols, background: c.surface, borderBottom: `1px solid ${c.borderStrong}` }}>
-          <div style={{ padding: "10px 14px", fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, letterSpacing: "0.14em", textTransform: "uppercase" }}>Frente</div>
-          {MONTHS.map((mo, i) => (
-            <div key={mo} style={{ ...colStyle(i), padding: "10px 8px", fontFamily: FONT_MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: i === MVP ? c.magenta : i === TODAY ? c.accent : c.inkSoft, fontWeight: i === MVP || i === TODAY ? 700 : 500 }}>
-              {mo}{i === 0 ? " 26" : i === YEAR_BREAK ? " 27" : ""}
-              {i === TODAY && <span style={{ display: "block", fontSize: 9, color: c.accent, letterSpacing: "0.14em" }}>hoje</span>}
-              {i === MVP && <span style={{ display: "block", fontSize: 9, color: c.magenta, letterSpacing: "0.14em" }}>MVP</span>}
-              {i === MVP + 1 && <span style={{ display: "block", fontSize: 9, color: c.inkMute, letterSpacing: "0.14em" }}>pós-MVP</span>}
-            </div>
-          ))}
+        <div className="rm-gantt-row" style={{ background: c.surface, borderBottom: `1px solid ${c.borderStrong}` }}>
+          <div style={{ padding: "10px 14px", fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, letterSpacing: "0.14em", textTransform: "uppercase" }}>Etapa</div>
+          <div style={{ position: "relative", display: "grid", gridTemplateColumns: `repeat(${N}, 1fr)` }}>
+            {MONTHS.map((mo, i) => (
+              <div key={mo} style={{ padding: "10px 6px", fontFamily: FONT_MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: i === MVP ? c.magenta : i === TODAY ? c.accent : i > MVP ? c.inkMute : c.inkSoft, fontWeight: i === MVP || i === TODAY ? 700 : 500, borderLeft: `1px solid ${c.border}` }}>
+                {mo}{i === 0 ? " 26" : i === YEAR_BREAK ? " 27" : ""}
+                {i === TODAY && <span style={{ display: "block", fontSize: 9, letterSpacing: "0.14em" }}>hoje</span>}
+                {i === MVP && <span style={{ display: "block", fontSize: 9, letterSpacing: "0.14em" }}>MVP</span>}
+                {i === MVP + 1 && <span style={{ display: "block", fontSize: 9, letterSpacing: "0.14em" }}>pós-MVP</span>}
+              </div>
+            ))}
+          </div>
         </div>
-        {/* lanes */}
-        {TIMELINE.map((lane, li) => {
+
+        {TIMELINE.map((lane) => {
           const left = remaining(lane);
           return (
-            <div key={lane.title} style={{ display: "grid", gridTemplateColumns: cols, borderTop: li ? `1px solid ${c.border}` : "none", background: c.surface }}>
-              <div style={{ padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div key={lane.title}>
+              {/* lane summary */}
+              <div className="rm-gantt-row" style={{ background: c.surfaceHi, borderTop: `1px solid ${c.borderStrong}` }}>
+                <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 8, height: 8, background: lane.accent }} />
                   <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>{lane.title}</span>
                 </div>
-                <div style={{ height: 6, background: c.surfaceHi, border: `1px solid ${c.border}`, position: "relative" }}>
-                  <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${100 - left}%`, background: lane.accent }} />
-                </div>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color: c.inkSoft, letterSpacing: "0.06em" }}>
-                  <span style={{ color: lane.accent, fontWeight: 700, fontSize: 14 }}>{left}%</span> falta até o MVP
+                <div style={{ position: "relative", padding: "12px 10px", display: "flex", alignItems: "center", gap: 12 }}>
+                  {markers}
+                  <div style={{ flex: 1, height: 8, background: c.surface, border: `1px solid ${c.border}`, position: "relative", maxWidth: pctLeft(MVP + 1) }}>
+                    <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${100 - left}%`, background: lane.accent }} />
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: lane.accent, fontWeight: 700, whiteSpace: "nowrap", position: "relative" }}>falta {left}% até o MVP</span>
                 </div>
               </div>
-              {MONTHS.map((mo, i) => (
-                <div key={mo} style={{ ...colStyle(i), padding: "10px 6px", display: "flex", flexDirection: "column", gap: 4 }}>
-                  {lane.items.filter((it) => it.m === i).map((it) => {
-                    const st = STATUS[it.status];
-                    const isMvp = i === MVP;
-                    return (
-                      <div key={it.label} title={st.label} style={{
-                        borderLeft: `2px solid ${st.color}`, padding: "4px 6px", fontSize: 11, lineHeight: 1.3,
-                        color: it.status === "pending" ? c.inkSoft : c.ink, fontWeight: it.status === "done" || isMvp ? 600 : 400,
-                        background: isMvp ? "rgba(255,45,135,0.10)" : i > MVP ? "transparent" : "rgba(244,244,242,0.03)",
+              {/* stages */}
+              {lane.stages.map((st) => {
+                const post = st.start > MVP;
+                return (
+                  <div key={st.label} className="rm-gantt-row" style={{ background: c.surface, borderTop: `1px solid ${c.border}`, opacity: post ? 0.6 : 1 }}>
+                    <div style={{ padding: "9px 14px", fontSize: 12.5, lineHeight: 1.35, color: st.pct === 100 ? c.inkSoft : c.ink }}>{st.label}</div>
+                    <div style={{ position: "relative", height: 36 }}>
+                      {markers}
+                      <div title={`${st.pct}% feito`} style={{
+                        position: "absolute", top: 9, height: 18,
+                        left: pctLeft(st.start), width: `${((st.end - st.start + 1) / N) * 100}%`,
+                        background: c.surfaceHi, border: `1px solid ${post ? c.border : lane.accent}`, boxSizing: "border-box",
                       }}>
-                        {it.label}
+                        <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${st.pct}%`, background: lane.accent }} />
+                        <span style={{ position: "absolute", right: 5, top: 0, bottom: 0, display: "flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9.5, fontWeight: 700, color: st.pct === 100 ? c.bg : c.ink, letterSpacing: "0.04em" }}>
+                          {st.pct === 100 ? "ok" : `${100 - st.pct}%`}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
-              ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
-        {/* legend */}
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "10px 14px", borderTop: `1px solid ${c.border}`, background: c.surface, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: c.inkMute }}>
-          {(["done", "progress", "partial", "blocked", "pending"] as Status[]).map((k) => (
-            <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 2, height: 12, background: STATUS[k].color }} />{STATUS[k].label}
-            </span>
-          ))}
+
+        <div style={{ display: "flex", gap: 18, flexWrap: "wrap", padding: "10px 14px", borderTop: `1px solid ${c.borderStrong}`, background: c.surface, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: c.inkMute }}>
+          <span>Barra = duração</span>
+          <span>Preenchido = feito</span>
+          <span>Número = falta</span>
+          <span style={{ color: c.magenta }}>Linha magenta = MVP</span>
         </div>
       </div>
     </div>
@@ -832,6 +825,7 @@ function MilestoneCard({ m }: { m: Milestone }) {
 const css = `
   .rm-nav { color: ${c.inkSoft}; text-decoration: none; }
   .rm-nav:hover { color: ${c.accent}; }
+  .rm-gantt-row { display: grid; grid-template-columns: 240px 1fr; }
   .rm-link { color: ${c.ink}; text-decoration: underline; text-decoration-color: ${c.premium}; text-underline-offset: 3px; }
   .rm-link:hover { color: ${c.premium}; }
   .rm-phase:hover, .rm-milestone:hover { background: ${c.surfaceHi} !important; }
