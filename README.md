@@ -142,7 +142,8 @@ fansnap/
 ├─ scripts/                            # process-photos, sync-mock-photos, build-face-index,
 │                                      # diagnose-match, write-build-info
 ├─ docs/
-│  ├─ roadmap-real-pipeline.md         # execution plan, phase status, decisions
+│  ├─ roadmap-real-pipeline.md         # technical plan, phase status, decisions
+│  ├─ roadmap-lancamento.md            # business track: photographers, brand, OCESA, pilot
 │  └─ photographers-landing-brief.md   # original brief for /aplica (built)
 ├─ public/                             # mock photos, face-index.json, face-api models
 ├─ wrangler.jsonc                      # site Worker (D1, R2, Queue producer, Email)

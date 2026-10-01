@@ -69,7 +69,7 @@ const GROUPS: Group[] = [
 
 // GET endpoints that return JSON — handy to poke at during dev.
 const INTERNAL: Link[] = [
-  { path: "/fansnap/roadmap", label: "Roadmap", desc: "Fases, real x simulado, decisões, próximos passos" },
+  { path: "/fansnap/roadmap", label: "Roadmap", desc: "Produto (leigo + técnico), lançamento, real x simulado, decisões" },
   { path: "/fansnap/mapa", label: "Mapa", desc: "Esta página" },
 ];
 
