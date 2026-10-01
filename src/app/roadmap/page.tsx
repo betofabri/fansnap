@@ -1,13 +1,15 @@
 // FanSnap · Roadmap — /fansnap/roadmap
 //
-// Two tracks side by side:
-//   01 Produto    — the technical phases from docs/roadmap-real-pipeline.md,
+// Opens with the macro next steps in three columns (técnico, negócio,
+// marketing), then two tracks:
+//   02 Produto    — the technical phases from docs/roadmap-real-pipeline.md,
 //                   explained in plain language first, with the technical
 //                   detail (items + verification) behind a native <details>.
-//   02 Lançamento — the business track that runs in parallel
+//   03 Lançamento — the business track that runs in parallel
 //                   (docs/roadmap-lancamento.md): photographers, brand, OCESA,
 //                   legal, pilot event, scale at CCXP MX.
-// Then the technical appendix: real vs simulated, locked decisions, next steps.
+//   04 Time       — minimum team + budget estimate for the pilot.
+// Then the technical appendix: real vs simulated and locked decisions.
 //
 // Internal: gated behind the PREVIEW cookie (same rule as /mapa) and noindex.
 // Keep the data below in sync with the two markdown docs.
@@ -350,22 +352,70 @@ const DECISIONS = [
   { n: "4", title: "Entrega sem gateway: rail free_sponsored", body: "Executado na Fase 4. Pedido nasce paid por stub; o gateway, quando entrar, só muda como esse status flipa." },
 ];
 
-const NEXT = [
-  "Destravar a fase 2b (Docker Desktop + plano Containers) e fechar a fase 3",
-  "Fase 6: consentimento e páginas legais, pré-requisito de abrir o site no MX",
-  "Fase 5: magic-link e dashboard do fotógrafo em dado real",
-  "#43: Cloudflare Access no /admin",
-  "Confirmar Email Sending no domínio e completar a fase 7",
+type Column = { title: string; accent: string; items: { text: string; status?: Status; href?: string }[] };
+
+const NEXT_STEPS: Column[] = [
+  {
+    title: "Técnico",
+    accent: c.accent,
+    items: [
+      { text: "Destravar a fase 2b (Docker Desktop + plano Containers) e fechar a fase 3", status: "blocked" },
+      { text: "Fase 6: consentimento e páginas legais, pré-requisito de abrir o site no MX" },
+      { text: "Fase 5: magic-link e dashboard do fotógrafo em dado real" },
+      { text: "#43: Cloudflare Access no /admin" },
+      { text: "Confirmar Email Sending no domínio e completar a fase 7", status: "partial" },
+    ],
+  },
+  {
+    title: "Negócio",
+    accent: c.premium,
+    items: [
+      { text: "Fechar a porcentagem e o modelo com a OCESA (quem fatura, exclusividade, evento patrocinado)" },
+      { text: "Definir budget e time inicial mínimo", href: "#time" },
+      { text: "Escolher o evento piloto da OCESA e a data" },
+      { text: "Registrar a marca FanSnap (IMPI + INPI) e os domínios" },
+      { text: "Contratar jurídico no México: privacidade biométrica, termos, contrato do fotógrafo" },
+      { text: "Definir preço por foto e pacote, IVA e a empresa que fatura" },
+    ],
+  },
+  {
+    title: "Marketing",
+    accent: c.magenta,
+    items: [
+      { text: "Reservar o @fansnap nas redes e publicar a identidade" },
+      { text: "Campanha de recrutamento de fotógrafos a partir do /aplica", status: "progress" },
+      { text: "Plano de conteúdo pré-lançamento: bastidores, fotógrafos do roster, como funciona" },
+      { text: "Material de ativação no venue: QR code, sinalização, roteiro" },
+      { text: "Anúncio do piloto com a OCESA: release e kit de imprensa" },
+      { text: "Comunicação pós-evento ao fã: email de fotos prontas e redes" },
+    ],
+  },
+];
+
+type Role = { role: string; what: string; dedication: string; cost: string };
+
+// Estimativas de referência para o período do piloto (6 meses), em USD/mês.
+// Validar com RH e com os números da OCESA antes de usar fora daqui.
+const TEAM: Role[] = [
+  { role: "Comercial", what: "Negociação OCESA, patrocínios, pricing, parceiros de venue", dedication: "Meio período", cost: "1.500 a 2.500" },
+  { role: "Suporte técnico (atendimento)", what: "Atendimento ao fã por WhatsApp e email, pedidos, downloads, reembolsos", dedication: "Meio período, integral nos dias de evento", cost: "800 a 1.200" },
+  { role: "Suporte a fotógrafos", what: "Credenciamento, treino de upload, acompanhamento no evento, dúvidas de pagamento", dedication: "Meio período, integral nos dias de evento", cost: "1.000 a 1.500" },
+  { role: "Marketing", what: "Redes, campanha de recrutamento, material no venue, imprensa", dedication: "Meio período", cost: "1.200 a 2.000" },
+  { role: "TI (desenvolvimento)", what: "Fases 2b a 7, operação do pipeline, plantão no evento", dedication: "Integral", cost: "3.000 a 5.000" },
+];
+
+const BUDGET_OTHER = [
+  { item: "Mídia paga (recrutamento + pré-lançamento)", cost: "500 a 1.000 por mês" },
+  { item: "Infra Cloudflare (Workers, R2, D1, Queues, Containers)", cost: "100 a 300 por mês" },
+  { item: "Jurídico MX (uma vez)", cost: "3.000 a 6.000" },
+  { item: "Registro de marca IMPI + INPI + domínios (uma vez)", cost: "1.000 a 2.000" },
+  { item: "Material no venue do piloto (uma vez)", cost: "500 a 1.500" },
 ];
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default async function RoadmapPage() {
   if (!(await hasPreviewCookie())) notFound();
-
-  const count = (s: Status) => PHASES.filter((p) => p.status === s).length;
-  const launchTotal = LAUNCH.reduce((n, h) => n + h.items.length, 0);
-  const launchStarted = LAUNCH.reduce((n, h) => n + h.items.filter((i) => i.status !== "pending").length, 0);
 
   return (
     <div style={{ background: c.bg, color: c.ink, minHeight: "100vh", fontFamily: FONT_GROTESK }}>
@@ -375,8 +425,10 @@ export default async function RoadmapPage() {
         <div style={{ maxWidth: 1040, margin: "0 auto", padding: "18px clamp(20px,4vw,40px)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <FanSnapLogo size="sm" />
           <nav style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap", fontFamily: FONT_MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            <a href="#proximos" className="rm-nav">Próximos passos</a>
             <a href="#produto" className="rm-nav">Produto</a>
             <a href="#lancamento" className="rm-nav">Lançamento</a>
+            <a href="#time" className="rm-nav">Time</a>
             <a href="#real" className="rm-nav">Técnico</a>
             <a href="/fansnap/mapa" className="rm-nav" style={{ color: c.inkMute }}>Mapa</a>
           </nav>
@@ -388,24 +440,40 @@ export default async function RoadmapPage() {
           Roadmap · interno · atualizado {UPDATED}
         </div>
 
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 1, background: c.border, border: `1px solid ${c.border}`, marginBottom: 56 }}>
-          <Stat value={count("done")} label="Fases prontas" color={c.ok} />
-          <Stat value={count("partial") + count("blocked") + count("pending")} label="Fases a fazer" color={c.inkSoft} />
-          <Stat value="2b" label="Bloqueio crítico" color={c.magenta} />
-          <Stat value={`${launchStarted}/${launchTotal}`} label="Lançamento iniciado" color={c.premium} />
-          <Stat value="1T 27" label="Piloto OCESA" color={c.warn} />
+        {/* 01 Próximos passos */}
+        <SectionTitle id="proximos" n="01" title="Próximos passos" accent={c.ok}
+          sub="O que anda agora, em cada frente. Técnico vem do produto; negócio e marketing vêm da trilha de lançamento." />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 1, background: c.border, border: `1px solid ${c.border}`, marginBottom: 72 }}>
+          {NEXT_STEPS.map((col) => (
+            <div key={col.title} style={{ background: c.surface, padding: "18px 20px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <span style={{ width: 8, height: 8, background: col.accent }} />
+                <h3 style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", margin: 0 }}>{col.title}</h3>
+              </div>
+              <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {col.items.map((it, i) => (
+                  <li key={it.text} style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: col.accent, fontWeight: 700, minWidth: 22 }}>{String(i + 1).padStart(2, "0")}</span>
+                    <span style={{ fontSize: 14, lineHeight: 1.5 }}>
+                      {it.href ? <a href={it.href} className="rm-link">{it.text}</a> : it.text}
+                      {it.status && <span style={{ marginLeft: 8, verticalAlign: "middle" }}><Pill status={it.status} /></span>}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
         </div>
 
-        {/* 01 Produto */}
-        <SectionTitle id="produto" n="01" title="Produto" accent={c.accent}
+        {/* 02 Produto */}
+        <SectionTitle id="produto" n="02" title="Produto" accent={c.accent}
           sub="O que o sistema já faz e o que falta. Explicado sem jargão; o detalhe técnico abre em cada fase." />
         <div style={{ display: "flex", flexDirection: "column", gap: 1, background: c.border, border: `1px solid ${c.border}`, marginBottom: 72 }}>
           {PHASES.map((p) => <PhaseCard key={p.id} p={p} />)}
         </div>
 
         {/* 02 Lançamento */}
-        <SectionTitle id="lancamento" n="02" title="Lançamento" accent={c.premium}
+        <SectionTitle id="lancamento" n="03" title="Lançamento" accent={c.premium}
           sub="O que precisa andar em paralelo ao desenvolvimento pra chegar no piloto da OCESA e escalar na CCXP MX. Onde um marco depende do produto, está indicado." />
         <div style={{ display: "flex", flexDirection: "column", gap: 28, marginBottom: 72 }}>
           {LAUNCH.map((h) => (
@@ -423,8 +491,64 @@ export default async function RoadmapPage() {
           ))}
         </div>
 
-        {/* 03 Real vs simulated */}
-        <SectionTitle id="real" n="03" title="Real x simulado" accent={c.warn} sub="Apêndice técnico: o que já roda de verdade e o que ainda é demonstração." />
+        {/* 04 Time e budget */}
+        <SectionTitle id="time" n="04" title="Time inicial mínimo e budget" accent={c.warn}
+          sub="Estrutura enxuta pra operar o piloto. Custos são estimativas de referência em USD por mês, pra validar com RH e com os números da OCESA." />
+        <div style={{ border: `1px solid ${c.border}`, marginBottom: 20, overflowX: "auto" }}>
+          <table className="rm-table">
+            <thead>
+              <tr>
+                <th>Função</th>
+                <th>O que faz</th>
+                <th>Dedicação</th>
+                <th>USD / mês</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TEAM.map((r) => (
+                <tr key={r.role}>
+                  <td style={{ fontWeight: 700, color: c.ink, whiteSpace: "nowrap" }}>{r.role}</td>
+                  <td>{r.what}</td>
+                  <td style={{ color: c.inkSoft, whiteSpace: "nowrap" }}>{r.dedication}</td>
+                  <td style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: c.warn, whiteSpace: "nowrap" }}>{r.cost}</td>
+                </tr>
+              ))}
+              <tr>
+                <td style={{ fontWeight: 700, color: c.ink }}>Time / mês</td>
+                <td colSpan={2} style={{ color: c.inkSoft }}>Soma das cinco funções</td>
+                <td style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: c.warn, fontWeight: 700, whiteSpace: "nowrap" }}>7.500 a 12.200</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{ border: `1px solid ${c.border}`, marginBottom: 12, overflowX: "auto" }}>
+          <table className="rm-table">
+            <thead>
+              <tr>
+                <th>Outros custos</th>
+                <th>USD</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BUDGET_OTHER.map((b) => (
+                <tr key={b.item}>
+                  <td>{b.item}</td>
+                  <td style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: c.warn, whiteSpace: "nowrap" }}>{b.cost}</td>
+                </tr>
+              ))}
+              <tr>
+                <td style={{ fontWeight: 700, color: c.ink }}>Piloto completo, 6 meses (time + mídia + infra + custos únicos)</td>
+                <td style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: c.warn, fontWeight: 700, whiteSpace: "nowrap" }}>53.000 a 90.000</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, lineHeight: 1.7, margin: "0 0 64px" }}>
+          Comercial e marketing podem ser absorvidos pelo time atual no começo. TI é o único integral desde já. Suporte sobe pra integral só nos dias de evento.
+        </p>
+
+        {/* 05 Real vs simulated */}
+        <SectionTitle id="real" n="05" title="Real x simulado" accent={c.warn} sub="Apêndice técnico: o que já roda de verdade e o que ainda é demonstração." />
         <div style={{ border: `1px solid ${c.border}`, marginBottom: 64, overflowX: "auto" }}>
           <table className="rm-table">
             <thead>
@@ -451,7 +575,7 @@ export default async function RoadmapPage() {
         </div>
 
         {/* 04 Decisions */}
-        <SectionTitle id="decisoes" n="04" title="Decisões batidas" accent={c.magenta} />
+        <SectionTitle id="decisoes" n="06" title="Decisões batidas" accent={c.magenta} />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 1, background: c.border, border: `1px solid ${c.border}`, marginBottom: 64 }}>
           {DECISIONS.map((d) => (
             <div key={d.n} style={{ background: c.surface, padding: "20px 22px" }}>
@@ -462,31 +586,11 @@ export default async function RoadmapPage() {
           ))}
         </div>
 
-        {/* 05 Next */}
-        <SectionTitle id="proximos" n="05" title="Próximos passos técnicos" accent={c.ok} />
-        <ol style={{ listStyle: "none", margin: 0, padding: 0, border: `1px solid ${c.border}`, marginBottom: 48 }}>
-          {NEXT.map((t, i) => (
-            <li key={t} style={{ display: "flex", gap: 18, padding: "16px 22px", borderTop: i ? `1px solid ${c.border}` : "none", background: c.surface, alignItems: "baseline" }}>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: c.ok, fontWeight: 700, minWidth: 24 }}>{String(i + 1).padStart(2, "0")}</span>
-              <span style={{ fontSize: 15, lineHeight: 1.5 }}>{t}</span>
-            </li>
-          ))}
-        </ol>
-
         <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.inkMute, lineHeight: 1.7, borderTop: `1px solid ${c.border}`, paddingTop: 18 }}>
           Princípio: tudo aditivo e atrás de flag. Eventos mock seguem intactos. Migrations rodam uma vez (remote + local).
           Não flipar SITE_LIVE antes da fase 6 e do #43. Fontes: docs/roadmap-real-pipeline.md e docs/roadmap-lancamento.md.
         </div>
       </main>
-    </div>
-  );
-}
-
-function Stat({ value, label, color }: { value: string | number; label: string; color: string }) {
-  return (
-    <div style={{ background: c.surface, padding: "18px 20px" }}>
-      <div style={{ fontFamily: FONT_MONO, fontSize: 32, fontWeight: 700, color, lineHeight: 1, letterSpacing: "-0.02em" }}>{value}</div>
-      <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color: c.inkMute, letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 8 }}>{label}</div>
     </div>
   );
 }
@@ -571,6 +675,8 @@ function MilestoneCard({ m }: { m: Milestone }) {
 const css = `
   .rm-nav { color: ${c.inkSoft}; text-decoration: none; }
   .rm-nav:hover { color: ${c.accent}; }
+  .rm-link { color: ${c.ink}; text-decoration: underline; text-decoration-color: ${c.premium}; text-underline-offset: 3px; }
+  .rm-link:hover { color: ${c.premium}; }
   .rm-phase:hover, .rm-milestone:hover { background: ${c.surfaceHi} !important; }
   .rm-details { margin-top: 12px; }
   .rm-details summary { list-style: none; cursor: pointer; font-family: ${FONT_MONO}; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: ${c.accent}; user-select: none; display: inline-block; }

@@ -43,3 +43,38 @@ Todo o resto pendente.
 |---|---|
 | FanSnap na CCXP MX: dezenas de fotógrafos, eventos patrocinados, comunicação integrada ao evento e ao app | Pendente |
 | Plano LATAM: próximos países e verticais (maratonas, esportes) | Pendente |
+
+## Próximos passos macro (01/out/2026)
+
+| Técnico | Negócio | Marketing |
+|---|---|---|
+| Destravar fase 2b e fechar fase 3 | Fechar % e modelo com a OCESA | Reservar @fansnap nas redes e publicar identidade |
+| Fase 6: consentimento + legal MX | Definir budget e time inicial mínimo | Campanha de recrutamento de fotógrafos (em andamento) |
+| Fase 5: magic-link | Escolher evento piloto e data | Plano de conteúdo pré-lançamento |
+| #43: Access no /admin | Registrar marca (IMPI + INPI) e domínios | Material de ativação no venue |
+| Email Sending + fase 7 | Contratar jurídico MX | Anúncio do piloto com a OCESA (release, kit de imprensa) |
+| | Definir preço, IVA e empresa que fatura | Comunicação pós-evento ao fã |
+
+## Time inicial mínimo e budget (estimativa de referência, USD/mês)
+
+Validar com RH e com os números da OCESA antes de usar fora deste doc.
+
+| Função | O que faz | Dedicação | USD/mês |
+|---|---|---|---|
+| Comercial | Negociação OCESA, patrocínios, pricing, venues | Meio período | 1.500 a 2.500 |
+| Suporte técnico (atendimento) | Fã por WhatsApp/email, pedidos, downloads, reembolsos | Meio período, integral em evento | 800 a 1.200 |
+| Suporte a fotógrafos | Credenciamento, treino de upload, acompanhamento no evento | Meio período, integral em evento | 1.000 a 1.500 |
+| Marketing | Redes, recrutamento, material no venue, imprensa | Meio período | 1.200 a 2.000 |
+| TI (desenvolvimento) | Fases 2b a 7, operação do pipeline, plantão no evento | Integral | 3.000 a 5.000 |
+| **Time / mês** | | | **7.500 a 12.200** |
+
+| Outros custos | USD |
+|---|---|
+| Mídia paga (recrutamento + pré-lançamento) | 500 a 1.000 / mês |
+| Infra Cloudflare (Workers, R2, D1, Queues, Containers) | 100 a 300 / mês |
+| Jurídico MX (uma vez) | 3.000 a 6.000 |
+| Marca IMPI + INPI + domínios (uma vez) | 1.000 a 2.000 |
+| Material no venue do piloto (uma vez) | 500 a 1.500 |
+| **Piloto completo, 6 meses** | **53.000 a 90.000** |
+
+Comercial e marketing podem ser absorvidos pelo time atual no começo. TI é o único integral desde já.
