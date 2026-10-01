@@ -231,17 +231,10 @@ export default async function RoadmapPage() {
 
       <main style={{ maxWidth: 1040, margin: "0 auto", padding: "clamp(36px,6vw,72px) clamp(20px,4vw,40px) 120px" }}>
         {/* Hero */}
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.accent, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 14 }}>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.accent, letterSpacing: "0.16em", textTransform: "uppercase" }}>
             Roadmap · interno · atualizado {UPDATED}
           </div>
-          <h1 style={{ fontSize: "clamp(36px,6vw,64px)", fontWeight: 800, letterSpacing: "-0.035em", lineHeight: 0.98, margin: 0 }}>
-            Do protótipo ao <span style={{ color: c.magenta }}>pipeline real.</span>
-          </h1>
-          <p style={{ color: c.inkSoft, fontSize: 16, lineHeight: 1.6, margin: "18px 0 0", maxWidth: 640 }}>
-            Upload, marca d&apos;água, pedido e entrega já rodam em prod. O que falta pra abrir o site no México:
-            índice facial dos eventos live, consentimento biométrico e auth. Gateway de pagamento fica fora desta rodada.
-          </p>
         </div>
 
         {/* Stats */}
