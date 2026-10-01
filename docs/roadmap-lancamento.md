@@ -78,3 +78,14 @@ Validar com RH e com os números da OCESA antes de usar fora deste doc.
 | **Piloto completo, 6 meses** | **53.000 a 90.000** |
 
 Comercial e marketing podem ser absorvidos pelo time atual no começo. TI é o único integral desde já.
+
+## Linha do tempo até o MVP (01/out/2026)
+
+MVP = piloto num evento OCESA, março de 2027. Percentual que falta por frente,
+contando marcos até o MVP (feito = 1, em andamento = 0,5).
+
+| Frente | Até o MVP | Pós-MVP | Falta |
+|---|---|---|---|
+| Técnico | Armazenamento, upload, marca d'água e compra (feitos, jul 26); leitura de rostos (nov, bloqueada); busca por selfie + consentimento (dez); login, admin, emails (jan 27); abrir o site (fev) | Pagamento real e escala CCXP MX (abr 27); busca em escala e SDK (2027+) | 59% |
+| Negócio | OCESA (out); budget, marca, jurídico (nov); evento piloto (dez); preço e empresa (jan); fotógrafos credenciados (fev) | Go/no-go e patrocínios CCXP MX (abr 27); plano LATAM | 100% |
+| Marketing | Landing /aplica (feita); campanha de recrutamento (em andamento); redes (nov); conteúdo (dez); material no venue e anúncio (fev) | Comunicação pós-evento e campanha CCXP MX (abr 27); LATAM | 75% |

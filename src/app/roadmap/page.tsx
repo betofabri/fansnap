@@ -15,6 +15,7 @@
 // Keep the data below in sync with the two markdown docs.
 
 import type { Metadata } from "next";
+import type React from "react";
 import { notFound } from "next/navigation";
 import { hasPreviewCookie } from "@/lib/gate";
 import { DARK as c, FONT_GROTESK, FONT_MONO } from "@/lib/theme";
@@ -38,6 +39,85 @@ const STATUS: Record<Status, { label: string; color: string }> = {
   pending: { label: "Pendente", color: c.inkSoft },
   scope: { label: "Fora do escopo", color: c.inkMute },
 };
+
+// ─── 00 Timeline ────────────────────────────────────────────────────────────
+// Three lanes, one column per month. MVP = piloto OCESA (mar 2027). Columns
+// after it are "pós-MVP". The % per lane counts milestones up to the MVP:
+// done = 1, em andamento = 0.5, resto = 0.
+
+const MONTHS = ["jul", "ago", "set", "out", "nov", "dez", "jan", "fev", "mar", "abr", "mai", "jun", "2027+"];
+const YEAR_BREAK = 6;   // index of jan 2027
+const TODAY = 3;        // out 2026
+const MVP = 8;          // mar 2027
+
+type TMilestone = { m: number; label: string; status: Status };
+type Lane = { title: string; accent: string; items: TMilestone[] };
+
+const TIMELINE: Lane[] = [
+  {
+    title: "Técnico",
+    accent: c.accent,
+    items: [
+      { m: 0, label: "Armazenamento das fotos", status: "done" },
+      { m: 0, label: "Upload real do fotógrafo", status: "done" },
+      { m: 0, label: "Marca d'água automática", status: "done" },
+      { m: 0, label: "Compra e entrega do original", status: "done" },
+      { m: 4, label: "Leitura de rostos (2b)", status: "blocked" },
+      { m: 5, label: "Busca por selfie em evento real", status: "pending" },
+      { m: 5, label: "Consentimento biométrico + legal", status: "pending" },
+      { m: 6, label: "Login sem senha", status: "pending" },
+      { m: 6, label: "Trancar o admin", status: "pending" },
+      { m: 6, label: "Emails automáticos", status: "partial" },
+      { m: 7, label: "Abrir o site ao público", status: "pending" },
+      { m: 8, label: "Piloto OCESA", status: "pending" },
+      { m: 9, label: "Pagamento real (cartão + OXXO)", status: "pending" },
+      { m: 9, label: "Escala CCXP MX", status: "pending" },
+      { m: 12, label: "Busca em escala (server) e SDK", status: "pending" },
+    ],
+  },
+  {
+    title: "Negócio",
+    accent: c.premium,
+    items: [
+      { m: 3, label: "Negociação com a OCESA", status: "pending" },
+      { m: 4, label: "Budget e time inicial", status: "pending" },
+      { m: 4, label: "Marca e domínios", status: "pending" },
+      { m: 4, label: "Jurídico MX", status: "pending" },
+      { m: 5, label: "Evento piloto definido", status: "pending" },
+      { m: 6, label: "Preço, IVA e empresa que fatura", status: "pending" },
+      { m: 7, label: "Fotógrafos credenciados", status: "pending" },
+      { m: 8, label: "Piloto OCESA", status: "pending" },
+      { m: 9, label: "Go/no-go CCXP MX", status: "pending" },
+      { m: 9, label: "Patrocínios CCXP MX", status: "pending" },
+      { m: 12, label: "Plano LATAM", status: "pending" },
+    ],
+  },
+  {
+    title: "Marketing",
+    accent: c.magenta,
+    items: [
+      { m: 0, label: "Landing /aplica no ar", status: "done" },
+      { m: 3, label: "Campanha de recrutamento", status: "progress" },
+      { m: 4, label: "Perfis @fansnap nas redes", status: "pending" },
+      { m: 5, label: "Conteúdo pré-lançamento", status: "pending" },
+      { m: 7, label: "Material no venue", status: "pending" },
+      { m: 7, label: "Anúncio do piloto", status: "pending" },
+      { m: 8, label: "Piloto OCESA", status: "pending" },
+      { m: 9, label: "Comunicação pós-evento ao fã", status: "pending" },
+      { m: 9, label: "Campanha CCXP MX", status: "pending" },
+      { m: 12, label: "Lançamento LATAM", status: "pending" },
+    ],
+  },
+];
+
+const WEIGHT: Record<Status, number> = { done: 1, progress: 0.5, partial: 0.5, blocked: 0, pending: 0, scope: 0 };
+
+function remaining(lane: Lane): number {
+  const upToMvp = lane.items.filter((i) => i.m < MVP);
+  if (!upToMvp.length) return 100;
+  const done = upToMvp.reduce((n, i) => n + WEIGHT[i.status], 0);
+  return Math.round(100 - (done / upToMvp.length) * 100);
+}
 
 // ─── 01 Produto ─────────────────────────────────────────────────────────────
 
@@ -425,6 +505,7 @@ export default async function RoadmapPage() {
         <div style={{ maxWidth: 1040, margin: "0 auto", padding: "18px clamp(20px,4vw,40px)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <FanSnapLogo size="sm" />
           <nav style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap", fontFamily: FONT_MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            <a href="#timeline" className="rm-nav">Timeline</a>
             <a href="#proximos" className="rm-nav">Próximos passos</a>
             <a href="#produto" className="rm-nav">Produto</a>
             <a href="#lancamento" className="rm-nav">Lançamento</a>
@@ -439,6 +520,11 @@ export default async function RoadmapPage() {
         <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: c.accent, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 20 }}>
           Roadmap · interno · atualizado {UPDATED}
         </div>
+
+        {/* 00 Timeline */}
+        <SectionTitle id="timeline" n="00" title="Até o MVP e depois" accent={c.magenta}
+          sub="MVP = piloto num evento OCESA, março de 2027. Três frentes, mês a mês. A barra de cada frente mostra quanto falta até o MVP." />
+        <Timeline />
 
         {/* 01 Próximos passos */}
         <SectionTitle id="proximos" n="01" title="Próximos passos" accent={c.ok}
@@ -591,6 +677,77 @@ export default async function RoadmapPage() {
           Não flipar SITE_LIVE antes da fase 6 e do #43. Fontes: docs/roadmap-real-pipeline.md e docs/roadmap-lancamento.md.
         </div>
       </main>
+    </div>
+  );
+}
+
+function Timeline() {
+  const cols = `150px repeat(${MONTHS.length}, minmax(96px, 1fr))`;
+  const colStyle = (i: number): React.CSSProperties => ({
+    borderLeft: `1px solid ${i === MVP ? c.magenta : i === YEAR_BREAK ? c.borderStrong : c.border}`,
+    background: i > MVP ? "rgba(244,244,242,0.025)" : i === TODAY ? "rgba(0,229,255,0.05)" : "transparent",
+  });
+  return (
+    <div style={{ border: `1px solid ${c.border}`, marginBottom: 72, overflowX: "auto" }}>
+      <div style={{ minWidth: 150 + MONTHS.length * 96 }}>
+        {/* month header */}
+        <div style={{ display: "grid", gridTemplateColumns: cols, background: c.surface, borderBottom: `1px solid ${c.borderStrong}` }}>
+          <div style={{ padding: "10px 14px", fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, letterSpacing: "0.14em", textTransform: "uppercase" }}>Frente</div>
+          {MONTHS.map((mo, i) => (
+            <div key={mo} style={{ ...colStyle(i), padding: "10px 8px", fontFamily: FONT_MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: i === MVP ? c.magenta : i === TODAY ? c.accent : c.inkSoft, fontWeight: i === MVP || i === TODAY ? 700 : 500 }}>
+              {mo}{i === 0 ? " 26" : i === YEAR_BREAK ? " 27" : ""}
+              {i === TODAY && <span style={{ display: "block", fontSize: 9, color: c.accent, letterSpacing: "0.14em" }}>hoje</span>}
+              {i === MVP && <span style={{ display: "block", fontSize: 9, color: c.magenta, letterSpacing: "0.14em" }}>MVP</span>}
+              {i === MVP + 1 && <span style={{ display: "block", fontSize: 9, color: c.inkMute, letterSpacing: "0.14em" }}>pós-MVP</span>}
+            </div>
+          ))}
+        </div>
+        {/* lanes */}
+        {TIMELINE.map((lane, li) => {
+          const left = remaining(lane);
+          return (
+            <div key={lane.title} style={{ display: "grid", gridTemplateColumns: cols, borderTop: li ? `1px solid ${c.border}` : "none", background: c.surface }}>
+              <div style={{ padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 8, height: 8, background: lane.accent }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>{lane.title}</span>
+                </div>
+                <div style={{ height: 6, background: c.surfaceHi, border: `1px solid ${c.border}`, position: "relative" }}>
+                  <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${100 - left}%`, background: lane.accent }} />
+                </div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color: c.inkSoft, letterSpacing: "0.06em" }}>
+                  <span style={{ color: lane.accent, fontWeight: 700, fontSize: 14 }}>{left}%</span> falta até o MVP
+                </div>
+              </div>
+              {MONTHS.map((mo, i) => (
+                <div key={mo} style={{ ...colStyle(i), padding: "10px 6px", display: "flex", flexDirection: "column", gap: 4 }}>
+                  {lane.items.filter((it) => it.m === i).map((it) => {
+                    const st = STATUS[it.status];
+                    const isMvp = i === MVP;
+                    return (
+                      <div key={it.label} title={st.label} style={{
+                        borderLeft: `2px solid ${st.color}`, padding: "4px 6px", fontSize: 11, lineHeight: 1.3,
+                        color: it.status === "pending" ? c.inkSoft : c.ink, fontWeight: it.status === "done" || isMvp ? 600 : 400,
+                        background: isMvp ? "rgba(255,45,135,0.10)" : i > MVP ? "transparent" : "rgba(244,244,242,0.03)",
+                      }}>
+                        {it.label}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+        {/* legend */}
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "10px 14px", borderTop: `1px solid ${c.border}`, background: c.surface, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: c.inkMute }}>
+          {(["done", "progress", "partial", "blocked", "pending"] as Status[]).map((k) => (
+            <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 2, height: 12, background: STATUS[k].color }} />{STATUS[k].label}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
