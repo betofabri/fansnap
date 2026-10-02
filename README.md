@@ -21,7 +21,8 @@ Execution plan and open phases: `docs/roadmap-real-pipeline.md`.
 | EN/PT/ES, dark/light, mobile responsive | Done |
 | `/aplica`: photographer pre-registration landing (Spanish) + referral | Done |
 | `/fotografos` and `/marcas` landings, `/mapa` internal navigation hub | Done |
-| Admin on real D1: events, photographer roster, applications queue, fans, onboarding links with expiry, per-event watermark level | Done |
+| Admin on real D1: events, photographer roster, applications queue, fans list, onboarding links with expiry, per-event watermark level | Done |
+| Admin fan detail view (purchases, scans, consent, activity) | Mockup, fixed sample data (Fase 4b) |
 | Photographer dashboard with in-dashboard upload (assigned events still mock) | Done (upload real, data mock) |
 | Real upload to R2 for events with `photo_source = 'live'` | Done |
 | Processing pipeline: Queue + separate `fansnap-processor` Worker (resize 1600px + watermark v3, three intensities) | Done |

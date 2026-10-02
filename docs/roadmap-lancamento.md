@@ -50,7 +50,7 @@ Todo o resto pendente.
 |---|---|---|
 | Destravar fase 2b e fechar fase 3 | Fechar % e modelo com a OCESA | Reservar @fansnap nas redes e publicar identidade |
 | Fase 6: consentimento + legal MX | Definir budget e time inicial mínimo | Campanha de recrutamento de fotógrafos (em andamento) |
-| Fase 5: magic-link | Escolher evento piloto e data | Plano de conteúdo pré-lançamento |
+| Fase 5: magic-link; fase 4b: ficha do fã real | Escolher evento piloto e data | Plano de conteúdo pré-lançamento |
 | #43: Access no /admin | Registrar marca (IMPI + INPI) e domínios | Material de ativação no venue |
 | Email Sending + fase 7 | Contratar jurídico MX | Anúncio do piloto com a OCESA (release, kit de imprensa) |
 | | Definir preço, IVA e empresa que fatura | Comunicação pós-evento ao fã |
@@ -89,6 +89,7 @@ percentual que falta. Percentual da frente = média das etapas até o MVP.
 | Técnico (falta 77%) | Upload, marca d'água, compra e entrega | jul 26 | 0% |
 | | Leitura de rostos + busca por selfie | out a nov 26 | 100% |
 | | Consentimento biométrico + legal | nov a dez 26 | 100% |
+| | Ficha do fã no admin com dados reais | nov 26 a jan 27 | 85% |
 | | Login, trava do admin, emails | dez 26 | 85% |
 | | Abrir o site + piloto | jan 27 | 100% |
 | | Pós-MVP: pagamento real (fev a mar), escala CCXP MX (abr), busca em escala + SDK (mai a jun) | | |

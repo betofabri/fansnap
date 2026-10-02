@@ -22,6 +22,7 @@ crítico é a 2b (índice facial de eventos live), que trava a 3.
 | 2b | Índice facial por upload (Container Node) | **Bloqueada**: Docker Desktop + plano Containers |
 | 3 | Match por evento live + log de `scans` | Pendente (depende da 2b) |
 | 4 | Pedido no D1 + entrega do original sem gateway | Concluída (jul/2026), links assinados 24h |
+| 4b | Ficha do fã no admin com dados reais | Pendente (lista real; ficha ainda mockup) |
 | 5 | Auth magic-link (fã + fotógrafo) | Pendente |
 | 6 | Consentimento biométrico + páginas legais MX | Pendente, **obrigatória antes de abrir o site** |
 | 7 | Emails transacionais | Parcial: recibo pronto; "fotos listas" pendente; envio real depende do Email Sending em betofabri.com |
@@ -135,6 +136,15 @@ original limpo; link vencido → `/pedidos?expired=1` reemite. `GET
 /api/photos/preview?id` serve a preview marcada. E2E verificado em prod
 (original byte-idêntico, tampering rejeitado, lookup por código + email).
 
+### Fase 4b — Ficha do fã no admin com dados reais — PENDENTE
+`/admin/fans` já lê `users` (role fan) do D1. `/admin/fans/<code>` (`FanDetail.tsx`)
+é mockup com perfil fixo.
+- `GET /api/admin/fans/<code>`: user + `orders`/`order_lines` do email; aba
+  Compras real primeiro (dado já existe desde a Fase 4).
+- KPIs calculados (GMV, eventos, fotos). Scans e match após a Fase 3;
+  consentimento (`scans.consent_text_id`) após a Fase 6.
+- Verif.: fã real mostra seus pedidos; fã sem compras mostra vazio.
+
 ### Fase 5 — Auth de produto — PENDENTE
 - `POST /api/auth/request` (magic-link) → `GET /api/auth/callback` (cookie JWT
   httpOnly assinado).
@@ -176,6 +186,6 @@ original limpo; link vencido → `/pedidos?expired=1` reemite. `GET
 ## Próximos passos (ordem de alavancagem)
 1. Destravar **Fase 2b** (Docker Desktop + plano Containers) e fechar a **Fase 3**.
 2. **Fase 6** (consentimento + legal), pré-requisito de abrir o site no MX.
-3. **Fase 5** (magic-link) e dashboard do fotógrafo em dado real.
+3. **Fase 5** (magic-link) e dashboard do fotógrafo em dado real; **Fase 4b** (ficha do fã real, compras primeiro).
 4. **#43** Cloudflare Access no `/admin`.
 5. Confirmar Email Sending no domínio e completar a **Fase 7**.
