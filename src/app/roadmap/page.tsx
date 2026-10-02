@@ -49,7 +49,7 @@ const YEAR_BREAK = 6;   // jan 2027
 const TODAY = 3;        // out 2026
 const MVP = 6;          // jan 2027
 
-type Stage = { label: string; start: number; end: number; pct: number };
+type Stage = { label: string; start: number; end: number; pct: number; detail: string };
 type Lane = { title: string; accent: string; stages: Stage[] };
 
 const TIMELINE: Lane[] = [
@@ -57,39 +57,39 @@ const TIMELINE: Lane[] = [
     title: "Técnico",
     accent: c.accent,
     stages: [
-      { label: "Upload, marca d'água, compra e entrega", start: 0, end: 0, pct: 100 },
-      { label: "Leitura de rostos + busca por selfie", start: 3, end: 4, pct: 0 },
-      { label: "Consentimento biométrico + legal", start: 4, end: 5, pct: 0 },
-      { label: "Login, trava do admin, emails", start: 5, end: 5, pct: 15 },
-      { label: "Abrir o site + piloto", start: 6, end: 6, pct: 0 },
-      { label: "Pagamento real", start: 7, end: 8, pct: 0 },
-      { label: "Escala CCXP MX", start: 9, end: 9, pct: 0 },
-      { label: "Busca em escala + SDK", start: 10, end: 11, pct: 0 },
+      { label: "Upload, marca d'água, compra e entrega", start: 0, end: 0, pct: 100, detail: "Fases 0, 1, 2a e 4: armazenamento R2, upload pelo painel, processador de marca d'água, pedidos no D1 e download por link assinado. Em produção desde julho." },
+      { label: "Leitura de rostos + busca por selfie", start: 3, end: 4, pct: 0, detail: "Fases 2b e 3: container com o leitor de rostos alimentando o índice por evento, endpoint de busca e registro de cada scan. Bloqueado por Docker Desktop e plano Containers." },
+      { label: "Consentimento biométrico + legal", start: 4, end: 5, pct: 0, detail: "Fase 6: step de consentimento antes da selfie, páginas de privacidade, termos e aviso biométrico, apagar meus dados." },
+      { label: "Login, trava do admin, emails", start: 5, end: 5, pct: 15, detail: "Fases 5, #43 e 7: login por magic-link, Cloudflare Access no admin, email de fotos prontas e envio ativado no domínio. Recibo já pronto." },
+      { label: "Abrir o site + piloto", start: 6, end: 6, pct: 0, detail: "Tirar a página de em breve depois das etapas anteriores. Plantão técnico no evento." },
+      { label: "Pagamento real", start: 7, end: 8, pct: 0, detail: "Gateway com cartão e OXXO e repasse ao fotógrafo. Só muda como o status do pedido vira pago." },
+      { label: "Escala CCXP MX", start: 9, end: 9, pct: 0, detail: "Dezenas de fotógrafos, eventos patrocinados, integração com a comunicação do evento." },
+      { label: "Busca em escala + SDK", start: 10, end: 11, pct: 0, detail: "Busca no servidor acima de cerca de 2.000 fotos por evento. SDK para embutir no app do promotor." },
     ],
   },
   {
     title: "Negócio",
     accent: c.premium,
     stages: [
-      { label: "Negociação com a OCESA", start: 3, end: 4, pct: 0 },
-      { label: "Budget, time, marca, jurídico", start: 3, end: 5, pct: 0 },
-      { label: "Evento piloto, preço, empresa que fatura", start: 4, end: 5, pct: 0 },
-      { label: "Fotógrafos credenciados", start: 5, end: 6, pct: 0 },
-      { label: "Piloto OCESA", start: 6, end: 6, pct: 0 },
-      { label: "Go/no-go + patrocínios CCXP MX", start: 7, end: 9, pct: 0 },
-      { label: "Plano LATAM", start: 10, end: 11, pct: 0 },
+      { label: "Negociação com a OCESA", start: 3, end: 4, pct: 0, detail: "Percentual sobre vendas, exclusividade por evento, quem fatura no México, formato do evento patrocinado." },
+      { label: "Budget, time, marca, jurídico", start: 3, end: 5, pct: 0, detail: "Aprovar time mínimo e budget do piloto. Pedido de marca no IMPI e INPI, domínios. Escritório jurídico para privacidade biométrica, termos e contrato do fotógrafo." },
+      { label: "Evento piloto, preço, empresa que fatura", start: 4, end: 5, pct: 0, detail: "Show ou venue médio na CDMX com autorização e credenciais. Preço por foto e pacote, IVA, empresa emissora, conta no meio de pagamento." },
+      { label: "Fotógrafos credenciados", start: 5, end: 6, pct: 0, detail: "5 a 8 fotógrafos vindos do /aplica, com alta no painel, treino e teste real de upload." },
+      { label: "Piloto OCESA", start: 6, end: 6, pct: 0, detail: "Cobertura, vendas e suporte ao vivo no evento." },
+      { label: "Go/no-go + patrocínios CCXP MX", start: 7, end: 9, pct: 0, detail: "Métricas do piloto (fotos, buscas, conversão, ticket médio, satisfação), decisão e venda de patrocínio para a CCXP MX." },
+      { label: "Plano LATAM", start: 10, end: 11, pct: 0, detail: "Próximos países e verticais." },
     ],
   },
   {
     title: "Marketing",
     accent: c.magenta,
     stages: [
-      { label: "Landing + recrutamento de fotógrafos", start: 0, end: 5, pct: 40 },
-      { label: "Redes + conteúdo pré-lançamento", start: 4, end: 5, pct: 0 },
-      { label: "Material no venue + anúncio do piloto", start: 5, end: 6, pct: 0 },
-      { label: "Piloto OCESA", start: 6, end: 6, pct: 0 },
-      { label: "Pós-evento + campanha CCXP MX", start: 7, end: 9, pct: 0 },
-      { label: "Lançamento LATAM", start: 10, end: 11, pct: 0 },
+      { label: "Landing + recrutamento de fotógrafos", start: 0, end: 5, pct: 40, detail: "Landing /aplica no ar. Divulgação em redes, grupos de fotógrafos da CDMX e indicação. Meta: 50 cadastros até novembro." },
+      { label: "Redes + conteúdo pré-lançamento", start: 4, end: 5, pct: 0, detail: "Reservar @fansnap (Instagram, TikTok, X, LinkedIn), bio e identidade. Posts de bastidores, fotógrafos do roster, como funciona." },
+      { label: "Material no venue + anúncio do piloto", start: 5, end: 6, pct: 0, detail: "Sinalização, QR code, roteiro de ativação. Release e kit de imprensa com a OCESA." },
+      { label: "Piloto OCESA", start: 6, end: 6, pct: 0, detail: "Cobertura em redes durante o evento." },
+      { label: "Pós-evento + campanha CCXP MX", start: 7, end: 9, pct: 0, detail: "Email de fotos prontas e redes depois do piloto. Campanha para a CCXP MX." },
+      { label: "Lançamento LATAM", start: 10, end: 11, pct: 0, detail: "Comunicação por país." },
     ],
   },
 ];
@@ -693,12 +693,13 @@ function Timeline() {
         {TIMELINE.map((lane) => {
           const left = remaining(lane);
           return (
-            <div key={lane.title}>
-              {/* lane summary */}
-              <div className="rm-gantt-row" style={{ background: c.surfaceHi, borderTop: `1px solid ${c.borderStrong}` }}>
+            <details key={lane.title} className="rm-lane">
+              <summary className="rm-gantt-row" style={{ background: c.surfaceHi, borderTop: `1px solid ${c.borderStrong}` }}>
                 <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="rm-caret" style={{ color: lane.accent }} />
                   <span style={{ width: 8, height: 8, background: lane.accent }} />
                   <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>{lane.title}</span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: c.inkMute, marginLeft: "auto" }}>{lane.stages.length} etapas</span>
                 </div>
                 <div style={{ position: "relative", padding: "12px 10px", display: "flex", alignItems: "center", gap: 12 }}>
                   {markers}
@@ -707,34 +708,45 @@ function Timeline() {
                   </div>
                   <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: lane.accent, fontWeight: 700, whiteSpace: "nowrap", position: "relative" }}>falta {left}% até o MVP</span>
                 </div>
-              </div>
-              {/* stages */}
+              </summary>
               {lane.stages.map((st) => {
                 const post = st.start > MVP;
                 return (
-                  <div key={st.label} className="rm-gantt-row" style={{ background: c.surface, borderTop: `1px solid ${c.border}`, opacity: post ? 0.6 : 1 }}>
-                    <div style={{ padding: "9px 14px", fontSize: 12.5, lineHeight: 1.35, color: st.pct === 100 ? c.inkSoft : c.ink }}>{st.label}</div>
-                    <div style={{ position: "relative", height: 36 }}>
-                      {markers}
-                      <div title={`${st.pct}% feito`} style={{
-                        position: "absolute", top: 9, height: 18,
-                        left: pctLeft(st.start), width: `${((st.end - st.start + 1) / N) * 100}%`,
-                        background: c.surfaceHi, border: `1px solid ${post ? c.border : lane.accent}`, boxSizing: "border-box",
-                      }}>
-                        <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${st.pct}%`, background: lane.accent }} />
-                        <span style={{ position: "absolute", right: 5, top: 0, bottom: 0, display: "flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9.5, fontWeight: 700, color: st.pct === 100 ? c.bg : c.ink, letterSpacing: "0.04em" }}>
-                          {st.pct === 100 ? "ok" : `${100 - st.pct}%`}
-                        </span>
+                  <details key={st.label} className="rm-stage" style={{ opacity: post ? 0.6 : 1 }}>
+                    <summary className="rm-gantt-row" style={{ background: c.surface, borderTop: `1px solid ${c.border}` }}>
+                      <div style={{ padding: "9px 14px 9px 24px", fontSize: 12.5, lineHeight: 1.35, color: st.pct === 100 ? c.inkSoft : c.ink, display: "flex", gap: 8, alignItems: "baseline" }}>
+                        <span className="rm-caret" style={{ color: c.inkMute }} />
+                        <span>{st.label}</span>
+                      </div>
+                      <div style={{ position: "relative", height: 36 }}>
+                        {markers}
+                        <div style={{
+                          position: "absolute", top: 9, height: 18,
+                          left: pctLeft(st.start), width: `${((st.end - st.start + 1) / N) * 100}%`,
+                          background: c.surfaceHi, border: `1px solid ${post ? c.border : lane.accent}`, boxSizing: "border-box",
+                        }}>
+                          <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${st.pct}%`, background: lane.accent }} />
+                          <span style={{ position: "absolute", right: 5, top: 0, bottom: 0, display: "flex", alignItems: "center", fontFamily: FONT_MONO, fontSize: 9.5, fontWeight: 700, color: st.pct === 100 ? c.bg : c.ink, letterSpacing: "0.04em" }}>
+                            {st.pct === 100 ? "ok" : `${100 - st.pct}%`}
+                          </span>
+                        </div>
+                      </div>
+                    </summary>
+                    <div className="rm-gantt-row" style={{ background: c.surface }}>
+                      <div style={{ gridColumn: "1 / -1", padding: "2px 14px 12px 46px", fontSize: 12.5, color: c.inkSoft, lineHeight: 1.6, maxWidth: 760 }}>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: lane.accent, letterSpacing: "0.1em", marginRight: 8 }}>{MONTHS[st.start]}{st.end !== st.start ? ` a ${MONTHS[st.end]}` : ""} · {st.pct}% feito</span>
+                        {st.detail}
                       </div>
                     </div>
-                  </div>
+                  </details>
                 );
               })}
-            </div>
+            </details>
           );
         })}
 
         <div style={{ display: "flex", gap: 18, flexWrap: "wrap", padding: "10px 14px", borderTop: `1px solid ${c.borderStrong}`, background: c.surface, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: c.inkMute }}>
+          <span>Clique na frente ou na etapa para abrir</span>
           <span>Barra = duração</span>
           <span>Preenchido = feito</span>
           <span>Número = falta</span>
@@ -826,6 +838,12 @@ const css = `
   .rm-nav { color: ${c.inkSoft}; text-decoration: none; }
   .rm-nav:hover { color: ${c.accent}; }
   .rm-gantt-row { display: grid; grid-template-columns: 240px 1fr; }
+  .rm-lane > summary, .rm-stage > summary { list-style: none; cursor: pointer; }
+  .rm-lane > summary::-webkit-details-marker, .rm-stage > summary::-webkit-details-marker { display: none; }
+  .rm-lane > summary:hover, .rm-stage > summary:hover { background: ${c.surfaceAlt} !important; }
+  .rm-caret { font-family: ${FONT_MONO}; font-size: 11px; font-weight: 700; width: 10px; display: inline-block; }
+  .rm-caret::before { content: "+"; }
+  details[open] > summary .rm-caret::before { content: "-"; }
   .rm-link { color: ${c.ink}; text-decoration: underline; text-decoration-color: ${c.premium}; text-underline-offset: 3px; }
   .rm-link:hover { color: ${c.premium}; }
   .rm-phase:hover, .rm-milestone:hover { background: ${c.surfaceHi} !important; }
